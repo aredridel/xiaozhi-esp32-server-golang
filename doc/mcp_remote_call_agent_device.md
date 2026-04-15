@@ -1,6 +1,6 @@
 # Device/Agent Dimension MCP Remote Call Documentation
 
-This document introduces the **MCP remote call debugging capability** in the management console, including:
+This document introduces the MCP remote call debugging capability in the management console, including:
 
 - Agent dimension MCP endpoint generation
 - Agent dimension tool list acquisition and remote calling
@@ -66,14 +66,14 @@ Common uses:
 
 ### 3.1 Administrator
 
-- `Administrator -> Agent Management` (agent dimension endpoint / tools / call)
-- `Administrator -> Device Management` (device dimension tools / call)
+- Administrator -> Agent Management (agent dimension endpoint / tools / call)
+- Administrator -> Device Management (device dimension tools / call)
 
 ### 3.2 Regular User
 
-- `My Agents` (agent dimension tools / call)
-- `My Devices` / `Agent Devices` (device dimension tools / call)
-- `Agent Edit` (configure `mcp_service_names`, affects agent dimension visible service scope)
+- My Agents (agent dimension tools / call)
+- My Devices / Agent Devices (device dimension tools / call)
+- Agent Edit (configure mcp_service_names, affects agent dimension visible service scope)
 
 ---
 
@@ -81,7 +81,7 @@ Common uses:
 
 ## 4.1 Configure Agent Available MCP Services (Optional but Recommended)
 
-On the agent edit page, you can set `mcp_service_names` (service name list, comma-separated):
+On the agent edit page, you can set mcp_service_names (service name list, comma-separated):
 
 - Empty: Use all enabled global MCP services
 - Filled: Only use specified service names (must be services that exist and are enabled in the system)
@@ -96,13 +96,13 @@ The system will perform the following on this field:
 
 The console can get the agent-specific MCP access point URL, format similar to:
 
-```text
+```
 ws(s)://<host>/mcp?token=<jwt>
 ```
 
 Description:
 
-- Endpoint is derived based on default OTA configuration `external.websocket.url` for domain and protocol
+- Endpoint is derived based on default OTA configuration external.websocket.url for domain and protocol
 - Token contains current user and agent context (used for permission verification/binding)
 - Suitable for external MCP client temporary debugging, not recommended for public sharing
 
@@ -121,8 +121,8 @@ If unable to get (e.g., controller not initialized or client temporarily unreach
 
 Fill in the console:
 
-- `tool_name`
-- `arguments` (JSON)
+- tool_name
+- arguments (JSON)
 
 After initiating the call, you can view the complete return body (JSON format) in the result box.
 
@@ -146,10 +146,10 @@ In these cases, the interface usually returns empty tool list or permission erro
 
 Similar to agent dimension, fill in:
 
-- `tool_name`
-- `arguments` (JSON)
+- tool_name
+- arguments (JSON)
 
-The difference is that the call body uses `device_id` (actual backend will pass device name) context, so it's closer to the "current device session" real execution environment.
+The difference is that the call body uses device_id (actual backend will pass device name) context, so it's closer to the current device session real execution environment.
 
 ---
 
@@ -159,18 +159,18 @@ The difference is that the call body uses `device_id` (actual backend will pass 
 
 Agent dimension:
 
-- `GET /user/agents/:id/mcp-endpoint`
-- `GET /user/agents/:id/mcp-tools`
-- `POST /user/agents/:id/mcp-call`
+- GET /user/agents/:id/mcp-endpoint
+- GET /user/agents/:id/mcp-tools
+- POST /user/agents/:id/mcp-call
 
 Device dimension:
 
-- `GET /user/devices/:id/mcp-tools`
-- `POST /user/devices/:id/mcp-call`
+- GET /user/devices/:id/mcp-tools
+- POST /user/devices/:id/mcp-call
 
 Agent service filtering auxiliary:
 
-- `GET /user/agents/:id/mcp-services/options`
+- GET /user/agents/:id/mcp-services/options
 
 Regular users can only operate their own agents/devices.
 
@@ -178,14 +178,14 @@ Regular users can only operate their own agents/devices.
 
 Agent dimension:
 
-- `GET /admin/agents/:id/mcp-endpoint`
-- `GET /admin/agents/:id/mcp-tools`
-- `POST /admin/agents/:id/mcp-call`
+- GET /admin/agents/:id/mcp-endpoint
+- GET /admin/agents/:id/mcp-tools
+- POST /admin/agents/:id/mcp-call
 
 Device dimension:
 
-- `GET /admin/devices/:id/mcp-tools`
-- `POST /admin/devices/:id/mcp-call`
+- GET /admin/devices/:id/mcp-tools
+- POST /admin/devices/:id/mcp-call
 
 Administrators can debug any agent/device across users (provided the record exists and connection link is normal).
 
@@ -195,8 +195,8 @@ Administrators can debug any agent/device across users (provided the record exis
 
 Agent endpoint generation depends on:
 
-1. Default OTA configuration (`type=ota` and `is_default=true`)
-2. `external.websocket.url` in OTA configuration
+1. Default OTA configuration (type=ota and is_default=true)
+2. external.websocket.url in OTA configuration
 3. Stable token generated based on current user ID + agent ID
 
 Generation result will use:
@@ -253,12 +253,12 @@ Check:
 
 1. Whether imported service is enabled
 2. Global MCP configuration master switch and service enable status
-3. Whether agent excluded this service through `mcp_service_names`
+3. Whether agent excluded this service through mcp_service_names
 
 ---
 
 ## 9. Best Practices
 
 - First verify "device dimension" tool availability on administrator side, then verify "agent dimension" tool filtering results
-- For production agents, it is recommended to explicitly configure `mcp_service_names` to avoid unrelated tools being exposed to the model
+- For production agents, it is recommended to explicitly configure mcp_service_names to avoid unrelated tools being exposed to the model
 - Treat endpoint as a sensitive debugging entry point, avoid spreading URLs with tokens in public channels

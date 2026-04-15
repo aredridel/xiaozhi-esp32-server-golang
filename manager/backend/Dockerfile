@@ -2,14 +2,14 @@ FROM golang:1.21-alpine AS builder
 
 WORKDIR /app
 
-# 复制go mod文件
+# Copy go mod files
 COPY go.mod go.sum ./
 RUN go mod download
 
-# 复制源代码
+# Copy source code
 COPY . .
 
-# 构建应用
+# Build application
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
 
 # 运行阶段
@@ -18,11 +18,11 @@ FROM alpine:latest
 RUN apk --no-cache add ca-certificates tzdata
 WORKDIR /root/
 
-# 从构建阶段复制二进制文件
+# Copy binary from build stage
 COPY --from=builder /app/main .
 COPY --from=builder /app/config ./config
 
-# 设置时区
+# Set timezone
 ENV TZ=Asia/Shanghai
 
 EXPOSE 8080

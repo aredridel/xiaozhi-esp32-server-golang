@@ -80,7 +80,7 @@ func TestParseDoubaoWSFullServerResponse(t *testing.T) {
 }
 
 func TestNewDoubaoWSPayloadUsesV3ReqParams(t *testing.T) {
-	payload := newDoubaoWSPayload("测试", "voice-demo", 24000, modelSeedTTS20Standard)
+	payload := newDoubaoWSPayload("test", "voice-demo", 24000, modelSeedTTS20Standard)
 	raw, err := json.Marshal(payload)
 	if err != nil {
 		t.Fatalf("marshal payload error = %v", err)
@@ -94,7 +94,7 @@ func TestNewDoubaoWSPayloadUsesV3ReqParams(t *testing.T) {
 	if !ok {
 		t.Fatalf("req_params missing: %#v", got)
 	}
-	if reqParams["text"] != "测试" {
+	if reqParams["text"] != "test" {
 		t.Fatalf("text = %#v", reqParams["text"])
 	}
 	if reqParams["speaker"] != "voice-demo" {

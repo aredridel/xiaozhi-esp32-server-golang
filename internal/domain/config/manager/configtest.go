@@ -21,33 +21,33 @@ import (
 	log "xiaozhi-esp32-server-golang/logger"
 )
 
-// DefaultTestWavPath 配置测试用固定 WAV 路径（16kHz 单声道，约 1–3 秒），可选
+// DefaultTestWavPath configtestusefixed WAV path（16kHz 单声道，about 1–3 second），optional
 const DefaultTestWavPath = "internal/testdata/config_test.wav"
 
-// DefaultTestText LLM/TTS 固定测试文本
-const DefaultTestText = "配置测试"
+// DefaultTestTextLLM/TTS fixedtesttext
+const DefaultTestText = "configtest"
 const (
 	defaultLLMTestTimeout  = 15 * time.Second
 	thinkingLLMTestTimeout = 30 * time.Second
 )
 
-// 用于 VAD/ASR 的备用 PCM：约 1 秒模拟语音 16kHz 单声道，无文件时使用
-// 使用合成噪声模拟真实语音，以便 ASR 服务端能正常处理（特别是 Manual 模式需要 commit）
+// used for VAD/ASR ofbackup PCM：about 1 secondmockvoice 16kHz 单声道，nofilewhenuse
+// use合成噪声mockrealvoice，以便 ASR server-side能normalprocess（特别yes Manual patternneed commit）
 var fallbackPCM = func() []float32 {
 	pcm := make([]float32, 16000)
-	// 生成模拟语音信号：使用多个正弦波叠加 + 噪声
-	// 模拟中文"配置测试"的基本频率范围
-	// 增加幅度以使服务端能识别为有效音频（Manual 模式要求更高）
+	// generatemockvoicesignal：usemultiplepositive弦波叠加 + 噪声
+	// mockin文"configtest"of基本frequencyrange
+	// 增加幅degree以使server-side能recognizeisvalidaudio（Manual pattern要求更high）
 	for i := range pcm {
 		t := float64(i) / 16000.0
-		// 基频 + 谐波模拟语音，大幅增加幅度
-		sample := float32(0.5 * math.Sin(2*math.Pi*t*400))   // 基频 400Hz，幅度 0.5
-		sample += float32(0.25 * math.Sin(2*math.Pi*t*800))  // 谐波，幅度 0.25
-		sample += float32(0.15 * math.Sin(2*math.Pi*t*1200)) // 谐波，幅度 0.15
-		sample += float32(0.1 * math.Sin(2*math.Pi*t*2000))  // 谐波，幅度 0.1
-		// 添加噪声，大幅增加噪声水平
-		sample += (float32(i%100) - 50) / 2000 // 噪声幅度增加到 0.05
-		// 应用包络（淡入淡出）
+		// 基频 + 谐波mockvoice，large幅增加幅degree
+		sample := float32(0.5 * math.Sin(2*math.Pi*t*400))   // 基频 400Hz，幅degree 0.5
+		sample += float32(0.25 * math.Sin(2*math.Pi*t*800))  // 谐波，幅degree 0.25
+		sample += float32(0.15 * math.Sin(2*math.Pi*t*1200)) // 谐波，幅degree 0.15
+		sample += float32(0.1 * math.Sin(2*math.Pi*t*2000))  // 谐波，幅degree 0.1
+		// add噪声，large幅增加噪声水平
+		sample += (float32(i%100) - 50) / 2000 // 噪声幅degree增加to 0.05
+		// applicationpackage络（淡入淡out）
 		env := float32(1.0)
 		if i < 1000 {
 			env = float32(i) / 1000
@@ -56,11 +56,11 @@ var fallbackPCM = func() []float32 {
 		}
 		pcm[i] = sample * env
 	}
-	log.Debugf("[config_test] fallbackPCM 生成: len=%d", len(pcm))
+	log.Debugf("[config_test] fallbackPCM generate: len=%d", len(pcm))
 	return pcm
 }()
 
-// loadTestWav 加载固定 WAV 为 float32 PCM，若文件不存在则返回 nil 与 nil error（调用方用 fallbackPCM）
+// loadTestWav loadfixed WAV is float32 PCM，iffileno存atthenreturn nil and nil error（call方use fallbackPCM）
 func loadTestWav(path string) ([]float32, error) {
 	if path == "" {
 		path = DefaultTestWavPath
@@ -94,7 +94,7 @@ func loadTestWav(path string) ([]float32, error) {
 	return out, nil
 }
 
-// RunConfigTest 根据下发的 data（与实时配置一致）执行 VAD/ASR/LLM/TTS 轻量测试，返回每类按 config_id 的结果
+// RunConfigTest according todown发of data（and实whenconfigconsistent）execute VAD/ASR/LLM/TTS 轻amounttest，return每class按 config_id ofresult
 func RunConfigTest(data map[string]interface{}, testText string) (vadResult, asrResult, llmResult, ttsResult map[string]interface{}) {
 	vadResult = make(map[string]interface{})
 	asrResult = make(map[string]interface{})
@@ -104,8 +104,8 @@ func RunConfigTest(data map[string]interface{}, testText string) (vadResult, asr
 	if testText == "" {
 		testText = DefaultTestText
 	}
-	log.Debugf("[config_test] RunConfigTest 开始 test_text=%q data.keys=%v", testText, mapKeys(data))
-	// 打印接收到的各类型 config_id 及脱敏后的配置内容，便于 debug
+	log.Debugf("[config_test] RunConfigTest start test_text=%q data.keys=%v", testText, mapKeys(data))
+	// 打印receivetoof各type config_id and脱敏afterofconfiginside容，便于 debug
 	for _, typ := range []string{"vad", "asr", "llm", "tts"} {
 		v, _ := data[typ].(map[string]interface{})
 		if v == nil {
@@ -115,22 +115,22 @@ func RunConfigTest(data map[string]interface{}, testText string) (vadResult, asr
 		for k := range v {
 			ids = append(ids, k)
 		}
-		log.Debugf("[config_test] 收到 data[%s] config_ids=%v", typ, ids)
+		log.Debugf("[config_test] receive data[%s] config_ids=%v", typ, ids)
 	}
 	if redacted := redactSensitive(data); redacted != nil {
 		if b, err := json.Marshal(redacted); err == nil {
-			log.Debugf("[config_test] 收到 data 脱敏后: %s", string(b))
+			log.Debugf("[config_test] receive data 脱敏after: %s", string(b))
 		}
 	}
 
 	pcm, _ := loadTestWav(DefaultTestWavPath)
 	if pcm == nil || len(pcm) == 0 {
-		log.Debugf("[config_test] WAV 文件加载失败或为空，使用 fallbackPCM")
+		log.Debugf("[config_test] WAV fileloadfailedorisempty，use fallbackPCM")
 		pcm = fallbackPCM
 	}
-	log.Debugf("[config_test] 使用 PCM 数据: len=%d", len(pcm))
+	log.Debugf("[config_test] use PCM data: len=%d", len(pcm))
 
-	// VAD：统计处理耗时（从调用 IsVAD 到返回）
+	// VAD：countprocesstime consumption（fromcall IsVAD toreturn）
 	if v, ok := data["vad"].(map[string]interface{}); ok {
 		for configID, val := range v {
 			if configID == "provider" {
@@ -138,7 +138,7 @@ func RunConfigTest(data map[string]interface{}, testText string) (vadResult, asr
 			}
 			cfg, ok := val.(map[string]interface{})
 			if !ok {
-				vadResult[configID] = map[string]interface{}{"ok": false, "message": "配置格式无效"}
+				vadResult[configID] = map[string]interface{}{"ok": false, "message": "configformatinvalid"}
 				continue
 			}
 			wrapper, err := pool.Acquire[inter.VAD]("vad", configID, cfg)
@@ -154,12 +154,12 @@ func RunConfigTest(data map[string]interface{}, testText string) (vadResult, asr
 			if err != nil {
 				vadResult[configID] = map[string]interface{}{"ok": false, "message": err.Error(), "first_packet_ms": elapsedMs}
 			} else {
-				vadResult[configID] = map[string]interface{}{"ok": true, "message": "通过", "first_packet_ms": elapsedMs}
+				vadResult[configID] = map[string]interface{}{"ok": true, "message": "through", "first_packet_ms": elapsedMs}
 			}
 		}
 	}
 
-	// ASR：使用 StreamingRecognize 做轻量测试，统计整体耗时
+	// ASR：use StreamingRecognize do轻amounttest，countbodybodytime consumption
 	if v, ok := data["asr"].(map[string]interface{}); ok {
 		for configID, val := range v {
 			if configID == "provider" {
@@ -167,11 +167,11 @@ func RunConfigTest(data map[string]interface{}, testText string) (vadResult, asr
 			}
 			cfg, ok := val.(map[string]interface{})
 			if !ok {
-				asrResult[configID] = map[string]interface{}{"ok": false, "message": "配置格式无效"}
-				log.Debugf("[config_test] ASR config_id=%s 配置格式无效", configID)
+				asrResult[configID] = map[string]interface{}{"ok": false, "message": "configformatinvalid"}
+				log.Debugf("[config_test] ASR config_id=%s configformatinvalid", configID)
 				continue
 			}
-			// 资源池 creator 需要引擎类型（funasr/doubao），用 config_id 会报「不支持的ASR引擎类型」
+			// resourcepool creator need引擎type（funasr/doubao），use config_id will报「unsupportedofASR引擎type」
 			asrEngineType := "funasr"
 			if p, ok := cfg["provider"].(string); ok && p != "" {
 				asrEngineType = p
@@ -185,7 +185,7 @@ func RunConfigTest(data map[string]interface{}, testText string) (vadResult, asr
 			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 			audioCh := make(chan []float32)
 			go func() {
-				const chunk = 3200 // 约 200ms @ 16kHz
+				const chunk = 3200 // about 200ms @ 16kHz
 				for i := 0; i < len(pcm); i += chunk {
 					end := i + chunk
 					if end > len(pcm) {
@@ -215,12 +215,12 @@ func RunConfigTest(data map[string]interface{}, testText string) (vadResult, asr
 			if asrErr != nil {
 				asrResult[configID] = map[string]interface{}{"ok": false, "message": asrErr.Error(), "first_packet_ms": elapsedMs}
 			} else {
-				asrResult[configID] = map[string]interface{}{"ok": true, "message": "通过", "first_packet_ms": elapsedMs}
+				asrResult[configID] = map[string]interface{}{"ok": true, "message": "through", "first_packet_ms": elapsedMs}
 			}
 		}
 	}
 
-	// LLM
+	//LLM
 	if v, ok := data["llm"].(map[string]interface{}); ok {
 		n := 0
 		for k := range v {
@@ -228,15 +228,15 @@ func RunConfigTest(data map[string]interface{}, testText string) (vadResult, asr
 				n++
 			}
 		}
-		log.Debugf("[config_test] LLM 待测 config 数: %d", n)
+		log.Debugf("[config_test]LLM 待测 config count: %d", n)
 		for configID, val := range v {
 			if configID == "provider" {
 				continue
 			}
 			cfg, ok := val.(map[string]interface{})
 			if !ok {
-				llmResult[configID] = map[string]interface{}{"ok": false, "message": "配置格式无效"}
-				log.Debugf("[config_test] LLM config_id=%s 配置格式无效", configID)
+				llmResult[configID] = map[string]interface{}{"ok": false, "message": "configformatinvalid"}
+				log.Debugf("[config_test]LLM config_id=%s configformatinvalid", configID)
 				continue
 			}
 			testCfg := cloneConfigMap(cfg)
@@ -244,7 +244,7 @@ func RunConfigTest(data map[string]interface{}, testText string) (vadResult, asr
 			wrapper, err := pool.Acquire[llm.LLMProvider]("llm", configID, testCfg)
 			if err != nil {
 				llmResult[configID] = map[string]interface{}{"ok": false, "message": err.Error()}
-				log.Debugf("[config_test] LLM config_id=%s Acquire 失败: %v", configID, err)
+				log.Debugf("[config_test]LLM config_id=%s Acquire failed: %v", configID, err)
 				continue
 			}
 			llmProvider := wrapper.GetProvider()
@@ -279,26 +279,26 @@ func RunConfigTest(data map[string]interface{}, testText string) (vadResult, asr
 				resultBase["ok"] = false
 				resultBase["message"] = errMsg
 				llmResult[configID] = resultBase
-				log.Debugf("[config_test] LLM config_id=%s 失败(透传错误): %s", configID, errMsg)
+				log.Debugf("[config_test]LLM config_id=%s failed(透传error): %s", configID, errMsg)
 			} else if gotMessage {
 				resultBase["ok"] = true
-				resultBase["message"] = "通过"
+				resultBase["message"] = "through"
 				llmResult[configID] = resultBase
-				log.Debugf("[config_test] LLM config_id=%s 通过", configID)
+				log.Debugf("[config_test]LLM config_id=%s through", configID)
 			} else if ctx.Err() == context.DeadlineExceeded {
 				resultBase["ok"] = false
-				resultBase["message"] = "超时"
+				resultBase["message"] = "timeout"
 				llmResult[configID] = resultBase
-				log.Debugf("[config_test] LLM config_id=%s 超时", configID)
+				log.Debugf("[config_test]LLM config_id=%s timeout", configID)
 			} else {
 				resultBase["ok"] = false
-				resultBase["message"] = "未收到响应或调用失败"
+				resultBase["message"] = "not receivedtorespondorcallfailed"
 				llmResult[configID] = resultBase
-				log.Debugf("[config_test] LLM config_id=%s 失败(未收到响应)", configID)
+				log.Debugf("[config_test]LLM config_id=%s failed(not receivedtorespond)", configID)
 			}
 		}
 	} else {
-		log.Debugf("[config_test] LLM data.llm 缺失或非 map, ok=%v", ok)
+		log.Debugf("[config_test]LLM data.llm 缺失ornon map, ok=%v", ok)
 	}
 
 	// TTS
@@ -309,7 +309,7 @@ func RunConfigTest(data map[string]interface{}, testText string) (vadResult, asr
 			}
 			cfg, ok := val.(map[string]interface{})
 			if !ok {
-				ttsResult[configID] = map[string]interface{}{"ok": false, "message": "配置格式无效"}
+				ttsResult[configID] = map[string]interface{}{"ok": false, "message": "configformatinvalid"}
 				continue
 			}
 			wrapper, err := pool.Acquire[tts.TTSProvider]("tts", configID, cfg)
@@ -344,10 +344,10 @@ func RunConfigTest(data map[string]interface{}, testText string) (vadResult, asr
 				firstPacketMs = time.Since(t0).Milliseconds()
 			}
 			if totalBytes == 0 {
-				ttsResult[configID] = map[string]interface{}{"ok": false, "message": "未收到有效音频或合成失败", "first_packet_ms": firstPacketMs}
-				log.Debugf("[config_test] TTS config_id=%s 失败(未收到有效音频)", configID)
+				ttsResult[configID] = map[string]interface{}{"ok": false, "message": "not receivedtovalidaudioor合成failed", "first_packet_ms": firstPacketMs}
+				log.Debugf("[config_test] TTS config_id=%s failed(not receivedtovalidaudio)", configID)
 			} else {
-				ttsResult[configID] = map[string]interface{}{"ok": true, "message": "通过", "first_packet_ms": firstPacketMs}
+				ttsResult[configID] = map[string]interface{}{"ok": true, "message": "through", "first_packet_ms": firstPacketMs}
 			}
 		}
 	}
@@ -384,7 +384,7 @@ func llmThinkingEnabled(cfg map[string]interface{}) bool {
 	return mode != "" && mode != "default"
 }
 
-// mapKeys 返回 map 的键列表，用于 debug 日志
+// mapKeys return map ofkeylist，used for debug log
 func mapKeys(m map[string]interface{}) []string {
 	if m == nil {
 		return nil
@@ -396,12 +396,12 @@ func mapKeys(m map[string]interface{}) []string {
 	return keys
 }
 
-// 敏感字段名（小写），脱敏后用于日志
+// 敏感fieldname（smallwrite），脱敏afterused forlog
 var sensitiveKeys = map[string]bool{
 	"api_key": true, "access_token": true, "token": true, "password": true, "secret": true,
 }
 
-// redactSensitive 深拷贝 data 并将敏感字段值替换为 "***"，用于 debug 日志
+// redactSensitive 深拷贝 data andwill敏感fieldvaluereplaceis "***"，used for debug log
 func redactSensitive(data map[string]interface{}) map[string]interface{} {
 	if data == nil {
 		return nil

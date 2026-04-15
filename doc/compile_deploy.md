@@ -5,7 +5,7 @@ This document is for developers who need to compile, debug and deploy this proje
 It is recommended to use this document in the following reading order:
 
 - First look at the overall architecture to clarify the location and calling relationships of each service
-- Then complete compilation and deployment in the order of "Main Program -> Console Backend -> Console Frontend -> Speaker Identification Service"
+- Then complete compilation and deployment in the order of Main Program -> Console Backend -> Console Frontend -> Speaker Identification Service
 - Finally, if you need to create an integrated release package, see the AIO packaging process at the end of the document
 
 This document prioritizes introducing the method of compiling and deploying each service separately; the AIO form is explained separately at the end.

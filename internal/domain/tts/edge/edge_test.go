@@ -22,19 +22,19 @@ func TestEdgeTTSProvider(t *testing.T) {
 	defer cancel()
 
 	t.Run("TestTextToSpeech", func(t *testing.T) {
-		frames, err := provider.TextToSpeech(ctx, "你好，EdgeTTS测试")
+		frames, err := provider.TextToSpeech(ctx, "Hello, Edge TTS test")
 		if err != nil {
-			t.Fatalf("TextToSpeech失败: %v", err)
+			t.Fatalf("TextToSpeechfailed: %v", err)
 		}
 		if len(frames) == 0 {
-			t.Error("未返回任何音频帧")
+			t.Error("did not return any audio frames")
 		}
 	})
 
 	t.Run("TestTextToSpeechStream", func(t *testing.T) {
-		outputChan, err := provider.TextToSpeechStream(ctx, "你好，EdgeTTS流式测试")
+		outputChan, err := provider.TextToSpeechStream(ctx, "Hello, Edge TTS streaming test")
 		if err != nil {
-			t.Fatalf("TextToSpeechStream失败: %v", err)
+			t.Fatalf("TextToSpeechStreamfailed: %v", err)
 		}
 		var receivedFrames [][]byte
 		timeout := time.After(20 * time.Second)
@@ -47,12 +47,12 @@ func TestEdgeTTSProvider(t *testing.T) {
 				}
 				receivedFrames = append(receivedFrames, frame)
 			case <-timeout:
-				t.Error("接收音频帧超时")
+				t.Error("receive audio frame timeout")
 				break ReceiveLoop
 			}
 		}
 		if len(receivedFrames) == 0 {
-			t.Error("未接收到任何音频帧")
+			t.Error("did not receive any audio frames")
 		}
 	})
 }

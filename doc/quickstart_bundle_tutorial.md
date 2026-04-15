@@ -79,7 +79,7 @@ This step will change the `rpath` in the binary from the development machine sou
 Browser access: **http://<Server IP or Domain>:8080**
 
 <!-- Screenshot position: Login interface -->
-> Figure: Web console login interface
+Figure: Web console login interface
 
 ### 2. Configure Services
 

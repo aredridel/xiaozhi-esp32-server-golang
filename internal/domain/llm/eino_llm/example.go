@@ -10,7 +10,7 @@ import (
 	log "xiaozhi-esp32-server-golang/logger"
 )
 
-// ExampleConfig 示例配置
+// ExampleConfig example config
 var ExampleConfig = map[string]interface{}{
 	"type":       "eino_llm",
 	"model_name": "gpt-3.5-turbo",
@@ -20,9 +20,9 @@ var ExampleConfig = map[string]interface{}{
 	"streamable": true,
 }
 
-// ExampleUsage 展示如何使用EinoLLMProvider
+// ExampleUsage demonstrates how to use EinoLLMProvider
 func ExampleUsage() {
-	// 1. OpenAI配置示例
+	// 1. OpenAI config example
 	openaiConfig := map[string]interface{}{
 		"type":       "openai",
 		"model_name": "gpt-3.5-turbo",
@@ -32,7 +32,7 @@ func ExampleUsage() {
 		"streamable": true,
 	}
 
-	// 2. Ollama配置示例
+	// 2. Ollama config example
 	ollamaConfig := map[string]interface{}{
 		"type":       "ollama",
 		"model_name": "llama2",
@@ -41,89 +41,89 @@ func ExampleUsage() {
 		"streamable": true,
 	}
 
-	// 3. 创建提供者
+	// 3. create provider
 	openaiProvider, err := NewEinoLLMProvider(openaiConfig)
 	if err != nil {
-		log.Errorf("创建OpenAI提供者失败: %v", err)
+		log.Errorf("create OpenAI provider failed: %v", err)
 		return
 	}
 
 	ollamaProvider, err := NewEinoLLMProvider(ollamaConfig)
 	if err != nil {
-		log.Errorf("创建Ollama提供者失败: %v", err)
+		log.Errorf("create Ollama provider failed: %v", err)
 		return
 	}
 
-	// 4. 使用Eino原生消息类型
+	// 4. use Eino native message type
 	messages := []*schema.Message{
 		{
 			Role:    schema.System,
-			Content: "你是一个有用的助手",
+			Content: "You are a useful assistant",
 		},
 		{
 			Role:    schema.User,
-			Content: "请介绍一下Eino框架",
+			Content: "Please introduce the Eino framework",
 		},
 	}
 
-	// 5. 基本对话
-	fmt.Println("=== OpenAI 基本对话 ===")
+	// 5. basic conversation
+	fmt.Println("=== OpenAI Basic Conversation ===")
 	responseChan := openaiProvider.ResponseWithContext(context.Background(), "example_session", messages, nil)
 	for resp := range responseChan {
 		if resp.Content != "" {
 			fmt.Print(resp.Content)
 		}
 		if len(resp.ToolCalls) > 0 {
-			fmt.Printf("工具调用: %+v\n", resp.ToolCalls)
+			fmt.Printf("tool call: %+v\n", resp.ToolCalls)
 		}
 	}
 	fmt.Println()
 
-	fmt.Println("=== Ollama 基本对话 ===")
+	fmt.Println("=== Ollama Basic Conversation ===")
 	responseChan = ollamaProvider.ResponseWithContext(context.Background(), "example_session", messages, nil)
 	for resp := range responseChan {
 		if resp.Content != "" {
 			fmt.Print(resp.Content)
 		}
 		if len(resp.ToolCalls) > 0 {
-			fmt.Printf("工具调用: %+v\n", resp.ToolCalls)
+			fmt.Printf("tool call: %+v\n", resp.ToolCalls)
 		}
 	}
 	fmt.Println()
 
-	// 6. 工具调用示例
+	// 6. tool call example
 	tools := []*schema.ToolInfo{
 		{
 			Name:        "get_weather",
 			ParamsOneOf: &schema.ParamsOneOf{
-				// 工具参数定义
+				// tool parameter definition
 			},
 		},
 	}
 
-	fmt.Println("=== 带工具调用的对话 ===")
+	fmt.Println("=== Conversation with tool call ===")
 	toolResponseChan := openaiProvider.ResponseWithContext(context.Background(), "example_session", messages, tools)
 	for resp := range toolResponseChan {
 		if resp.Content != "" {
 			fmt.Print(resp.Content)
 		}
 		if len(resp.ToolCalls) > 0 {
-			fmt.Printf("工具调用: %+v\n", resp.ToolCalls)
+			fmt.Printf("tool call: %+v\n", resp.ToolCalls)
 		}
 	}
 	fmt.Println()
 
-	// 7. 链式调用示例
-	fmt.Println("=== 链式调用示例 ===")
+	// 7. chain call example
+	fmt.Println("=== Chain call example ===")
 	enhancedProvider := openaiProvider.
 		WithMaxTokens(1000).
 		WithStreamable(false)
 
-	fmt.Printf("提供者类型: %s\n", enhancedProvider.GetProviderType())
-	fmt.Printf("模型信息: %+v\n", enhancedProvider.GetModelInfo())
+	fmt.Printf("provider type: %s\n", enhancedProvider.GetProviderType())
+	fmt.Printf("model info: %+v\n", enhancedProvider.GetModelInfo())
 }
 
-// ExampleAdvancedUsage 高级用法示例
+// ExampleAdvancedUsage advanced usage example
 func ExampleAdvancedUsage() {
 	config := map[string]interface{}{
 		"type":       "openai",
@@ -135,47 +135,47 @@ func ExampleAdvancedUsage() {
 
 	provider, err := NewEinoLLMProvider(config)
 	if err != nil {
-		log.Errorf("创建提供者失败: %v", err)
+		log.Errorf("create provider failed: %v", err)
 		return
 	}
 
-	// 使用上下文控制
+	// use context control
 	ctx := context.Background()
 	messages := []*schema.Message{
 		{
 			Role:    schema.User,
-			Content: "请写一个关于AI的长篇文章",
+			Content: "Please write a long article about AI",
 		},
 	}
 
-	fmt.Println("=== 带上下文控制的对话 ===")
+	fmt.Println("=== Conversation with context control ===")
 	responseChan := provider.ResponseWithContext(ctx, "advanced_session", messages, nil)
 	for resp := range responseChan {
 		if resp.Content != "" {
 			fmt.Print(resp.Content)
 		}
 		if len(resp.ToolCalls) > 0 {
-			fmt.Printf("工具调用: %+v\n", resp.ToolCalls)
+			fmt.Printf("tool call: %+v\n", resp.ToolCalls)
 		}
 	}
 	fmt.Println()
 
-	// 直接使用Eino ChatModel
+	// direct use Eino ChatModel
 	chatModel := provider.GetChatModel()
 	result, err := chatModel.Generate(ctx, messages)
 	if err != nil {
-		log.Errorf("直接调用ChatModel失败: %v", err)
+		log.Errorf("direct call ChatModel failed: %v", err)
 		return
 	}
 
-	fmt.Printf("直接调用结果: %s\n", result.Content)
+	fmt.Printf("direct call result: %s\n", result.Content)
 }
 
-// ExampleMultiProvider 多提供者示例
+// ExampleMultiProvider multiple provider example
 func ExampleMultiProvider() {
 	providers := make(map[string]*EinoLLMProvider)
 
-	// 创建多个提供者
+	// create multiple providers
 	configs := map[string]map[string]interface{}{
 		"openai": {
 			"type":       "openai",
@@ -192,76 +192,76 @@ func ExampleMultiProvider() {
 	for name, config := range configs {
 		provider, err := NewEinoLLMProvider(config)
 		if err != nil {
-			log.Errorf("创建%s提供者失败: %v", name, err)
+			log.Errorf("create %s provider failed: %v", name, err)
 			continue
 		}
 		providers[name] = provider
 	}
 
-	// 使用不同提供者处理相同请求
+	// use different providers to process different requests
 	messages := []*schema.Message{
 		{
 			Role:    schema.User,
-			Content: "你好，请介绍一下你自己",
+			Content: "Hello, please introduce yourself",
 		},
 	}
 
 	for name, provider := range providers {
-		fmt.Printf("=== %s 提供者响应 ===\n", name)
+		fmt.Printf("=== %s provider response ===\n", name)
 		responseChan := provider.ResponseWithContext(context.Background(), "multi_session", messages, nil)
 		for resp := range responseChan {
 			if resp.Content != "" {
 				fmt.Print(resp.Content)
 			}
 			if len(resp.ToolCalls) > 0 {
-				fmt.Printf("工具调用: %+v\n", resp.ToolCalls)
+				fmt.Printf("tool call: %+v\n", resp.ToolCalls)
 			}
 		}
 		fmt.Println()
 	}
 }
 
-// ExampleWithTools 工具调用示例
+// ExampleWithTools tool call example
 func ExampleWithTools() {
 	provider, err := NewEinoLLMProvider(ExampleConfig)
 	if err != nil {
-		log.Errorf("创建提供者失败: %v", err)
+		log.Errorf("create provider failed: %v", err)
 		return
 	}
 
-	// 使用Eino原生消息类型
+	// use Eino native message type
 	messages := []*schema.Message{
 		{
 			Role:    schema.User,
-			Content: "今天北京的天气如何？请帮我查询一下。",
+			Content: "How is the weather in Beijing today? Please help me check.",
 		},
 	}
 
-	// 使用Eino原生工具类型
+	// use Eino native tool type
 	tools := []*schema.ToolInfo{
 		{
 			Name:        "get_weather",
 			ParamsOneOf: &schema.ParamsOneOf{
-				// 简化的工具参数定义
-				// 在实际使用中，这里需要正确定义参数结构
+				// simplified tool parameter definition
+				// in actual use, need to properly define parameter structure
 			},
 		},
 	}
 
-	fmt.Println("=== 工具调用示例 ===")
+	fmt.Println("=== Tool call example ===")
 
-	// 使用Eino原生工具调用接口
-	fmt.Println("--- Eino原生工具调用 ---")
+	// use Eino native tool call interface
+	fmt.Println("--- Eino native tool call ---")
 	responseChan := provider.ResponseWithContext(context.Background(), "tool_session", messages, tools)
 	for resp := range responseChan {
-		fmt.Printf("响应: %+v\n", resp)
+		fmt.Printf("response: %+v\n", resp)
 	}
 }
 
-// MultiProviderExample 多提供者示例
+// MultiProviderExample multiple provider example
 func MultiProviderExample() {
-	// OpenAI提供者示例
-	fmt.Println("=== OpenAI 提供者示例 ===")
+	// OpenAI provider example
+	fmt.Println("=== OpenAI provider example ===")
 	openaiConfig := map[string]interface{}{
 		"type":       "openai",
 		"model_name": "gpt-3.5-turbo",
@@ -272,14 +272,14 @@ func MultiProviderExample() {
 
 	openaiProvider, err := NewEinoLLMProvider(openaiConfig)
 	if err != nil {
-		log.Errorf("创建OpenAI提供者失败: %v", err)
+		log.Errorf("create OpenAI provider failed: %v", err)
 		return
 	}
 
-	fmt.Printf("提供者类型: %s\n", openaiProvider.GetProviderType())
+	fmt.Printf("provider type: %s\n", openaiProvider.GetProviderType())
 
-	// Ollama提供者示例
-	fmt.Println("\n=== Ollama 提供者示例 ===")
+	// Ollama provider example
+	fmt.Println("\n=== Ollama provider example ===")
 	ollamaConfig := map[string]interface{}{
 		"type":       "ollama",
 		"model_name": "llama2",
@@ -289,207 +289,207 @@ func MultiProviderExample() {
 
 	ollamaProvider, err := NewEinoLLMProvider(ollamaConfig)
 	if err != nil {
-		log.Errorf("创建Ollama提供者失败: %v", err)
+		log.Errorf("create Ollama provider failed: %v", err)
 		return
 	}
 
-	fmt.Printf("提供者类型: %s\n", ollamaProvider.GetProviderType())
+	fmt.Printf("provider type: %s\n", ollamaProvider.GetProviderType())
 
-	// 使用Eino原生消息类型
+	// use Eino native message type
 	messages := []*schema.Message{
 		{
 			Role:    schema.User,
-			Content: "请介绍一下你自己。",
+			Content: "Please introduce yourself.",
 		},
 	}
 
-	// 分别测试两个提供者
+	// test two providers separately
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	fmt.Println("\n--- OpenAI 响应 ---")
+	fmt.Println("\n--- OpenAI response ---")
 	openaiResponse := openaiProvider.ResponseWithContext(ctx, "openai_session", messages, nil)
 	for resp := range openaiResponse {
 		if resp.Content != "" {
 			fmt.Print(resp.Content)
 		}
 		if len(resp.ToolCalls) > 0 {
-			fmt.Printf("工具调用: %+v\n", resp.ToolCalls)
+			fmt.Printf("tool call: %+v\n", resp.ToolCalls)
 		}
 	}
 
-	fmt.Println("\n--- Ollama 响应 ---")
+	fmt.Println("\n--- Ollama response ---")
 	ollamaResponse := ollamaProvider.ResponseWithContext(ctx, "ollama_session", messages, nil)
 	for resp := range ollamaResponse {
 		if resp.Content != "" {
 			fmt.Print(resp.Content)
 		}
 		if len(resp.ToolCalls) > 0 {
-			fmt.Printf("工具调用: %+v\n", resp.ToolCalls)
+			fmt.Printf("tool call: %+v\n", resp.ToolCalls)
 		}
 	}
 	fmt.Println()
 }
 
-// EinoFrameworkAdvantages Eino框架的优势说明
+// EinoFrameworkAdvantages Eino framework advantages description
 func EinoFrameworkAdvantages() string {
 	return `
-Eino框架的主要优势：
+Eino framework main advantages:
 
-1. **组件化设计**
-   - 丰富的组件抽象（ChatModel, Tool, ChatTemplate, Retriever等）
-   - 每个组件都有统一的输入输出接口
-   - 支持组件嵌套和复杂业务逻辑封装
+1. **Component-based design**
+   - Rich component abstractions (ChatModel, Tool, ChatTemplate, Retriever, etc)
+   - Each component has unified input/output interface
+   - Support component nesting and complex business logic encapsulation
 
-2. **强大的编排能力**
-   - 基于图的数据流编排
-   - 自动处理类型检查、流处理、并发管理
-   - 支持分支执行、状态管理、字段映射
+2. **Strong orchestration capability**
+   - Graph-based data flow orchestration
+   - Automatic type checking, stream processing, concurrent management
+   - Support branch execution, state management, field mapping
 
-3. **完整的流处理**
-   - 自动串联流式数据块
-   - 自动装箱非流数据为流
-   - 自动合并多个流
-   - 自动复制流到多个下游节点
+3. **Complete stream processing**
+   - Automatic concatenation of streaming data blocks
+   - Automatic boxing of non-stream data as stream
+   - Automatic merging of multiple streams
+   - Automatic replication of stream to multiple downstream nodes
 
-4. **高扩展性**
-   - 支持自定义回调处理器
-   - 五种切面支持（OnStart, OnEnd, OnError等）
-   - 可注入日志、追踪、监控等横切关注点
+4. **High extensibility**
+   - Support custom callback processors
+   - Five cut-face support (OnStart, OnEnd, OnError, etc)
+   - Injectable log, trace, monitor and other cross-cutting concerns
 
-5. **生产就绪**
-   - 完整的错误处理机制
-   - 支持超时和取消操作
-   - 连接池和性能优化
-   - 详细的日志和监控
+5. **Production ready**
+   - Complete error processing mechanism
+   - Support timeout and cancel operations
+   - Connection pool and performance optimization
+   - Detailed log and monitoring
 
-本实现特点：
+This implementation features:
 
-**多提供者支持**：
-- 统一的Eino接口支持OpenAI和Ollama
-- 通过type配置灵活切换提供者
-- 每个提供者都使用相同的Eino ChatModel接口
+**Multi-provider support**:
+- Unified Eino interface support for OpenAI and Ollama
+- Flexible provider switching through type config
+- Each provider uses the same Eino ChatModel interface
 
-**Eino原生实现**：
-- 直接使用*schema.Message类型进行对话
-- 直接使用*schema.ToolInfo类型进行工具调用
-- 完全基于Eino框架构建，无需类型转换
+**Eino native implementation**:
+- Direct use of *schema.Message type for conversation
+- Direct use of *schema.ToolInfo type for tool calls
+- Completely built based on Eino framework, no type conversion needed
 
-**增强功能**：
-- 链式调用支持 (WithMaxTokens, WithStreamable)
-- 统一的错误处理和日志记录
-- 支持流式和非流式调用模式
-- 完全兼容原有LLMProvider接口
+**Enhanced functions**:
+- Chain call support (WithMaxTokens, WithStreamable)
+- Unified error processing and log recording
+- Support streaming and non-streaming call patterns
+- Fully compatible with original LLMProvider interface
 
-**最佳实践**：
-- 支持上下文取消和超时控制
-- 结构化日志和监控集成
-- 类型安全的配置管理
-- 资源自动管理和清理
+**Best practices**:
+- Support context cancel and timeout control
+- Structured log and monitoring integration
+- Type-safe config management
+- Resource automatic management and cleanup
 
-这种实现方式真正使用了Eino框架的核心能力，同时支持多种LLM提供者。
+This implementation truly leverages the core capabilities of the Eino framework while supporting multiple LLM providers.
 `
 }
 
-// BasicUsageExample 基础用法示例
+// BasicUsageExample basic usage example
 func BasicUsageExample() {
 	provider, err := NewEinoLLMProvider(ExampleConfig)
 	if err != nil {
-		log.Errorf("创建提供者失败: %v", err)
+		log.Errorf("create provider failed: %v", err)
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	// 演示链式配置
+	// demo chain config
 	enhancedProvider := provider.
 		WithMaxTokens(2000).
 		WithStreamable(true)
 
-	// 获取底层的Eino ChatModel
+	// get underlying Eino ChatModel
 	chatModel := enhancedProvider.GetChatModel()
-	fmt.Printf("底层ChatModel: %+v\n", chatModel)
+	fmt.Printf("underlying ChatModel: %+v\n", chatModel)
 
-	// 获取提供者类型
+	// get provider type
 	providerType := enhancedProvider.GetProviderType()
-	fmt.Printf("提供者类型: %s\n", providerType)
+	fmt.Printf("provider type: %s\n", providerType)
 
-	// 获取增强后的模型信息
+	// get enhanced model info
 	modelInfo := enhancedProvider.GetModelInfo()
-	fmt.Printf("增强模型信息: %+v\n", modelInfo)
+	fmt.Printf("enhanced model info: %+v\n", modelInfo)
 
-	// 复杂对话示例 - 使用Eino原生消息类型
+	// complex conversation example - use Eino native message type
 	messages := []*schema.Message{
 		{
 			Role:    schema.System,
-			Content: "你是一个专业的软件架构师，精通Go语言和AI应用开发。",
+			Content: "You are a professional software architect, proficient in Go language and AI application development.",
 		},
 		{
 			Role:    schema.User,
-			Content: "请设计一个基于Eino框架的聊天机器人系统架构。",
+			Content: "Please design a chatbot system architecture based on Eino framework.",
 		},
 	}
 
-	// 使用增强配置进行调用
+	// use enhanced config to perform call
 	responseChan := enhancedProvider.ResponseWithContext(ctx, "basic_example", messages, nil)
-	fmt.Printf("架构设计响应:\n")
+	fmt.Printf("architecture design response:\n")
 	for resp := range responseChan {
 		if resp.Content != "" {
 			fmt.Print(resp.Content)
 		}
 		if len(resp.ToolCalls) > 0 {
-			fmt.Printf("工具调用: %+v\n", resp.ToolCalls)
+			fmt.Printf("tool call: %+v\n", resp.ToolCalls)
 		}
 	}
 	fmt.Println()
 }
 
-// EinoNativeExample Eino原生API示例
+// EinoNativeExample Eino native API example
 func EinoNativeExample() {
 	provider, err := NewEinoLLMProvider(ExampleConfig)
 	if err != nil {
-		log.Errorf("创建提供者失败: %v", err)
+		log.Errorf("create provider failed: %v", err)
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 使用Eino原生消息类型
+	// use Eino native message type
 	messages := []*schema.Message{
 		{
 			Role:    schema.System,
-			Content: "你是一个有用的AI助手。",
+			Content: "You are a useful AI assistant.",
 		},
 		{
 			Role:    schema.User,
-			Content: "请简单介绍一下Eino框架。",
+			Content: "Please briefly introduce the Eino framework.",
 		},
 	}
 
-	fmt.Println("=== Eino原生API示例 ===")
+	fmt.Println("=== Eino native API example ===")
 
-	// 1. 使用EinoResponse
-	fmt.Println("--- EinoResponse ---")
+	// 1. use Eino Response
+	fmt.Println("--- Eino Response ---")
 	responseChan := provider.ResponseWithContext(ctx, "eino_session", messages, nil)
 	for resp := range responseChan {
 		if resp.Content != "" {
 			fmt.Print(resp.Content)
 		}
 		if len(resp.ToolCalls) > 0 {
-			fmt.Printf("工具调用: %+v\n", resp.ToolCalls)
+			fmt.Printf("tool call: %+v\n", resp.ToolCalls)
 		}
 	}
 	fmt.Println()
 
-	// 2. 使用EinoResponseWithTools
-	fmt.Println("\n--- EinoResponseWithTools ---")
+	// 2. use Eino ResponseWithTools
+	fmt.Println("\n--- Eino ResponseWithTools ---")
 	tools := []*schema.ToolInfo{
 		{
 			Name:        "search_docs",
 			ParamsOneOf: &schema.ParamsOneOf{
-				// 工具参数定义
+				// tool parameter definition
 			},
 		},
 	}
@@ -497,10 +497,10 @@ func EinoNativeExample() {
 	toolResponseChan := provider.ResponseWithContext(ctx, "eino_tools_session", messages, tools)
 	for resp := range toolResponseChan {
 		if resp.Content != "" {
-			fmt.Printf("内容: %s\n", resp.Content)
+			fmt.Printf("content: %s\n", resp.Content)
 		}
 		if len(resp.ToolCalls) > 0 {
-			fmt.Printf("工具调用: %+v\n", resp.ToolCalls)
+			fmt.Printf("tool call: %+v\n", resp.ToolCalls)
 		}
 	}
 }

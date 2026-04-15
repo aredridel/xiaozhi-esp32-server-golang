@@ -2,8 +2,8 @@ package xunfei
 
 import "time"
 
-// Config 讯飞听写(WebSocket IAT)配置
-// 文档: https://www.xfyun.cn/doc/asr/voicedictation/API.html
+// Config Xunfei speech-to-text (WebSocket IAT) config
+// documentation: https://www.xfyun.cn/doc/asr/voicedictation/API.html
 type Config struct {
 	AppID      string
 	APIKey     string

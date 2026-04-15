@@ -20,16 +20,16 @@ Recommended return audio format: `audio/wav` (16-bit PCM).
 
 | Admin Field | Purpose | Send Location |
 | --- | --- | --- |
-| `api_url` | IndexTTS service address | As base URL, concatenate endpoints |
-| `api_key` | Optional auth | `Authorization: Bearer <api_key>` |
-| `model` | Model name | `/audio/speech` request body `model` |
-| `voice` | Default voice | `/audio/speech` request body `voice` |
-| `frame_duration` | Frame duration (ms) | Local audio frame segmentation parameter |
+| api_url | IndexTTS service address | As base URL, concatenate endpoints |
+| api_key | Optional auth | Authorization: Bearer <api_key> |
+| model | Model name | /audio/speech request body model |
+| voice | Default voice | /audio/speech request body voice |
+| frame_duration | Frame duration (ms) | Local audio frame segmentation parameter |
 
 Description:
 
-- When administrator interface clicks "Voice" dropdown, it will use the latest `api_url` in the current input box to pull `/audio/voices`.
-- `api_url` supports filling in base address (e.g., `http://127.0.0.1:7860`), also compatible with filling in to specific path (e.g., `/audio/speech`).
+- When administrator interface clicks Voice dropdown, it will use the latest api_url in the current input box to pull /audio/voices.
+- api_url supports filling in base address (e.g., http://127.0.0.1:7860), also compatible with filling in to specific path (e.g., /audio/speech).
 
 ## 3. Interface Requirements
 
@@ -39,8 +39,8 @@ Purpose: Administrator configuration page "Voice" dropdown, user-side voice opti
 
 Request headers:
 
-- `Accept: application/json`
-- `Authorization: Bearer <api_key>` (optional)
+- Accept: application/json
+- Authorization: Bearer <api_key> (optional)
 
 Return example (recommended):
 
@@ -62,9 +62,9 @@ Purpose: Main program TTS synthesis, post-cloning preview.
 
 Request headers:
 
-- `Content-Type: application/json`
-- `Accept: audio/wav,application/octet-stream,*/*`
-- `Authorization: Bearer <api_key>` (optional)
+- Content-Type: application/json
+- Accept: audio/wav,application/octet-stream,*/*
+- Authorization: Bearer <api_key> (optional)
 
 Request body example:
 
@@ -89,8 +89,8 @@ Request type: `multipart/form-data`
 
 Form fields:
 
-- `voice`: Desired generated voice ID
-- `audio`: Reference audio file (wav/mp3/m4a, etc.)
+- voice: Desired generated voice ID
+- audio: Reference audio file (wav/mp3/m4a, etc.)
 
 Return example:
 
@@ -103,7 +103,7 @@ Return example:
 
 Requirements:
 
-- Recommended to include `voice` field in response; if missing, this project will fall back to using the `voice` field value from the request.
+- Recommended to include voice field in response; if missing, this project will fall back to using the voice field value from the request.
 
 ## 4. Compatibility Reference (api_server.py)
 
@@ -122,9 +122,9 @@ Reference link:
 
 Priority check:
 
-- Whether `api_url` is reachable (latest input value)
-- Whether `/audio/voices` returns JSON object
-- Whether `api_key` is needed
+- Whether api_url is reachable (latest input value)
+- Whether /audio/voices returns JSON object
+- Whether api_key is needed
 
 ### 5.2 Synthesis successful but playback abnormal
 
@@ -138,5 +138,5 @@ Priority check:
 
 Priority check:
 
-- Whether `/audio/clone` accepts `voice + audio` multipart request
-- Whether response JSON is parseable, whether it contains available `voice`
+- Whether /audio/clone accepts voice + audio multipart request
+- Whether response JSON is parseable, whether it contains available voice

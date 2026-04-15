@@ -18,58 +18,59 @@ var (
 	clientInstance *MemobaseClient
 	once           sync.Once
 	configOnce     sync.Once
-	// 使用固定的命名空间UUID，用于生成设备ID的UUID v5
-	// 这样同一个设备ID总是映射到相同的UUID
-	deviceNamespace = uuid.MustParse("6ba7b810-9dad-11d1-80b4-00c04fd430c8") // DNS命名空间
+	// use fixed namespace UUID, used for generating device ID UUID v5
+	// this ensures that the same device ID always maps to the same UUID
+	deviceNamespace = uuid.MustParse("6ba7b810-9dad-11d1-80b4-00c04fd430c8") // DNS namespace
 )
 
-// MemobaseClient Memobase客户端管理器
+// MemobaseClient Memobase client manager
 type MemobaseClient struct {
 	client *core.MemoBaseClient
-	users  sync.Map // 缓存用户对象
+	users  sync.Map // cache user objects
 	sync.RWMutex
 	EnableSearch    bool
 	SearchThreshold float64
 	SearchTopk      int
 }
 
-// GetWithConfig 使用配置获取Memobase客户端实例（单例模式）
+// GetWithConfig gets Memobase client instance using config (singleton pattern)
 func GetWithConfig(config map[string]interface{}) (*MemobaseClient, error) {
 	var initErr error
 	configOnce.Do(func() {
 		iClient := &MemobaseClient{
 			users: sync.Map{},
 		}
-		// 从配置中读取 memobase 相关配置		// 读取必要的配置项
+		// read memobase relevant config from config
+		// read required config items
 		projectUrlInterface, ok := config["base_url"]
 		if !ok {
-			initErr = fmt.Errorf("memobase.base_url 配置缺失")
+			initErr = fmt.Errorf("memobase.base_url config is missing")
 			return
 		}
 		baseUrl, ok := projectUrlInterface.(string)
 		if !ok {
-			initErr = fmt.Errorf("memobase.base_url 必须是字符串")
+			initErr = fmt.Errorf("memobase.base_url must be a string")
 			return
 		}
 
 		apiKeyInterface, ok := config["api_key"]
 		if !ok {
-			initErr = fmt.Errorf("memobase.api_key 配置缺失")
+			initErr = fmt.Errorf("memobase.api_key config is missing")
 			return
 		}
 		apiKey, ok := apiKeyInterface.(string)
 		if !ok {
-			initErr = fmt.Errorf("memobase.api_key 必须是字符串")
+			initErr = fmt.Errorf("memobase.api_key must be a string")
 			return
 		}
 
 		if baseUrl == "" || apiKey == "" {
-			initErr = fmt.Errorf("Memobase 配置不完整: base_url 或 api_key 为空")
-			log.Log().Errorf("Memobase 初始化失败: %v", initErr)
+			initErr = fmt.Errorf("Memobase config incomplete: base_url or api_key is empty")
+			log.Log().Errorf("Memobase initialization failed: %v", initErr)
 			return
 		}
 
-		// 读取可选的搜索配置
+		// read optional search config
 		enableSearchInterface, ok := config["enable_search"]
 		if ok {
 			enableSearch, ok := enableSearchInterface.(bool)
@@ -94,18 +95,18 @@ func GetWithConfig(config map[string]interface{}) (*MemobaseClient, error) {
 			}
 		}
 
-		// 创建客户端
+		// create client
 		client, err := core.NewMemoBaseClient(baseUrl, apiKey)
 		if err != nil {
-			initErr = fmt.Errorf("创建 Memobase 客户端失败: %v", err)
-			log.Log().Errorf("Memobase 初始化失败: %v", initErr)
+			initErr = fmt.Errorf("create Memobase client failed: %v", err)
+			log.Log().Errorf("Memobase initialization failed: %v", initErr)
 			return
 		}
 
 		iClient.client = client
 		clientInstance = iClient
 
-		log.Log().Infof("Memobase 客户端初始化成功, project_url: %s", baseUrl)
+		log.Log().Infof("Memobase client initialized successfully, project_url: %s", baseUrl)
 	})
 
 	if initErr != nil {
@@ -114,8 +115,8 @@ func GetWithConfig(config map[string]interface{}) (*MemobaseClient, error) {
 	return clientInstance, nil
 }
 
-// deviceIDToUUID 将设备ID转换为UUID v5格式
-// 使用UUID v5确保同一个设备ID总是生成相同的UUID
+// deviceIDToUUID converts deviceID to UUID v5 format
+// use UUID v5 to ensure the same deviceID always generates the same UUID
 func deviceIDToUUID(deviceID string) string {
 	return uuid.NewSHA1(deviceNamespace, []byte(deviceID)).String()
 }
@@ -124,10 +125,10 @@ func IsEnableSearch() bool {
 	return clientInstance.EnableSearch
 }
 
-// AddMessage 添加消息到Memobase
+// AddMessage adds message to Memobase
 func (m *MemobaseClient) AddMessage(ctx context.Context, agentID string, msg schema.Message) error {
 	memobaseUserID := deviceIDToUUID(agentID)
-	// 构建消息
+	// build message
 	messages := []blob.OpenAICompatibleMessage{
 		{
 			Role:    string(msg.Role),
@@ -135,7 +136,7 @@ func (m *MemobaseClient) AddMessage(ctx context.Context, agentID string, msg sch
 		},
 	}
 
-	// 如果有工具调用，添加到消息中
+	// if have tool call, add to message
 	if len(msg.ToolCalls) > 0 {
 		return nil
 		/*for _, toolCall := range msg.ToolCalls {
@@ -146,7 +147,7 @@ func (m *MemobaseClient) AddMessage(ctx context.Context, agentID string, msg sch
 		}*/
 	}
 
-	// 创建ChatBlob
+	// create ChatBlob
 	chatBlob := &blob.ChatBlob{
 		BaseBlob: blob.BaseBlob{
 			Type: blob.ChatType,
@@ -154,23 +155,23 @@ func (m *MemobaseClient) AddMessage(ctx context.Context, agentID string, msg sch
 		Messages: messages,
 	}
 
-	// 获取或创建用户实例（使用UUID格式的userID）
+	// get or create user instance (use UUID format of userID)
 	user, err := m.getUser(memobaseUserID)
 	if err != nil {
-		log.Log().Errorf("获取或创建用户失败, agentID: %s, memobaseUserID: %s, error: %v", agentID, memobaseUserID, err)
-		return fmt.Errorf("获取或创建用户失败: %v", err)
+		log.Log().Errorf("get or create user failed, agentID: %s, memobaseUserID: %s, error: %v", agentID, memobaseUserID, err)
+		return fmt.Errorf("get or create user failed: %v", err)
 	}
 
-	// 插入消息（异步）
+	// insert message (async)
 	blobID, err := user.Insert(chatBlob, false)
 	if err != nil {
-		log.Log().Errorf("添加消息到Memobase失败, deviceID: %s, error: %v", agentID, err)
-		return fmt.Errorf("添加消息到Memobase失败: %v", err)
+		log.Log().Errorf("add message to Memobase failed, deviceID: %s, error: %v", agentID, err)
+		return fmt.Errorf("add message to Memobase failed: %v", err)
 	}
 
 	//user.Flush(blob.ChatType, false)
 
-	log.Log().Debugf("成功添加消息到Memobase, deviceID: %s, blobID: %s", agentID, blobID)
+	log.Log().Debugf("successfully added message to Memobase, deviceID: %s, blobID: %s", agentID, blobID)
 	return nil
 }
 
@@ -178,36 +179,36 @@ func (m *MemobaseClient) Flush(ctx context.Context, agentID string) error {
 	memobaseUserID := deviceIDToUUID(agentID)
 	user, err := m.getUser(memobaseUserID)
 	if err != nil {
-		log.Log().Errorf("刷新用户记忆失败, agentID: %s, memobaseUserID: %s, error: %v", agentID, memobaseUserID, err)
-		return fmt.Errorf("刷新用户记忆失败: %v", err)
+		log.Log().Errorf("refresh user memory failed, agentID: %s, memobaseUserID: %s, error: %v", agentID, memobaseUserID, err)
+		return fmt.Errorf("refresh user memory failed: %v", err)
 	}
 	user.Flush(blob.ChatType, false)
 	return nil
 }
 
-// GetContext 获取用户上下文
+// GetContext gets user context
 func (m *MemobaseClient) GetContext(ctx context.Context, agentID string, maxToken int) (string, error) {
 
-	// 将设备ID转换为UUID格式（Memobase要求）
+	// convert deviceID to UUID format (required by Memobase)
 	memobaseUserID := deviceIDToUUID(agentID)
 
-	// 获取用户实例（不执行 HTTP GET 请求，只创建实例）
+	// get user instance (does not execute HTTP GET request, only creates instance)
 	user, err := m.getUser(memobaseUserID)
 	if err != nil {
-		log.Log().Errorf("获取用户实例失败, agentID: %s, memobaseUserID: %s, error: %v", agentID, memobaseUserID, err)
-		return "", fmt.Errorf("获取用户实例失败: %v", err)
+		log.Log().Errorf("get user instance failed, agentID: %s, memobaseUserID: %s, error: %v", agentID, memobaseUserID, err)
+		return "", fmt.Errorf("get user instance failed: %v", err)
 	}
 
-	// 获取上下文，使用默认选项
+	// get context, use default options
 	context, err := user.Context(&core.ContextOptions{
 		MaxTokenSize: maxToken,
 	})
 	if err != nil {
-		log.Log().Errorf("从Memobase获取上下文失败, agentID: %s, memobaseUserID: %s, error: %v", agentID, memobaseUserID, err)
-		return "", fmt.Errorf("从Memobase获取上下文失败: %v", err)
+		log.Log().Errorf("get context from Memobase failed, agentID: %s, memobaseUserID: %s, error: %v", agentID, memobaseUserID, err)
+		return "", fmt.Errorf("get context from Memobase failed: %v", err)
 	}
 
-	log.Log().Debugf("成功从Memobase获取上下文, agentID: %s, context长度: %d", agentID, len(context))
+	log.Log().Debugf("successfully got context from Memobase, agentID: %s, context length: %d", agentID, len(context))
 	return context, nil
 }
 
@@ -216,23 +217,23 @@ func (m *MemobaseClient) Search(ctx context.Context, agentID string, query strin
 		return "", nil
 	}
 	topK = m.SearchTopk
-	// 将设备ID转换为UUID格式（Memobase要求）
+	// convert deviceID to UUID format (required by Memobase)
 	memobaseUserID := deviceIDToUUID(agentID)
 
-	// 获取用户实例（不执行 HTTP GET 请求，只创建实例）
+	// get user instance (does not execute HTTP GET request, only creates instance)
 	user, err := m.getUser(memobaseUserID)
 	if err != nil {
-		log.Log().Errorf("获取用户实例失败, agentID: %s, memobaseUserID: %s, error: %v", agentID, memobaseUserID, err)
-		return "", fmt.Errorf("获取用户实例失败: %v", err)
+		log.Log().Errorf("get user instance failed, agentID: %s, memobaseUserID: %s, error: %v", agentID, memobaseUserID, err)
+		return "", fmt.Errorf("get user instance failed: %v", err)
 	}
 
 	topK = 2
 
-	// 搜索event
+	// search event
 	userEventList, err := user.SearchEvent(query, topK, 0.2, int(timeRangeDays))
 	if err != nil {
-		log.Log().Errorf("从Memobase搜索事件失败, agentID: %s, error: %v", agentID, err)
-		return "", fmt.Errorf("从Memobase搜索事件失败: %v", err)
+		log.Log().Errorf("search event from Memobase failed, agentID: %s, error: %v", agentID, err)
+		return "", fmt.Errorf("search event from Memobase failed: %v", err)
 	}
 
 	var eventList []string
@@ -240,14 +241,14 @@ func (m *MemobaseClient) Search(ctx context.Context, agentID string, query strin
 		eventList = append(eventList, fmt.Sprintf("- %s: %s", event.CreatedAt, event.EventData.EventTip))
 	}
 
-	// 转换为字符串
+	// convert to string
 	userEventStr := strings.Join(eventList, "\n")
 
-	log.Log().Debugf("成功从Memobase搜索事件, agentID: %s, event数量: %d", agentID, len(eventList))
+	log.Log().Debugf("successfully searched event from Memobase, agentID: %s, event count: %d", agentID, len(eventList))
 	return userEventStr, nil
 }
 
-// AddBatchMessages 批量添加消息到Memobase
+// AddBatchMessages batch adds messages to Memobase
 func (m *MemobaseClient) AddBatchMessages(ctx context.Context, userID string, messages []schema.Message) error {
 	m.Lock()
 	defer m.Unlock()
@@ -256,7 +257,7 @@ func (m *MemobaseClient) AddBatchMessages(ctx context.Context, userID string, me
 		return nil
 	}
 
-	// 转换消息格式
+	// convert message format
 	blobMessages := make([]blob.OpenAICompatibleMessage, 0, len(messages))
 	for _, msg := range messages {
 		blobMessages = append(blobMessages, blob.OpenAICompatibleMessage{
@@ -265,7 +266,7 @@ func (m *MemobaseClient) AddBatchMessages(ctx context.Context, userID string, me
 		})
 	}
 
-	// 创建ChatBlob
+	// create ChatBlob
 	chatBlob := &blob.ChatBlob{
 		BaseBlob: blob.BaseBlob{
 			Type: blob.ChatType,
@@ -273,51 +274,51 @@ func (m *MemobaseClient) AddBatchMessages(ctx context.Context, userID string, me
 		Messages: blobMessages,
 	}
 
-	// 将设备ID转换为UUID格式（Memobase要求）
+	// convert deviceID to UUID format (required by Memobase)
 	memobaseUserID := deviceIDToUUID(userID)
 
-	// 获取或创建用户实例（使用UUID格式的userID）
+	// get or create user instance (use UUID format of userID)
 	user, err := m.getUser(userID)
 	if err != nil {
-		log.Log().Errorf("批量添加消息: 获取或创建用户失败, deviceID: %s, memobaseUserID: %s, error: %v", userID, memobaseUserID, err)
-		return fmt.Errorf("获取或创建用户失败: %v", err)
+		log.Log().Errorf("batch add message: get or create user failed, deviceID: %s, memobaseUserID: %s, error: %v", userID, memobaseUserID, err)
+		return fmt.Errorf("get or create user failed: %v", err)
 	}
 
-	// 插入消息（异步）
+	// insert message (async)
 	blobID, err := user.Insert(chatBlob, false)
 	if err != nil {
-		log.Log().Errorf("批量添加消息到Memobase失败, deviceID: %s, error: %v", userID, err)
-		return fmt.Errorf("批量添加消息到Memobase失败: %v", err)
+		log.Log().Errorf("batch add message to Memobase failed, deviceID: %s, error: %v", userID, err)
+		return fmt.Errorf("batch add message to Memobase failed: %v", err)
 	}
 
-	log.Log().Debugf("成功批量添加 %d 条消息到Memobase, deviceID: %s, blobID: %s", len(messages), userID, blobID)
+	log.Log().Debugf("successfully batch added %d messages to Memobase, deviceID: %s, blobID: %s", len(messages), userID, blobID)
 	return nil
 }
 
-// GetMessages 获取用户的历史消息
-// 实现 BaseMemoryProvider 接口
-// 注意：Memobase 主要用于长期记忆和上下文增强，不提供历史消息检索功能
+// GetMessages gets user's history messages
+// implements BaseMemoryProvider interface
+// Note: Memobase is mainly used for long-term memory and context enhancement, does not provide history message retrieve function
 func (m *MemobaseClient) GetMessages(ctx context.Context, agentID string, count int) ([]*schema.Message, error) {
 	return []*schema.Message{}, nil
 }
 
-// ResetMemory 重置用户的记忆
-// 实现 MemoryProvider 接口
-// 注意：Memobase 的记忆重置需要通过 API 删除用户数据
+// ResetMemory resets user's memories
+// implements MemoryProvider interface
+// Note: Memobase memory reset needs to be done through API to delete user data
 func (m *MemobaseClient) ResetMemory(ctx context.Context, userID string) error {
-	// TODO: 如果 Memobase SDK 提供了删除用户数据的接口，在这里调用
-	// 目前返回 nil 表示操作成功（即使没有实际删除）
-	log.Log().Infof("Memobase 重置记忆请求: userID=%s (注意: Memobase 不支持直接重置)", userID)
+	// TODO: if Memobase SDK provides delete user data interface, call it here
+	// currently return nil to indicate operation successful (even if no actual delete)
+	log.Log().Infof("Memobase reset memory request: userID=%s (Note: Memobase does not support direct reset)", userID)
 	return nil
 }
 
-// Close 关闭客户端（如果需要）
+// Close closes client (if needed)
 func (m *MemobaseClient) Close() error {
-	log.Log().Info("Memobase 客户端已关闭")
+	log.Log().Info("Memobase client already closed")
 	return nil
 }
 
-// todo 加user对象缓存
+// todo add user object cache
 func (m *MemobaseClient) getUser(userID string) (*core.User, error) {
 	if user, ok := m.users.Load(userID); ok {
 		return user.(*core.User), nil
@@ -326,7 +327,7 @@ func (m *MemobaseClient) getUser(userID string) (*core.User, error) {
 	memobaseUserID := deviceIDToUUID(userID)
 	user, err := m.client.GetOrCreateUser(memobaseUserID)
 	if err != nil {
-		return nil, fmt.Errorf("获取用户实例失败: %v", err)
+		return nil, fmt.Errorf("get user instance failed: %v", err)
 	}
 
 	m.users.Store(userID, user)

@@ -15,13 +15,13 @@ import (
 	log "xiaozhi-esp32-server-golang/logger"
 )
 
-// 全局HTTP客户端，实现连接池
+// globalHTTPclient-side，implementjoinpool
 var (
 	httpClient     *http.Client
 	httpClientOnce sync.Once
 )
 
-// 获取配置了连接池的HTTP客户端
+// getconfigjoinpoolofHTTPclient-side
 func getHTTPClient() *http.Client {
 	httpClientOnce.Do(func() {
 		transport := &http.Transport{
@@ -44,7 +44,7 @@ func getHTTPClient() *http.Client {
 	return httpClient
 }
 
-// CosyVoiceTTSProvider CosyVoice TTS提供者
+// CosyVoiceTTSProvider CosyVoice TTSprovide者
 type CosyVoiceTTSProvider struct {
 	APIURL        string
 	SpeakerID     string
@@ -54,14 +54,14 @@ type CosyVoiceTTSProvider struct {
 	InstructText  string
 }
 
-// 响应结构体
+// respondstructurebody
 type cosyVoiceResponse struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 	Data    []byte `json:"data"`
 }
 
-// NewCosyVoiceTTSProvider 创建新的CosyVoice TTS提供者
+// NewCosyVoiceTTSProvider create newCosyVoice TTSprovide者
 func NewCosyVoiceTTSProvider(config map[string]interface{}) *CosyVoiceTTSProvider {
 	apiURL, _ := config["api_url"].(string)
 	speakerID, _ := config["spk_id"].(string)
@@ -70,7 +70,7 @@ func NewCosyVoiceTTSProvider(config map[string]interface{}) *CosyVoiceTTSProvide
 	audioFormat, _ := config["audio_format"].(string)
 	instructText, _ := config["instruct_text"].(string)
 
-	// 设置默认值
+	// setdefault values
 	if apiURL == "" {
 		apiURL = "https://tts.linkerai.cn/tts"
 	}
@@ -97,89 +97,89 @@ func NewCosyVoiceTTSProvider(config map[string]interface{}) *CosyVoiceTTSProvide
 	}
 }
 
-// TextToSpeech 将文本转换为语音，返回音频帧数据和错误
+// TextToSpeech willtextconvertisvoice，returnaudio framedataanderror
 func (p *CosyVoiceTTSProvider) TextToSpeech(ctx context.Context, text string, sampleRate int, channels int, frameDuration int) ([][]byte, error) {
-	// 构建查询参数
+	// buildqueryparameter
 	params := url.Values{}
 	params.Add("tts_text", text)
 	params.Add("spk_id", p.SpeakerID)
 	params.Add("frame_durition", fmt.Sprintf("%d", p.FrameDuration))
-	params.Add("stream", "true") // 流式请求
+	params.Add("stream", "true") // streamingrequest
 	params.Add("target_sr", fmt.Sprintf("%d", p.TargetSR))
 	params.Add("audio_format", p.AudioFormat)
 
 	startTs := time.Now().UnixMilli()
 
-	// 构建完整URL
+	// build完bodyURL
 	requestURL := fmt.Sprintf("%s?%s", p.APIURL, params.Encode())
 
-	// 创建HTTP请求
+	// createHTTPrequest
 	req, err := http.NewRequest("GET", requestURL, nil)
 	if err != nil {
-		return nil, fmt.Errorf("创建请求失败: %v", err)
+		return nil, fmt.Errorf("failed to create request: %v", err)
 	}
 
 	req.Header.Set("Accept", "application/json")
 
-	// 使用连接池发送请求
+	// usejoinpoolsendrequest
 	client := getHTTPClient()
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("发送请求失败: %v", err)
+		return nil, fmt.Errorf("sendrequestfailed: %v", err)
 	}
 	defer resp.Body.Close()
 
-	// 读取响应
+	// readrespond
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("读取响应失败: %v", err)
+		return nil, fmt.Errorf("failed to read response: %v", err)
 	}
 
-	// 检查响应状态码
+	// inspectrespondstate码
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("API请求失败，状态码: %d, 响应: %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("API request failed，state码: %d, respond: %s", resp.StatusCode, string(body))
 	}
 
-	// 检查响应内容类型和内容长度
+	// inspectrespondinside容typeandinside容length
 	// contentType := resp.Header.Get("Content-Type")
 	contentLength := resp.ContentLength
 
-	// 记录响应长度到日志
-	log.Debugf("收到TTS响应，Content-Length: %d", contentLength)
+	// recordrespondlengthtolog
+	log.Debugf("receiveTTSrespond，Content-Length: %d", contentLength)
 
-	// 判断Content-Length是否合理
+	// judgeContent-Lengthwhether合理
 	if contentLength == 0 {
-		log.Errorf("API返回空响应，Content-Length为0")
-		return nil, fmt.Errorf("API返回空响应，Content-Length为0")
+		log.Errorf("APIreturnemptyrespond，Content-Lengthis0")
+		return nil, fmt.Errorf("APIreturnemptyrespond，Content-Lengthis0")
 	}
 
-	// MP3文件头至少需要100字节才能正常解析
-	// -1表示未知长度（例如分块传输）
+	// MP3fileheaderat leastneed100byteonly then能normalparse
+	// -1indicatenot知length（例如minuteblock传输）
 	if contentLength > 0 && contentLength < 100 {
-		log.Errorf("API返回的响应太小无法解析为MP3: %d字节", contentLength)
-		return nil, fmt.Errorf("API返回的响应太小无法解析为MP3: %d字节", contentLength)
+		log.Errorf("APIreturnofrespond太smallno法parseisMP3: %dbyte", contentLength)
+		return nil, fmt.Errorf("APIreturnofrespond太smallno法parseisMP3: %dbyte", contentLength)
 	}
 
-	// 转换为Opus帧
+	// convertisOpusframe
 	if p.AudioFormat == "mp3" {
-		// 创建一个管道
+		// create apipe
 		doneChan := make(chan struct{})
 		outputChan := make(chan []byte, 1000)
 
-		// 创建MP3解码器
+		// createMP3decode器
 		mp3Decoder, err := util.CreateAudioDecoder(ctx, resp.Body, outputChan, frameDuration, p.AudioFormat)
 		if err != nil {
 			close(doneChan)
-			return nil, fmt.Errorf("创建MP3解码器失败: %v", err)
+			return nil, fmt.Errorf("createMP3decode器failed: %v", err)
 		}
-		// 启动解码过程
+		// startdecodepast程
 		go func() {
 			if err := mp3Decoder.Run(startTs); err != nil {
-				log.Errorf("MP3解码失败: %v", err)
+				log.Errorf("MP3decodefailed: %v", err)
 			}
 		}()
 
-		// 收集所有的Opus帧
+		// receive集allofOpusframe
 		var opusFrames [][]byte
 		for frame := range outputChan {
 			opusFrames = append(opusFrames, frame)
@@ -188,124 +188,124 @@ func (p *CosyVoiceTTSProvider) TextToSpeech(ctx context.Context, text string, sa
 		return opusFrames, nil
 	}
 
-	return nil, fmt.Errorf("不支持的音频格式: %s", p.AudioFormat)
+	return nil, fmt.Errorf("unsupportedofaudioformat: %s", p.AudioFormat)
 }
 
-// TextToSpeechStream 流式语音合成实现
+// TextToSpeechStream streamingvoice合成implement
 func (p *CosyVoiceTTSProvider) TextToSpeechStream(ctx context.Context, text string, sampleRate int, channels int, frameDuration int) (outputChan chan []byte, err error) {
-	// 构建查询参数
+	// buildqueryparameter
 	params := url.Values{}
 	params.Add("tts_text", text)
 	params.Add("spk_id", p.SpeakerID)
 	params.Add("frame_durition", fmt.Sprintf("%d", frameDuration))
-	params.Add("stream", "true") // 流式请求
+	params.Add("stream", "true") // streamingrequest
 	params.Add("target_sr", fmt.Sprintf("%d", sampleRate))
 	params.Add("audio_format", p.AudioFormat)
 
 	startTs := time.Now().UnixMilli()
 
-	// 构建完整URL
+	// build完bodyURL
 	requestURL := fmt.Sprintf("%s?%s", p.APIURL, params.Encode())
 
-	// 创建HTTP请求
+	// createHTTPrequest
 	req, err := http.NewRequest("GET", requestURL, nil)
 	if err != nil {
-		return nil, fmt.Errorf("创建请求失败: %v", err)
+		return nil, fmt.Errorf("failed to create request: %v", err)
 	}
 
 	req.Header.Set("Accept", "application/json")
 
-	// 使用连接池创建客户端
+	// usejoinpoolcreateclient-side
 	client := getHTTPClient()
 
-	// 创建输出通道
+	// createoutputchannel
 	outputChan = make(chan []byte, 100)
-	// 启动goroutine处理流式响应
+	// startgoroutineprocessstreamingrespond
 	go func() {
-		// 发送请求
+		// sendrequest
 		resp, err := client.Do(req)
 		if err != nil {
-			log.Errorf("发送请求失败: %v", err)
+			log.Errorf("sendrequestfailed: %v", err)
 			return
 		}
 		defer func() {
 			resp.Body.Close()
 		}()
 
-		// 检查响应状态码
+		// inspectrespondstate码
 		if resp.StatusCode != http.StatusOK {
 			body, _ := io.ReadAll(resp.Body)
-			log.Errorf("API请求失败，状态码: %d, 响应: %s", resp.StatusCode, string(body))
+			log.Errorf("API request failed，state码: %d, respond: %s", resp.StatusCode, string(body))
 			return
 		}
 
-		// 检查响应内容类型和内容长度
+		// inspectrespondinside容typeandinside容length
 		// contentType := resp.Header.Get("Content-Type")
 		contentLength := resp.ContentLength
 
-		// 记录响应长度到日志
-		log.Debugf("收到TTS响应，Content-Length: %d", contentLength)
+		// recordrespondlengthtolog
+		log.Debugf("receiveTTSrespond，Content-Length: %d", contentLength)
 
-		// 判断Content-Length是否合理
+		// judgeContent-Lengthwhether合理
 		if contentLength == 0 {
-			log.Errorf("API返回空响应，Content-Length为0")
+			log.Errorf("APIreturnemptyrespond，Content-Lengthis0")
 			return
 		}
 
-		// MP3文件头至少需要100字节才能正常解析
-		// -1表示未知长度（例如分块传输）
+		// MP3fileheaderat leastneed100byteonly then能normalparse
+		// -1indicatenot知length（例如minuteblock传输）
 		if contentLength > 0 && contentLength < 100 {
-			log.Errorf("API返回的响应太小无法解析为MP3: %d字节", contentLength)
+			log.Errorf("APIreturnofrespond太smallno法parseisMP3: %dbyte", contentLength)
 			return
 		}
 
-		// 根据音频格式处理流式响应
+		// according toaudioformatprocessstreamingrespond
 		if p.AudioFormat == "mp3" {
-			// 创建 MP3 解码器，传入 context 而不是 done 通道
+			// create MP3 decode器，传入 context 而noyes done channel
 			mp3Decoder, err := util.CreateAudioDecoder(ctx, resp.Body, outputChan, frameDuration, p.AudioFormat)
 			if err != nil {
-				log.Errorf("创建MP3解码器失败: %v", err)
+				log.Errorf("createMP3decode器failed: %v", err)
 				close(outputChan)
 				return
 			}
 
-			// 启动解码过程
+			// startdecodepast程
 			if err := mp3Decoder.Run(startTs); err != nil {
-				log.Errorf("MP3解码失败: %v", err)
+				log.Errorf("MP3decodefailed: %v", err)
 				return
 			}
 
 			select {
 			case <-ctx.Done():
-				log.Debugf("TTS流式合成取消, 文本: %s", text)
+				log.Debugf("TTSstreaming合成cancel, text: %s", text)
 				return
 			default:
-				log.Infof("tts耗时: 从输入至获取MP3数据结束耗时: %d ms", time.Now().UnixMilli()-startTs)
+				log.Infof("ttstime consumption: frominput至getMP3dataendtime consumption: %d ms", time.Now().UnixMilli()-startTs)
 
 			}
 		} else {
-			log.Errorf("当前仅支持MP3格式的流式合成")
+			log.Errorf("currentonlysupportMP3formatofstreaming合成")
 		}
 	}()
 
 	return outputChan, nil
 }
 
-// SetVoice 设置音色参数
+// SetVoice setvoiceparameter
 func (p *CosyVoiceTTSProvider) SetVoice(voiceConfig map[string]interface{}) error {
 	if spkID, ok := voiceConfig["spk_id"].(string); ok && spkID != "" {
 		p.SpeakerID = spkID
 		return nil
 	}
-	return fmt.Errorf("无效的音色配置: 缺少 spk_id")
+	return fmt.Errorf("invalidofvoiceconfig: Missing spk_id")
 }
 
-// Close 关闭资源（无状态 Provider，无需关闭）
+// Close closeresource（nostate Provider，noneedclose）
 func (p *CosyVoiceTTSProvider) Close() error {
 	return nil
 }
 
-// IsValid 检查资源是否有效
+// IsValid inspectresourcewhethervalid
 func (p *CosyVoiceTTSProvider) IsValid() bool {
 	return p != nil
 }

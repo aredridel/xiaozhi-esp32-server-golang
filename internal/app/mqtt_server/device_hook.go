@@ -27,12 +27,12 @@ func (h *DeviceHook) Provides(b byte) bool {
 	return b == mqttServer.OnDisconnect || b == mqttServer.OnACLCheck || b == mqttServer.OnSessionEstablished || b == mqttServer.OnSubscribe || b == mqttServer.OnPublish
 }
 
-// OnACLCheck 发布/订阅权限控制
+// OnACLCheck publish/subscribepermissioncontrol
 func (h *DeviceHook) OnACLCheck(cl *mqttServer.Client, topic string, write bool) bool {
 	isAdmin := isAdminUser(cl)
 
 	if isAdmin {
-		return true // 超级管理员无限制
+		return true // 超级manage员nolimit
 	}
 
 	if write {

@@ -18,7 +18,7 @@ type DeviceActivationController struct {
 	DB *gorm.DB
 }
 
-// 生成6位随机数字代码
+// Generate 6-digit random numeric code
 func generateCode() string {
 	randomBytes := make([]byte, 3)
 	rand.Read(randomBytes)
@@ -29,12 +29,12 @@ func generateCode() string {
 	return fmt.Sprintf("%06d", code%1000000)
 }
 
-// 生成UUID格式的挑战码
+// Generate UUID format challenge code
 func generateChallenge() string {
 	randomBytes := make([]byte, 16)
 	rand.Read(randomBytes)
 
-	// 设置版本 (4) 和变体位
+	// Set version (4) and variant bits
 	randomBytes[6] = (randomBytes[6] & 0x0f) | 0x40
 	randomBytes[8] = (randomBytes[8] & 0x3f) | 0x80
 
@@ -46,7 +46,7 @@ func generateChallenge() string {
 		randomBytes[10:16])
 }
 
-// 1. 判断设备是否已激活
+// 1. Check if device is activated
 // GET /api/internal/device/check-activation?device_id=xxx&client_id=xxx
 func (dac *DeviceActivationController) CheckDeviceActivation(c *gin.Context) {
 	deviceId := c.Query("device_id")
@@ -55,24 +55,24 @@ func (dac *DeviceActivationController) CheckDeviceActivation(c *gin.Context) {
 	if deviceId == "" /*|| clientId == ""*/ {
 		c.JSON(http.StatusOK, gin.H{
 			"activated": false,
-			"error":     "device_id参数必填",
+			"error":     "device_id parameter is required",
 		})
 		return
 	}
 
 	var device models.Device
-	// 使用device_id (对应device_name字段) 查找设备
+	// Use device_id (corresponds to device_name field) to find device
 	if err := dac.DB.Where("device_name = ?", deviceId).First(&device).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusOK, gin.H{
 				"activated": false,
-				"message":   "设备不存在",
+				"message":   "Device does not exist",
 			})
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{
 			"activated": false,
-			"error":     "查询设备失败",
+			"error":     "Failed to query device",
 		})
 		return
 	}
@@ -81,84 +81,84 @@ func (dac *DeviceActivationController) CheckDeviceActivation(c *gin.Context) {
 		"activated": device.Activated,
 		"message": func() string {
 			if device.Activated {
-				return "设备已激活"
+				return "Device activated"
 			}
-			return "设备未激活"
+			return "Device not activated"
 		}(),
 	})
 }
 
-// 2. 获取激活信息
+// 2. Get activation info
 // GET /api/internal/device/activation-info?device_id=xxx&client_id=xxx
 func (dac *DeviceActivationController) GetActivationInfo(c *gin.Context) {
 	deviceId := c.Query("device_id")
 	//clientId := c.Query("client_id")
 
 	if deviceId == "" /*|| clientId == ""*/ {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "device_id和client_id参数必填"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "device_id and client_id parameters are required"})
 		return
 	}
 
 	var device models.Device
 	var isNewDevice bool
 
-	// 使用device_id (对应device_name字段) 查找设备
+	// Use device_id (corresponds to device_name field) to find device
 	if err := dac.DB.Where("device_name = ?", deviceId).First(&device).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			// 设备不存在，创建新设备记录
+			// Device does not exist, create new device record
 			device = models.Device{
 				DeviceName: deviceId,
-				UserID:     0, // user_id置为0
+				UserID:     0, // Set user_id to 0
 				DeviceCode: generateCode(),
 				Challenge:  generateChallenge(),
 				Activated:  false,
 			}
 
 			if err := dac.DB.Create(&device).Error; err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "创建设备记录失败"})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create device record"})
 				return
 			}
 			isNewDevice = true
 		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "查询设备失败"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query device"})
 			return
 		}
 	}
 
-	// 如果设备已激活，直接返回状态
+	// If device is already activated, return status directly
 	if device.Activated {
 		c.JSON(http.StatusOK, gin.H{
 			"activated": true,
-			"message":   "设备已激活",
+			"message":   "Device activated",
 		})
 		return
 	}
 
-	// 如果设备未激活，生成或返回激活信息
+	// If device is not activated, generate or return activation info
 	needUpdate := false
 
-	// 如果没有激活码，生成新的激活码
+	// If no activation code, generate new activation code
 	if device.DeviceCode == "" {
 		device.DeviceCode = generateCode()
 		needUpdate = true
 	}
 
-	// 如果没有挑战码，生成新的挑战码
+	// If no challenge code, generate new challenge code
 	if device.Challenge == "" {
 		device.Challenge = generateChallenge()
 		needUpdate = true
 	}
 
-	// 确保user_id为0（如果不是新设备且未激活）
+	// Ensure user_id is 0 (if not new device and not activated)
 	if !isNewDevice && device.UserID != 0 {
 		device.UserID = 0
 		needUpdate = true
 	}
 
-	// 更新数据库
+	// Update database
 	if needUpdate {
 		if err := dac.DB.Save(&device).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "更新设备信息失败"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update device info"})
 			return
 		}
 	}
@@ -167,14 +167,14 @@ func (dac *DeviceActivationController) GetActivationInfo(c *gin.Context) {
 		"activated": false,
 		"code":      device.DeviceCode,
 		"challenge": device.Challenge,
-		"message":   "请在后台绑定激活设备，激活码:" + device.DeviceCode,
+		"message":   "Please bind and activate device in backend, activation code:" + device.DeviceCode,
 	})
 }
 
-// 验证HMAC-SHA256
+// Verify HMAC-SHA256
 func verifyHMAC(challenge, secretKey, providedHmac string) bool {
 	if secretKey == "" {
-		return true // 如果pre_secret_key为空，直接通过验证
+		return true // If pre_secret_key is empty, pass verification directly
 	}
 
 	mac := hmac.New(sha256.New, []byte(secretKey))
@@ -184,7 +184,7 @@ func verifyHMAC(challenge, secretKey, providedHmac string) bool {
 	return expectedHmac == providedHmac
 }
 
-// 3. 设备激活接口
+// 3. Device activation interface
 // POST /api/internal/device/activate
 func (dac *DeviceActivationController) ActivateDevice(c *gin.Context) {
 	var req struct {
@@ -197,32 +197,32 @@ func (dac *DeviceActivationController) ActivateDevice(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Parameter error: " + err.Error()})
 		return
 	}
 
 	var device models.Device
-	// 使用device_id (对应device_name字段) 查找设备
+	// Use device_id (corresponds to device_name field) to find device
 	if err := dac.DB.Where("device_name = ?", req.DeviceId).First(&device).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"error":   "设备不存在",
+				"error":   "Device does not exist",
 			})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
-			"error":   "查询设备失败",
+			"error":   "Failed to query device",
 		})
 		return
 	}
 
-	// 检查设备是否已经激活
+	// Check if device is already activated
 	if device.Activated {
 		c.JSON(http.StatusOK, gin.H{
 			"success": true,
-			"message": "设备已激活",
+			"message": "Device activated",
 		})
 		return
 	}
@@ -230,7 +230,7 @@ func (dac *DeviceActivationController) ActivateDevice(c *gin.Context) {
 	if device.UserID == 0 {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"error":   "设备未绑定用户",
+			"error":   "Device not bound to user",
 		})
 		return
 	}
@@ -238,33 +238,33 @@ func (dac *DeviceActivationController) ActivateDevice(c *gin.Context) {
 	if device.Challenge != req.Challenge {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"error":   "挑战码错误",
+			"error":   "Challenge code error",
 		})
 		return
 	}
 
-	// 验证HMAC（如果pre_secret_key为空则直接通过）
+	// Verify HMAC (pass directly if pre_secret_key is empty)
 	if !verifyHMAC(req.Challenge, device.PreSecretKey, req.Hmac) {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"error":   "HMAC验证失败",
+			"error":   "HMAC verification failed",
 		})
 		return
 	}
 
-	// 激活设备
+	// Activate device
 	device.Activated = true
 	if err := dac.DB.Save(&device).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
-			"error":   "激活设备失败",
+			"error":   "Failed to activate device",
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
-		"message": "设备激活成功",
+		"message": "Device activated successfully",
 		"data": gin.H{
 			"device_id": device.DeviceName,
 			"activated": device.Activated,

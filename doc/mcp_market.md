@@ -1,6 +1,6 @@
 # MCP Market Feature Documentation
 
-This document introduces the **MCP Market** feature in the management backend: how to access third-party MCP markets, aggregate discovery services, import service configurations and incorporate them into the system's global MCP service list.
+This document introduces the MCP Market feature in the management backend: how to access third-party MCP markets, aggregate discovery services, import service configurations and incorporate them into the system's global MCP service list.
 
 Related documents:
 
@@ -11,7 +11,7 @@ Related documents:
 
 ## 1. Feature Positioning
 
-MCP Market is used to solve the problem of "low efficiency in accessing remote MCP services", supporting:
+MCP Market is used to solve the problem of low efficiency in accessing remote MCP services, supporting:
 
 - Configure multiple MCP market connections (such as ModelScope, etc.)
 - Aggregate service catalogs from multiple markets
@@ -31,12 +31,12 @@ Role permissions:
 
 Management backend entry points:
 
-- `Administrator -> MCP Market`
+- Administrator -> MCP Market
 
 Page contains two tabs:
 
-- `Market Discovery`
-- `Imported Services`
+- Market Discovery
+- Imported Services
 
 ---
 
@@ -50,7 +50,7 @@ Represents a "MCP market catalog source that can be accessed", containing:
 - Provider identifier (provider)
 - Catalog URL (catalog_url)
 - Detail URL template (detail_url_template, optional)
-- Auth Token (optional)
+- Auth token (optional)
 - Enable status
 
 ### 3.2 Aggregated Service List
@@ -80,20 +80,20 @@ Imported services form independent configuration items in this system, can direc
 
 ## 4.1 Add MCP Market Connection
 
-Click `Add Connection` in `Market Discovery` tab, fill in:
+Click Add Connection in Market Discovery tab, fill in:
 
-- `Provider`: Preferably select built-in provider preset (will automatically fill catalog URL template)
-- `Name`
-- `Catalog URL`
-- `Detail URL Template` (optional)
-- `Enable`
-- `Token` (if market requires)
+- Provider: Preferably select built-in provider preset (will automatically fill catalog URL template)
+- Name
+- Catalog URL
+- Detail URL Template (optional)
+- Enable
+- Token (if market requires)
 
 It is recommended to perform connection test (see below) before saving and using.
 
 ## 4.2 Test Market Connection
 
-Click `Test` in market list operation menu:
+Click Test in market list operation menu:
 
 - Success will return "number of discoverable services"
 - Failure will prompt catalog connection/auth error
@@ -106,11 +106,11 @@ Suitable for troubleshooting:
 
 ## 4.3 Browse and Search Aggregated Services
 
-In `Aggregated Service List` area you can:
+In Aggregated Service List area you can:
 
 - Enter keywords to search services
 - Paginate through aggregated results
-- Click `Details` to view service endpoint information
+- Click Details to view service endpoint information
 
 Service detail page usually includes:
 
@@ -122,7 +122,7 @@ Service detail page usually includes:
 
 ## 4.4 One-click Import Service Configuration (Recommended)
 
-Click `Import Service Configuration and Hot Update` in service detail popup:
+Click Import Service Configuration and Hot Update in service detail popup:
 
 - System will generate one or more import service configurations based on service details
 - After successful import, "Imported Services" list will refresh
@@ -132,16 +132,16 @@ Click `Import Service Configuration and Hot Update` in service detail popup:
 
 ## 4.5 Manually Add/Edit Imported Service
 
-In `Imported Services` tab you can click `Add Service` to manually enter, or edit imported items.
+In Imported Services tab you can click Add Service to manually enter, or edit imported items.
 
 Key field descriptions:
 
-- `Transport`: Currently supports `SSE`, `StreamableHTTP`
-- `URL`: Remote MCP service entry
-- `Headers(JSON)`: Used to carry auth information, such as `Authorization`
-- `Enable`: After disabling, will not participate in runtime available service set
+- Transport: Currently supports SSE, StreamableHTTP
+- URL: Remote MCP service entry
+- Headers(JSON): Used to carry auth information, such as Authorization
+- Enable: After disabling, will not participate in runtime available service set
 
-`Headers(JSON)` must be JSON object, for example:
+Headers(JSON) must be JSON object, for example:
 
 ```json
 {
@@ -153,17 +153,17 @@ Key field descriptions:
 
 ## 5. Relationship with Global MCP Configuration
 
-MCP Market is not a replacement for the `MCP Configuration` page, but a supplementary source.
+MCP Market is not a replacement for the MCP Configuration page, but a supplementary source.
 
 Runtime available global MCP service set comes from two parts merged:
 
-- Global services manually maintained by administrator in `MCP Configuration` page
+- Global services manually maintained by administrator in MCP Configuration page
 - Services imported from MCP Market and enabled
 
 Therefore recommended practice is:
 
 1. Use MCP Market for quick discovery and import
-2. Enable and select services as needed in `MCP Configuration` / Agent
+2. Enable and select services as needed in MCP Configuration / Agent
 
 ---
 
@@ -173,25 +173,25 @@ The following are management-related interfaces (require administrator permissio
 
 ### 6.1 Market Connection Management
 
-- `GET /admin/mcp-markets`
-- `POST /admin/mcp-markets`
-- `PUT /admin/mcp-markets/:id`
-- `DELETE /admin/mcp-markets/:id`
-- `POST /admin/mcp-markets/:id/test`
+- GET /admin/mcp-markets
+- POST /admin/mcp-markets
+- PUT /admin/mcp-markets/:id
+- DELETE /admin/mcp-markets/:id
+- POST /admin/mcp-markets/:id/test
 
 ### 6.2 Market Discovery and Details
 
-- `GET /admin/mcp-market/providers`
-- `GET /admin/mcp-market/services`
-- `GET /admin/mcp-market/services/:market_id/*service_id`
-- `POST /admin/mcp-market/import`
+- GET /admin/mcp-market/providers
+- GET /admin/mcp-market/services
+- GET /admin/mcp-market/services/:market_id/*service_id
+- POST /admin/mcp-market/import
 
 ### 6.3 Imported Service Management
 
-- `GET /admin/mcp-market/imported-services`
-- `POST /admin/mcp-market/imported-services`
-- `PUT /admin/mcp-market/imported-services/:id`
-- `DELETE /admin/mcp-market/imported-services/:id`
+- GET /admin/mcp-market/imported-services
+- POST /admin/mcp-market/imported-services
+- PUT /admin/mcp-market/imported-services/:id
+- DELETE /admin/mcp-market/imported-services/:id
 
 ---
 
@@ -216,7 +216,7 @@ Common causes:
 
 ### 7.3 What happens if Token is left blank when editing market?
 
-Leaving Token blank in edit popup usually means "do not modify existing Token" (interface will display current masked status prompt).
+Leaving Token blank in edit popup usually means do not modify existing Token (interface will display current masked status prompt).
 
 ---
 

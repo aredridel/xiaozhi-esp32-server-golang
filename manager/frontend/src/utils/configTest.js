@@ -1,6 +1,6 @@
 import api from './api'
 
-/** 从接口条目解析为统一结果（含 first_packet_ms） */
+/** Parse API item into unified result (including first_packet_ms) */
 function normItem(item) {
   if (!item || typeof item !== 'object') return { ok: false, message: '', first_packet_ms: undefined, reasoning_content_returned: false }
   const ms = item.first_packet_ms
@@ -13,10 +13,10 @@ function normItem(item) {
 }
 
 /**
- * 测试单个或单类配置
- * @param {string} type - 类型：ota | vad | asr | llm | tts
- * @param {string} [configId] - 可选，指定 config_id 则只测该条
- * @returns {Promise<{ ok: boolean, message: string, first_packet_ms?: number }>} 单条时直接返回结果；多条时返回第一条或汇总
+ * Test a single or single-type configuration
+ * @param {string} type - Type: ota | vad | asr | llm | tts
+ * @param {string} [configId] - Optional, specify config_id to test only that entry
+ * @returns {Promise<{ ok: boolean, message: string, first_packet_ms?: number }>} Returns result directly for single entry; returns first or summary for multiple
  */
 export async function testSingleConfig(type, configId) {
   const body = {
@@ -27,7 +27,7 @@ export async function testSingleConfig(type, configId) {
   const data = res.data?.data ?? res.data
   const typeResult = data?.[type]
   if (!typeResult || typeof typeResult !== 'object') {
-    return { ok: false, message: '未返回测试结果' }
+    return { ok: false, message: 'No test results returned' }
   }
   const entries = Object.entries(typeResult).filter(([k]) => !k.startsWith('_'))
   if (configId && typeResult[configId]) {
@@ -36,15 +36,15 @@ export async function testSingleConfig(type, configId) {
   if (entries.length === 0) {
     const err = typeResult._error || typeResult._no_client || typeResult._none
     const msg = err && typeof err === 'object' ? (err.message || '').trim() : ''
-    const fallback = typeResult._none ? '未配置或未启用' : '无测试结果'
+    const fallback = typeResult._none ? 'Not configured or not enabled' : 'No test results'
     return { ok: false, message: msg || fallback }
   }
   return normItem(entries[0][1])
 }
 
 /**
- * 测试某类型全部配置，返回按 config_id 的结果（用于“测试全部”并在每行展示）
- * @param {string} type - 类型：vad | asr | llm | tts
+ * Test all configurations of a type, return results by config_id (for "Test All" and display per row)
+ * @param {string} type - Type: vad | asr | llm | tts
  * @returns {Promise<Record<string, { ok: boolean, message: string, first_packet_ms?: number }>>} config_id -> { ok, message, first_packet_ms? }
  */
 export async function testAllConfigs(type) {
@@ -57,7 +57,7 @@ export async function testAllConfigs(type) {
     return out
   }
   const err = typeResult._error || typeResult._no_client || typeResult._none
-  const errMsg = err && typeof err === 'object' ? (err.message || '').trim() : '未返回测试结果'
+  const errMsg = err && typeof err === 'object' ? (err.message || '').trim() : 'No test results returned'
   for (const [k, v] of Object.entries(typeResult)) {
     if (k.startsWith('_')) continue
     out[k] = normItem(v)
@@ -69,8 +69,8 @@ export async function testAllConfigs(type) {
 }
 
 /**
- * 将 getJsonData() 返回值转为可合并对象（表单返回的是 JSON 字符串）
- * @param {string|object} jsonData - getJsonData() 返回值
+ * Convert getJsonData() return value into a mergeable object (form returns JSON string)
+ * @param {string|object} jsonData - getJsonData() return value
  * @returns {object}
  */
 export function parseJsonData(jsonData) {
@@ -85,10 +85,10 @@ export function parseJsonData(jsonData) {
 }
 
 /**
- * 使用自定义 data 测试（未保存草稿 / 向导当前步）
- * @param {string} type - 类型：ota | vad | asr | llm | tts
- * @param {Record<string, object>} typeData - 该类型下 config_id -> 配置对象，与接口 data[type] 一致
- * @returns {Promise<{ ok: boolean, message: string, first_packet_ms?: number }>} 单条结果（仅支持单条）
+ * Test with custom data (unsaved draft / current step of wizard)
+ * @param {string} type - Type: ota | vad | asr | llm | tts
+ * @param {Record<string, object>} typeData - config_id -> config object under this type, consistent with API data[type]
+ * @returns {Promise<{ ok: boolean, message: string, first_packet_ms?: number }>} Single result (single entry only)
  */
 export async function testWithData(type, typeData) {
   const body = { types: [type], data: { [type]: typeData } }
@@ -96,7 +96,7 @@ export async function testWithData(type, typeData) {
   const data = res.data?.data ?? res.data
   const typeResult = data?.[type]
   if (!typeResult || typeof typeResult !== 'object') {
-    return { ok: false, message: '未返回测试结果' }
+    return { ok: false, message: 'No test results returned' }
   }
   const err = typeResult._error || typeResult._no_client
   if (err && typeof err === 'object' && err.message) {
@@ -104,7 +104,7 @@ export async function testWithData(type, typeData) {
   }
   const entries = Object.entries(typeResult).filter(([k]) => !k.startsWith('_'))
   if (entries.length === 0) {
-    return { ok: false, message: typeResult._none?.message || '无测试结果' }
+    return { ok: false, message: typeResult._none?.message || 'No test results' }
   }
   return normItem(entries[0][1])
 }

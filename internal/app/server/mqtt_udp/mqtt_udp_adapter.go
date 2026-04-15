@@ -215,7 +215,7 @@ func (s *MqttUdpAdapter) getDeviceSession(deviceId string) *MqttUdpConn {
 	return nil
 }
 
-// handleMessage 将消息丢进队列
+// handleMessage willmessage丢进queue
 func (s *MqttUdpAdapter) handleMessage(client mqtt.Client, msg mqtt.Message) {
 	select {
 	case s.msgChan <- msg:
@@ -393,11 +393,11 @@ func (s *MqttUdpAdapter) getDeviceIdByTopic(topic string) (string, string) {
 	if len(strList) == 4 {
 		topicMacAddr = strList[3]
 
-		// 检查是否为新格式: "GID_test@@@ba_8f_17_de_94_94@@@e4b0c442-98fc-4e1b-8c3d-6a5b6a5b6a6d"
+		// check ifis新format: "GID_test@@@ba_8f_17_de_94_94@@@e4b0c442-98fc-4e1b-8c3d-6a5b6a5b6a6d"
 		if strings.Contains(topicMacAddr, "@@@") {
 			parts := strings.Split(topicMacAddr, "@@@")
 			if len(parts) >= 2 {
-				// 提取中间部分作为MAC地址
+				// extractmiddlepartasisMACaddress
 				macAddr := parts[1]
 				deviceId = strings.ReplaceAll(macAddr, "_", ":")
 			}

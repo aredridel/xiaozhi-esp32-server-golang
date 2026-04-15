@@ -9,14 +9,14 @@ import (
 	log "xiaozhi-esp32-server-golang/logger"
 )
 
-// FunasrAdapter 适配 funasr 包到 asr 接口
+// FunasrAdapter 适配 funasr packageto asr interface
 type FunasrAdapter struct {
 	engine *funasr.Funasr
 }
 
-// NewFunasrAdapter 创建一个新的 FunASR 适配器
+// NewFunasrAdapter create anew FunASR adapter
 func NewFunasrAdapter(config map[string]interface{}) (AsrProvider, error) {
-	// 创建 FunasrConfig 配置
+	// create FunasrConfig config
 	funasrConfig := funasr.FunasrConfig{
 		Host:          "localhost",
 		Port:          "10095",
@@ -29,7 +29,7 @@ func NewFunasrAdapter(config map[string]interface{}) (AsrProvider, error) {
 
 	log.Log().Infof("funasr config: %+v", config)
 
-	// 从 map 中获取配置项
+	// from map ingetconfig项
 	if host, ok := config["host"].(string); ok && host != "" {
 		funasrConfig.Host = host
 	}
@@ -67,7 +67,7 @@ func NewFunasrAdapter(config map[string]interface{}) (AsrProvider, error) {
 		funasrConfig.AutoEnd = autoEnd
 	}
 
-	// 创建FunASR引擎
+	// createFunASR引擎
 	engine, err := funasr.NewFunasr(funasrConfig)
 	if err != nil {
 		return nil, err
@@ -75,14 +75,14 @@ func NewFunasrAdapter(config map[string]interface{}) (AsrProvider, error) {
 	return &FunasrAdapter{engine: engine}, nil
 }
 
-// Process 实现 Asr 接口
+// Process implement Asr interface
 func (a *FunasrAdapter) Process(pcmData []float32) (string, error) {
 	return a.engine.Process(pcmData)
 }
 
-// StreamingRecognize 实现流式识别接口
+// StreamingRecognize implementstreaming recognizeinterface
 func (a *FunasrAdapter) StreamingRecognize(ctx context.Context, audioStream <-chan []float32) (chan types.StreamingResult, error) {
-	// 调用funasr包的StreamingRecognize方法
+	// callfunasrpackageofStreamingRecognizemethod
 	resultChan, err := a.engine.StreamingRecognize(ctx, audioStream)
 	if err != nil {
 		return nil, err
@@ -91,12 +91,12 @@ func (a *FunasrAdapter) StreamingRecognize(ctx context.Context, audioStream <-ch
 	return resultChan, nil
 }
 
-// Close 关闭资源（无状态 Provider，无需关闭）
+// Close closeresource（nostate Provider，noneedclose）
 func (a *FunasrAdapter) Close() error {
 	return nil
 }
 
-// IsValid 检查资源是否有效
+// IsValid inspectresourcewhethervalid
 func (a *FunasrAdapter) IsValid() bool {
 	return a != nil && a.engine != nil
 }

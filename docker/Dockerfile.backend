@@ -1,34 +1,34 @@
-# 构建阶段
+# Build stage
 FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 
-# 安装必要的系统依赖
+# Install necessary system dependencies
 RUN apk add --no-cache git ca-certificates tzdata
 
-# 复制go mod文件
+# Copy go mod files
 COPY manager/backend/go.mod manager/backend/go.sum ./
 
-# 复制源代码
+# Copy source code
 COPY manager/backend/ .
 
 RUN go mod tidy
 
-# 构建应用
+# Build application
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
 
-# 运行阶段
+# Runtime stage
 FROM alpine:latest
 
 RUN apk --no-cache add ca-certificates tzdata
 
 WORKDIR /root/
 
-# 从构建阶段复制二进制文件
+# Copy binary from build stage
 COPY --from=builder /app/main .
 COPY --from=builder /app/config ./config
 
-# 设置时区
+# Set timezone
 ENV TZ=Asia/Shanghai
 
 EXPOSE 8080

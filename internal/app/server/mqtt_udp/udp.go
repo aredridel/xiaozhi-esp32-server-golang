@@ -15,23 +15,23 @@ const (
 	UdpSessionStatusClosed = "closed"
 )
 
-// Session 表示一个UDP会话
+// Session indicateaUDPsession
 type UdpSession struct {
 	ID          string
 	Conn        *net.UDPConn //udp conn
 	ConnId      string
 	ClientId    string
 	DeviceId    string
-	AesKey      [16]byte // 随机32位
-	Nonce       [8]byte  // 存储原始nonce模板 16位
+	AesKey      [16]byte // random32bit
+	Nonce       [8]byte  // storeoriginalnoncetemplate 16bit
 	CreatedAt   time.Time
 	LastActive  time.Time
 	RemoteAddr  *net.UDPAddr //remote addr
 	LocalSeq    uint32
 	Block       cipher.Block
 	RemoteSeq   uint32
-	RecvChannel chan []byte //发送的音频数据
-	SendChannel chan []byte //接收的音频数据
+	RecvChannel chan []byte //sendofaudio data
+	SendChannel chan []byte //receiveofaudio data
 	Status      string
 	Lock        sync.Mutex
 }
@@ -87,22 +87,22 @@ func (s *UdpSession) DrainPendingAudio() int {
 	}
 }
 
-// decrypt 解密数据
+// decrypt decryptdata
 func (s *UdpSession) Decrypt(data []byte) ([]byte, error) {
-	// 分离nonce和密文
-	nonce := data[:16] // 使用16字节nonce
+	// detachnonceand密文
+	nonce := data[:16] // use16bytenonce
 	ciphertext := data[16:]
 
-	// 提取序列号
+	// extract序列号
 	seqNum := binary.BigEndian.Uint32(data[12:16])
 
-	// 检查序列号
+	// inspect序列号
 	/*if seqNum < s.RemoteSeq {
-		return nil, fmt.Errorf("序列号过期: got %d, expected >= %d", seqNum, s.RemoteSeq)
+		return nil, fmt.Errorf("序列号expire: got %d, expected >= %d", seqNum, s.RemoteSeq)
 	}*/
 	s.RemoteSeq = seqNum
 
-	// 解密数据
+	// decryptdata
 	stream := cipher.NewCTR(s.Block, nonce)
 	decrypted := make([]byte, len(ciphertext))
 	stream.XORKeyStream(decrypted, ciphertext)
@@ -110,30 +110,30 @@ func (s *UdpSession) Decrypt(data []byte) ([]byte, error) {
 	return decrypted, nil
 }
 
-// encrypt 加密数据
+// encrypt encryptdata
 func (s *UdpSession) Encrypt(data []byte) ([]byte, error) {
-	// 预分配内存，避免扩容
+	// 预dispatchmemory，avoid扩容
 	encrypted := make([]byte, 16+len(data))
 
-	// 构建nonce (16字节)
-	encrypted[0] = 0x01                                          // 包类型
-	binary.BigEndian.PutUint16(encrypted[2:], uint16(len(data))) // 数据长度
-	copy(encrypted[4:12], s.Nonce[:])                            // 8字节nonce
+	// buildnonce (16byte)
+	encrypted[0] = 0x01                                          // packagetype
+	binary.BigEndian.PutUint16(encrypted[2:], uint16(len(data))) // datalength
+	copy(encrypted[4:12], s.Nonce[:])                            // 8bytenonce
 	s.LocalSeq++
 	binary.BigEndian.PutUint32(encrypted[12:], s.LocalSeq) // 序列号
 
-	// 加密数据
-	stream := cipher.NewCTR(s.Block, encrypted[:16]) // 使用16字节作为IV
+	// encryptdata
+	stream := cipher.NewCTR(s.Block, encrypted[:16]) // use16byteasisIV
 	stream.XORKeyStream(encrypted[16:], data)
 
 	return encrypted, nil
 }
 
 func (s *UdpSession) GetAesKeyAndNonce() (string, string) {
-	//处理
+	//process
 	strAesKey := hex.EncodeToString(s.AesKey[:])
 
-	// 构造 fullNonce: 前缀2字节0100 + 长度2字节0000 + 真实nonce(8字节) + seq(4字节00000000)
+	// construct fullNonce: before缀2byte0100 + length2byte0000 + realnonce(8byte) + seq(4byte00000000)
 	prefix := []byte{0x01, 0x00}
 	length := []byte{0x00, 0x00}
 	seq := []byte{0x00, 0x00, 0x00, 0x00}
@@ -157,7 +157,7 @@ func (s *UdpSession) RecvData(data []byte) (bool, error) {
 	}
 }
 
-// SendAudioData 发送音频数据
+// SendAudioData sendaudio data
 func (s *UdpSession) SendAudioData(data []byte) (bool, error) {
 	s.Lock.Lock()
 	defer s.Lock.Unlock()

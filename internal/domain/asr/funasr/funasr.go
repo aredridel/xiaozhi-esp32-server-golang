@@ -20,19 +20,19 @@ import (
 	"xiaozhi-esp32-server-golang/internal/domain/asr/types"
 )
 
-// FunasrConfig 配置结构体
+// FunasrConfig config structure
 type FunasrConfig struct {
-	Host          string // FunASR 服务主机地址
-	Port          string // FunASR 服务端口
-	Mode          string // 识别模式，如 "online"
-	SampleRate    int    // 采样率
-	ChunkSize     []int  // 分块大小
-	ChunkInterval int    // 分块间隔
-	Timeout       int    // 连接超时时间（秒）
-	AutoEnd       bool   // 是否超时 xx ms自动结束，不依赖 isSpeaking为false
+	Host          string // FunASR service host address
+	Port          string // FunASR server port
+	Mode          string // recognition mode, e.g., "online"
+	SampleRate    int    // sampling rate
+	ChunkSize     []int  // chunk size
+	ChunkInterval int    // chunk interval
+	Timeout       int    // connection timeout (seconds)
+	AutoEnd       bool   // whether to auto-end after timeout xx ms, not dependent on isSpeaking being false
 }
 
-// DefaultConfig 默认配置
+// DefaultConfig default config
 var DefaultConfig = FunasrConfig{
 	Host:          "localhost",
 	Port:          "10095",
@@ -43,14 +43,14 @@ var DefaultConfig = FunasrConfig{
 	Timeout:       30,
 }
 
-// Funasr 实现ASR接口
+// Funasr implements ASR interface
 type Funasr struct {
 	config FunasrConfig
 
-	// 连接管理
+	// connection management
 	conn      *websocket.Conn
 	connMutex sync.RWMutex
-	// 发送锁，确保同一时间只有一个请求在使用连接
+	// send lock, ensure only one request uses connection at a time
 	sendMutex sync.Mutex
 }
 
@@ -62,30 +62,30 @@ type streamDebugState struct {
 	audioSampleCount atomic.Uint64
 }
 
-// FunasrRequest FunASR WebSocket请求结构体
+// FunasrRequest FunASR WebSocket request structure
 type FunasrRequest struct {
-	Mode          string `json:"mode,omitempty"`           // 识别模式，如 "online"
-	ChunkSize     []int  `json:"chunk_size,omitempty"`     // 分块大小
-	ChunkInterval int    `json:"chunk_interval,omitempty"` // 分块间隔
-	AudioFs       int    `json:"audio_fs,omitempty"`       // 采样率
-	WavName       string `json:"wav_name,omitempty"`       // 音频名称
-	WavFormat     string `json:"wav_format,omitempty"`     // 音频格式
-	IsSpeaking    bool   `json:"is_speaking"`              // 是否在说话
-	Hotwords      string `json:"hotwords,omitempty"`       // 热词
-	Itn           bool   `json:"itn,omitempty"`            // 是否进行文本规整
+	Mode          string `json:"mode,omitempty"`           // recognition mode, e.g., "online"
+	ChunkSize     []int  `json:"chunk_size,omitempty"`     // chunk size
+	ChunkInterval int    `json:"chunk_interval,omitempty"` // chunk interval
+	AudioFs       int    `json:"audio_fs,omitempty"`       // sampling rate
+	WavName       string `json:"wav_name,omitempty"`       // audio name
+	WavFormat     string `json:"wav_format,omitempty"`     // audio format
+	IsSpeaking    bool   `json:"is_speaking"`              // whether speaking
+	Hotwords      string `json:"hotwords,omitempty"`       // hotwords
+	Itn           bool   `json:"itn,omitempty"`            // whether to perform text normalization
 }
 
-// FunasrResponse FunASR WebSocket响应结构体
+// FunasrResponse FunASR WebSocket response structure
 type FunasrResponse struct {
-	Text       string  `json:"text"`       // 识别的文本
-	IsFinal    bool    `json:"is_final"`   // 是否为最终结果
-	WavName    string  `json:"wav_name"`   // 音频名称
-	TimeStamp  string  `json:"timestamp"`  // 时间戳
-	Mode       string  `json:"mode"`       // 模式
-	Confidence float64 `json:"confidence"` // 置信度
+	Text       string  `json:"text"`       // recognized text
+	IsFinal    bool    `json:"is_final"`   // whether is final result
+	WavName    string  `json:"wav_name"`   // audio name
+	TimeStamp  string  `json:"timestamp"`  // timestamp
+	Mode       string  `json:"mode"`       // mode
+	Confidence float64 `json:"confidence"` // confidence degree
 }
 
-// NewFunasr 创建一个新的Funasr实例
+// NewFunasr creates a new Funasr instance
 func NewFunasr(config FunasrConfig) (*Funasr, error) {
 	if config.Host == "" {
 		config = DefaultConfig
@@ -96,86 +96,86 @@ func NewFunasr(config FunasrConfig) (*Funasr, error) {
 	}, nil
 }
 
-// getConnection 获取连接，如果不存在则创建
+// getConnection gets connection, creates if not exists
 func (f *Funasr) getConnection(ctx context.Context) (*websocket.Conn, error) {
-	// 先尝试读取现有连接
+	// first try to read existing connection
 	f.connMutex.RLock()
 	conn := f.conn
 	f.connMutex.RUnlock()
 
 	if conn != nil {
-		log.Debugf("FunASR WebSocket 复用连接: conn=%p", conn)
+		log.Debugf("FunASR WebSocket reuse connection: conn=%p", conn)
 		return conn, nil
 	}
 
-	// 需要创建新连接
+	// need to create new connection
 	f.connMutex.Lock()
 	defer f.connMutex.Unlock()
 
-	// 双重检查，可能其他 goroutine 已经创建了连接
+	// double-check, other goroutine may have already created connection
 	if f.conn != nil {
 		return f.conn, nil
 	}
 
-	// 创建新连接
+	// create new connection
 	url := fmt.Sprintf("ws://%s:%s/", f.config.Host, f.config.Port)
 	conn, _, err := websocket.DefaultDialer.DialContext(ctx, url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("连接到FunASR服务失败: %v", err)
+		return nil, fmt.Errorf("connect to FunASR service failed: %v", err)
 	}
 
 	f.conn = conn
-	log.Infof("FunASR WebSocket 连接已建立: conn=%p", conn)
+	log.Infof("FunASR WebSocket connection established: conn=%p", conn)
 	return conn, nil
 }
 
-// clearConnection 清空连接（用于断线重连）
+// clearConnection clears connection (used for reconnection)
 func (f *Funasr) clearConnection() {
 	f.connMutex.Lock()
 	defer f.connMutex.Unlock()
 
 	if f.conn != nil {
-		log.Infof("FunASR WebSocket 连接已清空: conn=%p", f.conn)
+		log.Infof("FunASR WebSocket connection cleared: conn=%p", f.conn)
 		f.conn.Close()
 		f.conn = nil
 	}
 }
 
-// StreamingResult 流式识别结果
+// StreamingResult streaming recognition result
 type StreamingResult struct {
-	Text    string // 识别的文本
-	IsFinal bool   // 是否为最终结果
+	Text    string // recognized text
+	IsFinal bool   // whether is final result
 }
 
-// isTimeoutError 判断是否为超时错误
+// isTimeoutError determines if it's a timeout error
 func isTimeoutError(err error) bool {
 	if err == nil {
 		return false
 	}
 
-	// 检查是否为网络超时错误
+	// check if it's a network timeout error
 	if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 		return true
 	}
 
-	// 检查错误消息中是否包含超时关键词
+	// check error message for timeout keywords
 	errMsg := strings.ToLower(err.Error())
 	return strings.Contains(errMsg, "timeout") || strings.Contains(errMsg, "i/o timeout")
 }
 
-// isConnectionClosedError 判断是否为连接关闭错误
+// isConnectionClosedError determines if it's a connection closed error
 func isConnectionClosedError(err error) bool {
 	if err == nil {
 		return false
 	}
 
-	// 检查是否为 WebSocket 关闭错误
+	// check if it's a WebSocket close error
 	if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway,
 		websocket.CloseAbnormalClosure, websocket.CloseNoStatusReceived) {
 		return true
 	}
 
-	// 检查错误消息中是否包含连接关闭关键词
+	// check error message for connection close keywords
 	errMsg := strings.ToLower(err.Error())
 	return strings.Contains(errMsg, "connection closed") ||
 		strings.Contains(errMsg, "broken pipe") ||
@@ -183,32 +183,32 @@ func isConnectionClosedError(err error) bool {
 		strings.Contains(errMsg, "use of closed network connection")
 }
 
-// writeMessage 安全地向 WebSocket 连接写入消息
+// writeMessage safely writes message to WebSocket connection
 func (f *Funasr) writeMessage(conn *websocket.Conn, messageType int, data []byte) error {
-	// 使用读锁保护连接写入操作，防止并发写入导致数据混乱
+	// use read lock to protect connection write operation, prevent concurrent write causing data corruption
 	f.connMutex.RLock()
 	defer f.connMutex.RUnlock()
 
-	// 检查连接是否有效
+	// check if connection is valid
 	if conn == nil {
-		return fmt.Errorf("连接已关闭")
+		return fmt.Errorf("connection already closed")
 	}
 
 	return conn.WriteMessage(messageType, data)
 }
 
-// StreamingRecognize 实现流式识别
-// 从audioStream接收音频数据，通过resultChan返回结果
-// 可以通过ctx控制识别过程的取消和超时
+// StreamingRecognize implements streaming recognition
+// receives audio data from audioStream, returns result through resultChan
+// can control recognition process cancellation and timeout through ctx
 func (f *Funasr) StreamingRecognize(ctx context.Context, audioStream <-chan []float32) (chan types.StreamingResult, error) {
-	// 使用发送锁保护，确保同一时间只有一个请求在使用连接
+	// use send lock to protect, ensure only one request uses connection at a time
 	f.sendMutex.Lock()
-	// 注意：不在函数返回时释放锁，而是在 goroutine 完成时释放
+	// Note: don't release lock when function returns, but release when goroutine completes
 
-	// 获取连接（复用或创建）
+	// get connection (reuse or create)
 	conn, err := f.getConnection(ctx)
 	if err != nil {
-		f.sendMutex.Unlock() // 获取连接失败时立即释放锁
+		f.sendMutex.Unlock() // release lock immediately if get connection fails
 		return nil, err
 	}
 
@@ -217,7 +217,7 @@ func (f *Funasr) StreamingRecognize(ctx context.Context, audioStream <-chan []fl
 	wavName := streamID
 	debugState := &streamDebugState{}
 
-	// 发送初始消息
+	// send initial message
 	firstMessage := FunasrRequest{
 		Mode:          f.config.Mode,
 		ChunkSize:     []int{5, 10, 5},
@@ -226,12 +226,12 @@ func (f *Funasr) StreamingRecognize(ctx context.Context, audioStream <-chan []fl
 		WavName:       wavName,
 		WavFormat:     "pcm",
 		IsSpeaking:    true,
-		Hotwords:      "{\"阿里巴巴\":20,\"hello world\":40}",
+		Hotwords:      "{\"Alibaba\":20,\"hello world\":40}",
 		Itn:           true,
 	}
 
 	log.Debugf(
-		"funasr StreamingRecognize 开始: stream_id=%s, conn=%p, mode=%s, chunk_interval=%d, chunk_size=%v, wav_name=%s",
+		"funasr StreamingRecognize start: stream_id=%s, conn=%p, mode=%s, chunk_interval=%d, chunk_size=%v, wav_name=%s",
 		streamID,
 		conn,
 		f.config.Mode,
@@ -243,29 +243,29 @@ func (f *Funasr) StreamingRecognize(ctx context.Context, audioStream <-chan []fl
 	messageBytes, err := json.Marshal(firstMessage)
 	if err != nil {
 		cancelFunc()
-		f.sendMutex.Unlock() // 序列化失败时立即释放锁
-		return nil, fmt.Errorf("序列化初始消息失败: %v", err)
+		f.sendMutex.Unlock() // release lock immediately if serialize fails
+		return nil, fmt.Errorf("serialize initial message failed: %v", err)
 	}
 
 	err = f.writeMessage(conn, websocket.TextMessage, messageBytes)
 	if err != nil {
-		// 发送失败，清空连接，下次使用时自动重连
-		log.Errorf("发送初始消息失败: %v，清空连接", err)
+		// send failed, clear connection, will auto-reconnect next time
+		log.Errorf("send initial message failed: %v, clear connection", err)
 		f.clearConnection()
 		cancelFunc()
-		f.sendMutex.Unlock() // 发送失败时立即释放锁
-		return nil, fmt.Errorf("发送初始消息失败: %v", err)
+		f.sendMutex.Unlock() // release lock immediately if send fails
+		return nil, fmt.Errorf("send initial message failed: %v", err)
 	}
 
-	// 创建结果通道，带缓冲避免阻塞
+	// create result channel, with buffer to avoid blocking
 	resultChan := make(chan types.StreamingResult, 20)
 
-	// 使用 WaitGroup 等待两个 goroutine 完成
+	// use WaitGroup to wait for two goroutines to complete
 	var wg sync.WaitGroup
 	wg.Add(2)
 
-	// 启动goroutine接收和发送数据
-	// 在 goroutine 完成时释放锁
+	// start goroutine to receive and send data
+	// release lock when goroutine completes
 	go func() {
 		defer wg.Done()
 		f.recvResult(subCtx, conn, streamID, wavName, debugState, resultChan)
@@ -276,13 +276,13 @@ func (f *Funasr) StreamingRecognize(ctx context.Context, audioStream <-chan []fl
 		f.forwardStreamAudio(subCtx, cancelFunc, conn, streamID, wavName, debugState, audioStream)
 	}()
 
-	// 在后台等待 goroutine 完成并释放锁
+	// wait for goroutine to complete in background and release lock
 	go func() {
 		wg.Wait()
 		f.clearConnection()
 		f.sendMutex.Unlock()
 		log.Debugf(
-			"funasr StreamingRecognize goroutine 完成，已释放 sendMutex: stream_id=%s, wav_name=%s, chunks=%d, samples=%d",
+			"funasr StreamingRecognize goroutine complete, already released sendMutex: stream_id=%s, wav_name=%s, chunks=%d, samples=%d",
 			streamID,
 			wavName,
 			debugState.audioChunkCount.Load(),
@@ -301,22 +301,22 @@ func (f *Funasr) recvResult(ctx context.Context, conn *websocket.Conn, streamID 
 	for {
 		select {
 		case <-ctx.Done():
-			// 上下文取消，退出goroutine
-			log.Debugf("funasr recvResult 已取消: %v", ctx.Err())
+			// context cancelled, exit goroutine
+			log.Debugf("funasr recvResult already cancelled: %v", ctx.Err())
 			return
 		default:
-			// 继续正常处理
+			// continue normal processing
 		}
 
 		_, message, err := conn.ReadMessage()
 		if err != nil {
-			log.Debugf("funasr recvResult 读取识别结果失败: stream_id=%s, conn=%p, err=%v，清空连接", streamID, conn, err)
-			// 读取失败，清空连接，下次使用时自动重连
+			log.Debugf("funasr recvResult read recognition result failed: stream_id=%s, conn=%p, err=%v, clear connection", streamID, conn, err)
+			// read failed, clear connection, will auto-reconnect next time
 			f.clearConnection()
 			return
 		}
 		log.Debugf(
-			"funasr recvResult 读取识别结果: stream_id=%s, conn=%p, chunks=%d, samples=%d, payload=%v",
+			"funasr recvResult read recognition result: stream_id=%s, conn=%p, chunks=%d, samples=%d, payload=%v",
 			streamID,
 			conn,
 			debugState.audioChunkCount.Load(),
@@ -327,13 +327,13 @@ func (f *Funasr) recvResult(ctx context.Context, conn *websocket.Conn, streamID 
 		var response FunasrResponse
 		err = json.Unmarshal(message, &response)
 		if err != nil {
-			log.Debugf("funasr recvResult 解析识别结果失败: %v", err)
+			log.Debugf("funasr recvResult parse recognition result failed: %v", err)
 			continue
 		}
 
 		if response.WavName != "" && response.WavName != wavName {
 			log.Warnf(
-				"funasr recvResult 忽略非当前流结果: stream_id=%s, expected_wav=%s, actual_wav=%s, conn=%p, chunks=%d, samples=%d",
+				"funasr recvResult ignore non-current stream result: stream_id=%s, expected_wav=%s, actual_wav=%s, conn=%p, chunks=%d, samples=%d",
 				streamID,
 				wavName,
 				response.WavName,
@@ -344,18 +344,18 @@ func (f *Funasr) recvResult(ctx context.Context, conn *websocket.Conn, streamID 
 			continue
 		}
 
-		// 只有有文本时才发送结果
+		// only send result when there is text
 		/*if response.Text == "" {
 			continue
 		}*/
 
 		streamingResult := f.toStreamingResult(response)
 
-		// 发送识别结果
+		// sendrecognizeresult
 		select {
 		case <-ctx.Done():
-			// 上下文取消，退出goroutine
-			log.Debugf("funasr recvResult 已取消: %v", ctx.Err())
+			// contextcancel，exitgoroutine
+			log.Debugf("funasr recvResult alreadycancel: %v", ctx.Err())
 			return
 		case resultChan <- streamingResult:
 		}
@@ -363,8 +363,8 @@ func (f *Funasr) recvResult(ctx context.Context, conn *websocket.Conn, streamID 
 			log.Debugf("funasr recvResult autoend")
 			return
 		}*/
-		// 结果发送成功
-		// 如果是最终结果且输入已结束，则退出循环
+		// resultsendsuccessful
+		// ifyesfinallyresultandinputalreadyend，thenexit loop
 		if streamingResult.IsFinal {
 			log.Debugf(
 				"funasr recvResult isfinal: stream_id=%s, conn=%p, response_mode=%s, raw_is_final=%v, text_len=%d, wav_name=%s, chunks=%d, samples=%d",
@@ -408,7 +408,7 @@ func (f *Funasr) toStreamingResult(response FunasrResponse) types.StreamingResul
 
 func (f *Funasr) forwardStreamAudio(ctx context.Context, cancelFunc context.CancelFunc, conn *websocket.Conn, streamID string, wavName string, debugState *streamDebugState, audioStream <-chan []float32) {
 	sendEndMsg := func() {
-		// 发送终止消息
+		// sendterminatemessage
 		endMessage := FunasrRequest{
 			Mode:          f.config.Mode,
 			ChunkInterval: f.config.ChunkInterval,
@@ -418,7 +418,7 @@ func (f *Funasr) forwardStreamAudio(ctx context.Context, cancelFunc context.Canc
 		}
 		endMessageBytes, _ := json.Marshal(endMessage)
 		log.Debugf(
-			"funasr forwardStreamAudio 发送结束消息: stream_id=%s, conn=%p, chunks=%d, samples=%d, payload=%v",
+			"funasr forwardStreamAudio sendendmessage: stream_id=%s, conn=%p, chunks=%d, samples=%d, payload=%v",
 			streamID,
 			conn,
 			debugState.audioChunkCount.Load(),
@@ -427,31 +427,31 @@ func (f *Funasr) forwardStreamAudio(ctx context.Context, cancelFunc context.Canc
 		)
 		err := f.writeMessage(conn, websocket.TextMessage, endMessageBytes)
 		if err != nil {
-			log.Debugf("funasr forwardStreamAudio 发送结束消息失败: stream_id=%s, conn=%p, err=%v，清空连接", streamID, conn, err)
+			log.Debugf("funasr forwardStreamAudio sendendmessagefailed: stream_id=%s, conn=%p, err=%v，clearjoin", streamID, conn, err)
 			f.clearConnection()
 		}
 	}
-	// 处理输入音频流
+	// processinputaudio stream
 	for {
 		select {
 		case <-ctx.Done():
-			// 上下文取消，发送结束消息并退出
+			// contextcancel，sendendmessageandexit
 			log.Debugf(
-				"funasr forwardStreamAudio 上下文已取消: stream_id=%s, conn=%p, chunks=%d, samples=%d, err=%v",
+				"funasr forwardStreamAudio contextalreadycancel: stream_id=%s, conn=%p, chunks=%d, samples=%d, err=%v",
 				streamID,
 				conn,
 				debugState.audioChunkCount.Load(),
 				debugState.audioSampleCount.Load(),
 				ctx.Err(),
 			)
-			// 注意：这里不需要调用 cancelFunc()，因为 ctx.Done() 已经被触发说明上下文已取消
+			// 注意：这innoneedcall cancelFunc()，becauseis ctx.Done() alreadybetriggerinstructioncontextalreadycancel
 			sendEndMsg()
 			return
 		case pcmChunk, ok := <-audioStream:
 			if !ok {
-				// 通道已关闭，结束输入，需要通知接收goroutine停止
+				// channel closed，endinput，neednotifyreceivegoroutinestop
 				log.Debugf(
-					"funasr forwardStreamAudio 音频通道关闭: stream_id=%s, conn=%p, chunks=%d, samples=%d",
+					"funasr forwardStreamAudio audio channelclose: stream_id=%s, conn=%p, chunks=%d, samples=%d",
 					streamID,
 					conn,
 					debugState.audioChunkCount.Load(),
@@ -461,24 +461,24 @@ func (f *Funasr) forwardStreamAudio(ctx context.Context, cancelFunc context.Canc
 				return
 			}
 
-			// 转换PCM数据为字节
+			// convertPCMdataisbyte
 			audioBytes := Float32SliceToBytes(pcmChunk)
 
-			//log.Debugf("funasr forwardStreamAudio 发送音频数据, pcmChunk len: %v, audioBytes len: %v", len(pcmChunk), len(audioBytes))
+			//log.Debugf("funasr forwardStreamAudio sendaudio data, pcmChunk len: %v, audioBytes len: %v", len(pcmChunk), len(audioBytes))
 
-			// 发送音频数据
+			// sendaudio data
 			err := f.writeMessage(conn, websocket.BinaryMessage, audioBytes)
 			if err != nil {
-				log.Debugf("funasr forwardStreamAudio 发送音频数据失败: stream_id=%s, conn=%p, err=%v，清空连接", streamID, conn, err)
+				log.Debugf("funasr forwardStreamAudio sendaudio datafailed: stream_id=%s, conn=%p, err=%v，clearjoin", streamID, conn, err)
 				f.clearConnection()
-				cancelFunc() // 发送失败时取消上下文，通知 recvResult goroutine 停止
+				cancelFunc() // sendfailedwhencancelcontext，notify recvResult goroutine stop
 				return
 			}
 			chunkCount := debugState.audioChunkCount.Add(1)
 			sampleCount := debugState.audioSampleCount.Add(uint64(len(pcmChunk)))
 			if chunkCount <= 3 || chunkCount%10 == 0 {
 				log.Debugf(
-					"funasr forwardStreamAudio 已发送音频块: stream_id=%s, conn=%p, chunk=%d, chunk_samples=%d, total_samples=%d, bytes=%d",
+					"funasr forwardStreamAudio alreadysendaudio chunk: stream_id=%s, conn=%p, chunk=%d, chunk_samples=%d, total_samples=%d, bytes=%d",
 					streamID,
 					conn,
 					chunkCount,
@@ -491,15 +491,15 @@ func (f *Funasr) forwardStreamAudio(ctx context.Context, cancelFunc context.Canc
 	}
 }
 
-// Process 处理音频数据并返回识别结果
+// Process processaudio dataandreturnrecognizeresult
 func (f *Funasr) Process(pcmData []float32) (string, error) {
 	ctx := context.Background()
 
-	// 使用发送锁保护，确保同一时间只有一个请求在使用连接
+	// usesendlockprotected，ensureat the same timeatimeonlyhavearequestatusejoin
 	f.sendMutex.Lock()
 	defer f.sendMutex.Unlock()
 
-	// 获取连接（复用或创建）
+	// getjoin（复useorcreate）
 	conn, err := f.getConnection(ctx)
 	if err != nil {
 		return "", err
@@ -507,7 +507,7 @@ func (f *Funasr) Process(pcmData []float32) (string, error) {
 
 	audioBytes := Float32SliceToBytes(pcmData)
 
-	// 发送初始消息
+	// sendinitialmessage
 	firstMessage := FunasrRequest{
 		Mode:          f.config.Mode,
 		ChunkSize:     []int{5, 10, 5},
@@ -522,19 +522,19 @@ func (f *Funasr) Process(pcmData []float32) (string, error) {
 
 	messageBytes, err := json.Marshal(firstMessage)
 	if err != nil {
-		return "", fmt.Errorf("序列化初始消息失败: %v", err)
+		return "", fmt.Errorf("serializeinitialmessagefailed: %v", err)
 	}
 
 	err = f.writeMessage(conn, websocket.TextMessage, messageBytes)
 	if err != nil {
-		// 发送失败，清空连接，下次使用时自动重连
-		log.Errorf("发送初始消息失败: %v，清空连接", err)
+		// sendfailed，clearjoin，downtimesusewhenautomaticreconnect
+		log.Errorf("sendinitialmessagefailed: %v，clearjoin", err)
 		f.clearConnection()
-		return "", fmt.Errorf("发送初始消息失败: %v", err)
+		return "", fmt.Errorf("sendinitialmessagefailed: %v", err)
 	}
 
-	// 将音频数据按块发送
-	chunkSize := int(audio.SampleRate * 0.1) // 每块大小约100ms的音频 (16000 * 0.1)
+	// willaudio data按blocksend
+	chunkSize := int(audio.SampleRate * 0.1) // 每blocksizeabout100msofaudio (16000 * 0.1)
 	for i := 0; i < len(audioBytes); i += chunkSize {
 		end := i + chunkSize
 		if end > len(audioBytes) {
@@ -544,48 +544,48 @@ func (f *Funasr) Process(pcmData []float32) (string, error) {
 
 		err = f.writeMessage(conn, websocket.BinaryMessage, chunk)
 		if err != nil {
-			// 发送失败，清空连接，下次使用时自动重连
-			log.Errorf("发送音频数据失败: %v，清空连接", err)
+			// sendfailed，clearjoin，downtimesusewhenautomaticreconnect
+			log.Errorf("sendaudio datafailed: %v，clearjoin", err)
 			f.clearConnection()
-			return "", fmt.Errorf("发送音频数据失败: %v", err)
+			return "", fmt.Errorf("sendaudio datafailed: %v", err)
 		}
 	}
 
-	// 发送终止消息
+	// sendterminatemessage
 	endMessage := FunasrRequest{
 		IsSpeaking: false,
 	}
 	endMessageBytes, _ := json.Marshal(endMessage)
 	err = f.writeMessage(conn, websocket.TextMessage, endMessageBytes)
 	if err != nil {
-		// 发送失败，清空连接，下次使用时自动重连
-		log.Errorf("发送终止消息失败: %v，清空连接", err)
+		// sendfailed，clearjoin，downtimesusewhenautomaticreconnect
+		log.Errorf("sendterminatemessagefailed: %v，clearjoin", err)
 		f.clearConnection()
-		return "", fmt.Errorf("发送终止消息失败: %v", err)
+		return "", fmt.Errorf("sendterminatemessagefailed: %v", err)
 	}
 
-	// 设置读取超时
+	// setreadtimeout
 	conn.SetReadDeadline(time.Now().Add(time.Duration(f.config.Timeout) * time.Second))
 
-	// 读取结果
+	// readresult
 	var result string
 	for {
 		_, message, err := conn.ReadMessage()
 		if err != nil {
 			if isTimeoutError(err) {
-				log.Debugf("funasr Process 读取结果超时: %v", err)
-				f.clearConnection() // 读取超时，清空连接
-				return "", fmt.Errorf("读取结果超时: %v", err)
+				log.Debugf("funasr Process readresulttimeout: %v", err)
+				f.clearConnection() // readtimeout，clearjoin
+				return "", fmt.Errorf("readresulttimeout: %v", err)
 			}
 			if isConnectionClosedError(err) {
-				log.Debugf("funasr Process 读取结果连接已关闭: %v", err)
-				f.clearConnection() // 连接已关闭，清空连接
-				return "", fmt.Errorf("连接已关闭: %v", err)
+				log.Debugf("funasr Process readresultjoinalreadyclose: %v", err)
+				f.clearConnection() // joinalreadyclose，clearjoin
+				return "", fmt.Errorf("joinalreadyclose: %v", err)
 			}
-			// 读取失败，清空连接，下次使用时自动重连
-			log.Errorf("funasr Process 读取结果失败: %v，清空连接", err)
+			// readfailed，clearjoin，downtimesusewhenautomaticreconnect
+			log.Errorf("funasr Process readresultfailed: %v，clearjoin", err)
 			f.clearConnection()
-			return "", fmt.Errorf("读取结果失败: %v", err)
+			return "", fmt.Errorf("readresultfailed: %v", err)
 		}
 
 		var response FunasrResponse
@@ -594,7 +594,7 @@ func (f *Funasr) Process(pcmData []float32) (string, error) {
 			continue
 		}
 
-		// 检查是否为最终结果
+		// check ifisfinallyresult
 		if response.IsFinal {
 			result = response.Text
 			break
@@ -605,7 +605,7 @@ func (f *Funasr) Process(pcmData []float32) (string, error) {
 }
 
 func Float32ToInt16(sample float32) int16 {
-	// 限制在 [-1, 1]，避免溢出
+	// limitat [-1, 1]，avoidoverflow
 	if sample > 1.0 {
 		sample = 1.0
 	} else if sample < -1.0 {
@@ -624,13 +624,13 @@ func Float32SliceToBytes(samples []float32) []byte {
 	return data
 }
 
-// Close 关闭资源，释放连接
+// Close closeresource，releasejoin
 func (f *Funasr) Close() error {
 	f.clearConnection()
 	return nil
 }
 
-// IsValid 检查资源是否有效
+// IsValid inspectresourcewhethervalid
 func (f *Funasr) IsValid() bool {
 	f.connMutex.RLock()
 	conn := f.conn
@@ -639,37 +639,37 @@ func (f *Funasr) IsValid() bool {
 }
 
 /*
-错误类型判断使用示例：
+errortypejudgeuseexample：
 
-1. 超时错误判断：
+1. timeouterrorjudge：
    if isTimeoutError(err) {
-       // 处理超时情况，可能需要重试或调整超时时间
-       log.Warnf("操作超时: %v", err)
+       // processtimeoutsituation，mayneedretryor调bodytimeouttime
+       log.Warnf("操astimeout: %v", err)
    }
 
-2. 连接关闭错误判断：
+2. joincloseerrorjudge：
    if isConnectionClosedError(err) {
-       // 处理连接关闭情况，可能需要重新建立连接
-       log.Warnf("连接已关闭: %v", err)
+       // processjoinclosesituation，mayneedre建立join
+       log.Warnf("joinalreadyclose: %v", err)
    }
 
-3. 综合错误处理：
+3. 综合errorprocess：
    _, message, err := conn.ReadMessage()
    if err != nil {
        if isTimeoutError(err) {
-           // 超时：可能是网络延迟或服务器响应慢
-           // 建议：调整超时时间或重试
+           // timeout：mayyesnetworkdelayorserverrespondslow
+           // suggestion：调bodytimeouttimeorretry
        } else if isConnectionClosedError(err) {
-           // 连接关闭：可能是服务器主动断开或网络中断
-           // 建议：重新建立连接
+           // joinclose：mayyesservermain动disconnectornetworkin断
+           // suggestion：re建立join
        } else {
-           // 其他错误：可能是协议错误或数据格式错误
-           // 建议：检查数据格式或协议实现
+           // othererror：mayyesprotocolerrorordataformaterror
+           // suggestion：inspectdataformatorprotocolimplement
        }
    }
 
-常见错误类型：
-- 超时错误：i/o timeout, context deadline exceeded
-- 连接关闭：connection closed, broken pipe, connection reset
-- WebSocket关闭：close 1000 (normal), close 1001 (going away)
+常见errortype：
+- timeouterror：i/o timeout, context deadline exceeded
+- joinclose：connection closed, broken pipe, connection reset
+- WebSocketclose：close 1000 (normal), close 1001 (going away)
 */

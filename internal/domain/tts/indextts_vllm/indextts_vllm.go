@@ -109,14 +109,14 @@ func (p *IndexTTSVLLMProvider) TextToSpeech(ctx context.Context, text string, sa
 		frames = append(frames, frame)
 	}
 	if len(frames) == 0 {
-		return nil, fmt.Errorf("IndexTTS 返回音频为空")
+		return nil, fmt.Errorf("IndexTTS returnaudioisempty")
 	}
 	return frames, nil
 }
 
 func (p *IndexTTSVLLMProvider) TextToSpeechStream(ctx context.Context, text string, sampleRate int, channels int, frameDuration int) (outputChan chan []byte, err error) {
 	if strings.TrimSpace(p.Voice) == "" {
-		return nil, fmt.Errorf("indextts_vllm 未配置 voice，请先通过 /audio/clone 创建音色")
+		return nil, fmt.Errorf("indextts_vllm notconfig voice，pleasefirstthrough /audio/clone createvoice")
 	}
 	if frameDuration <= 0 {
 		frameDuration = p.FrameDuration
@@ -128,13 +128,13 @@ func (p *IndexTTSVLLMProvider) TextToSpeechStream(ctx context.Context, text stri
 	payload := speechRequest{Model: p.Model, Input: text, Voice: p.Voice}
 	body, err := json.Marshal(payload)
 	if err != nil {
-		return nil, fmt.Errorf("序列化请求失败: %v", err)
+		return nil, fmt.Errorf("serializerequestfailed: %v", err)
 	}
 
 	url := p.BaseURL + indexttsTTSEndpoint
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
-		return nil, fmt.Errorf("创建请求失败: %v", err)
+		return nil, fmt.Errorf("failed to create request: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "audio/wav,application/octet-stream,*/*")
@@ -147,23 +147,23 @@ func (p *IndexTTSVLLMProvider) TextToSpeechStream(ctx context.Context, text stri
 		defer close(outputChan)
 		resp, reqErr := getHTTPClient().Do(req)
 		if reqErr != nil {
-			log.Errorf("IndexTTS请求失败: %v", reqErr)
+			log.Errorf("IndexTTSrequestfailed: %v", reqErr)
 			return
 		}
 		defer resp.Body.Close()
 		if resp.StatusCode != http.StatusOK {
 			msg, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
-			log.Errorf("IndexTTS请求失败: status=%d body=%s", resp.StatusCode, strings.TrimSpace(string(msg)))
+			log.Errorf("IndexTTSrequestfailed: status=%d body=%s", resp.StatusCode, strings.TrimSpace(string(msg)))
 			return
 		}
 
 		decoder, decErr := util.CreateAudioDecoderWithSampleRate(ctx, resp.Body, outputChan, frameDuration, "wav", sampleRate)
 		if decErr != nil {
-			log.Errorf("创建IndexTTS音频解码器失败: %v", decErr)
+			log.Errorf("createIndexTTSaudiodecode器failed: %v", decErr)
 			return
 		}
 		if runErr := decoder.Run(time.Now().UnixMilli()); runErr != nil {
-			log.Errorf("IndexTTS音频解码失败: %v", runErr)
+			log.Errorf("IndexTTSaudiodecodefailed: %v", runErr)
 		}
 	}()
 
@@ -179,7 +179,7 @@ func (p *IndexTTSVLLMProvider) SetVoice(voiceConfig map[string]interface{}) erro
 		p.Voice = strings.TrimSpace(character)
 		return nil
 	}
-	return fmt.Errorf("无效的音色配置: 缺少 voice/character")
+	return fmt.Errorf("invalidofvoiceconfig: Missing voice/character")
 }
 
 func (p *IndexTTSVLLMProvider) Close() error { return nil }

@@ -1,20 +1,20 @@
-# 播放音乐功能
+# play music功能
 
-这个模块提供了从URL流式播放音乐的功能，支持从网络URL获取音频文件并实时解码为音频帧流。
+这个模块providefromURLstreamingplay musicof功能，支持from网络URLgetaudio文件并实when解码isaudio frame流。
 
 ## 功能特性
 
-- ✅ **流式播放**: 支持从URL实时下载和播放音乐
-- ✅ **格式支持**: 主要支持MP3格式，自动解码为Opus音频帧
-- ✅ **音频解码**: 基于成熟的音频解码器，高效稳定
-- ✅ **上下文控制**: 支持通过context取消和超时控制
-- ✅ **连接池优化**: 使用HTTP连接池，提高网络性能
-- ✅ **配置灵活**: 可配置帧时长和音频格式
-- ✅ **统计信息**: 提供播放统计和状态监控
+- ✅ **streaming播放**: 支持fromURL实when下载和play music
+- ✅ **格式支持**: 主要支持MP3格式，自动解码isOpusaudio frame
+- ✅ **audio解码**: 基于成熟ofaudio解码器，高效稳定
+- ✅ **上下文控制**: 支持throughcontext取消和超when控制
+- ✅ **连接池优化**: useHTTP连接池，提高网络性能
+- ✅ **config灵活**: 可configframewhen长和audio格式
+- ✅ **统计信息**: provide播放统计和状态监控
 
-## 快速开始
+## 快速start
 
-### 1. 基础使用
+### 1. 基础use
 
 ```go
 package main
@@ -31,39 +31,39 @@ func main() {
     config := play_music.DefaultMusicPlayerConfig()
     player := play_music.NewMusicPlayer(config.ToMap())
     
-    // 开始播放音乐
+    // startplay music
     ctx := context.Background()
     audioChan, err := player.PlayMusicStream(ctx, "https://example.com/music.mp3")
     if err != nil {
         panic(err)
     }
     
-    // 处理音频帧
+    // processaudio frame
     for audioFrame := range audioChan {
-        fmt.Printf("收到音频帧: %d 字节\n", len(audioFrame))
-        // 这里可以将音频帧发送到播放设备或其他处理
+        fmt.Printf("收toaudio frame: %d 字节\n", len(audioFrame))
+        // 这里canwillaudio framesendto播放device或其他process
     }
 }
 ```
 
-### 2. 自定义配置
+### 2. 自定义config
 
 ```go
-// 创建自定义配置
+// 创建自定义config
 config := &play_music.MusicPlayerConfig{
-    FrameDuration: 20,   // 20ms帧时长
+    FrameDuration: 20,   // 20msframewhen长
 }
 
 player := play_music.NewMusicPlayer(config.ToMap())
 
-// 或者直接传入配置映射
+// or直接传入config映射
 player := play_music.NewMusicPlayer(map[string]interface{}{
     "frame_duration": 20,
     "audio_format":   "mp3",
 })
 ```
 
-### 3. 带统计信息的完整示例
+### 3. 带统计信息of完整示例
 
 ```go
 package main
@@ -101,13 +101,13 @@ func main() {
         
         if frameCount == 1 {
             stats.FirstFrameTime = time.Now().UnixMilli()
-            fmt.Printf("首帧延迟: %d ms\n", stats.FirstFrameTime - stats.StartTime)
+            fmt.Printf("首frame延迟: %d ms\n", stats.FirstFrameTime - stats.StartTime)
         }
         
-        // 处理音频帧...
+        // processaudio frame...
     }
     
-    fmt.Printf("播放完成，总帧数: %d\n", frameCount)
+    fmt.Printf("播放complete，总frame数: %d\n", frameCount)
 }
 ```
 
@@ -115,55 +115,55 @@ func main() {
 
 ### MusicPlayer
 
-主要的音乐播放器结构体。
+主要of音乐播放器结构体。
 
 #### 方法
 
 ##### `NewMusicPlayer(config map[string]interface{}) *MusicPlayer`
 
-创建新的音乐播放器实例。
+创建new音乐播放器实例。
 
 **参数:**
-- `config`: 配置参数映射
+- `config`: config参数映射
 
-**配置选项:**
-- `frame_duration` (int): 帧时长(ms)，默认20
-- `audio_format` (string): 音频格式，默认"mp3"
+**config选项:**
+- `frame_duration` (int): framewhen长(ms)，default20
+- `audio_format` (string): audio格式，default"mp3"
 
 ##### `PlayMusicStream(ctx context.Context, url string) (chan []byte, error)`
 
-从URL开始流式播放音乐。
+fromURLstartstreamingplay music。
 
 **参数:**
-- `ctx`: 上下文对象，用于取消和超时控制
-- `url`: 音乐文件的URL地址
+- `ctx`: 上下文to象，used for取消和超when控制
+- `url`: 音乐文件ofURL地址
 
-**返回:**
-- `chan []byte`: 音频帧数据通道
-- `error`: 错误信息
+**return:**
+- `chan []byte`: audio framedata通道
+- `error`: error信息
 
 ##### `GetPlayerInfo() map[string]interface{}`
 
-获取播放器配置信息。
+get播放器config信息。
 
 ##### `Stop() error`
 
-停止播放器并清理资源。
+stop播放器并清理resource。
 
-### 配置类型
+### config类型
 
 #### `MusicPlayerConfig`
 
 ```go
 type MusicPlayerConfig struct {
-    FrameDuration int    `json:"frame_duration"` // 帧时长(ms)
-    AudioFormat   string `json:"audio_format"`   // 音频格式，默认"mp3"
+    FrameDuration int    `json:"frame_duration"` // framewhen长(ms)
+    AudioFormat   string `json:"audio_format"`   // audio格式，default"mp3"
 }
 ```
 
 #### `StreamingStats`
 
-播放统计信息结构体，用于监控播放状态。
+播放统计信息结构体，used for监控播放状态。
 
 ```go
 type StreamingStats struct {
@@ -186,44 +186,44 @@ cd test/music_player
 go run main.go "https://example.com/music.mp3"
 ```
 
-## 支持的音频格式
+## 支持ofaudio格式
 
-目前主要支持：
-- **MP3**: 完全支持，推荐使用
-- **WAV**: 部分支持（通过通用解码器）
+目before主要支持：
+- **MP3**: 完全支持，推荐use
+- **WAV**: 部分支持（through通用解码器）
 
-## 错误处理
+## errorprocess
 
-播放器提供了简洁的错误处理机制：
+播放器provide简洁oferrorprocess机制：
 
-1. **连接池优化**: 使用HTTP连接池提高网络稳定性
-2. **上下文控制**: 支持通过context取消操作
-3. **优雅退出**: 遇到错误时优雅关闭通道
+1. **连接池优化**: useHTTP连接池提高网络稳定性
+2. **上下文控制**: 支持throughcontext取消操作
+3. **优雅exit**: 遇toerrorwhen优雅关闭通道
 
 ## 性能优化建议
 
-1. **合理设置帧时长**: 默认20ms适合大多数场景
-2. **网络优化**: 使用稳定的网络连接，播放器已优化HTTP连接池
-3. **内存管理**: 及时处理音频帧数据，避免通道阻塞
-4. **并发控制**: 避免同时播放过多音频流
+1. **合理设置framewhen长**: default20ms适合大多数场景
+2. **网络优化**: use稳定of网络连接，播放器already优化HTTP连接池
+3. **内存管理**: andwhenprocessaudio framedata，避免通道阻塞
+4. **并发控制**: 避免同when播放过多audio stream
 
 ## 集成示例
 
-### 与WebSocket集成
+### andWebSocket集成
 
 ```go
 func streamToWebSocket(audioChan <-chan []byte, ws *websocket.Conn) {
     for frame := range audioChan {
         err := ws.WriteMessage(websocket.BinaryMessage, frame)
         if err != nil {
-            log.Errorf("发送WebSocket消息失败: %v", err)
+            log.Errorf("sendWebSocketmessagefailed: %v", err)
             return
         }
     }
 }
 ```
 
-### 保存到文件
+### 保存to文件
 
 ```go
 func saveToFile(audioChan <-chan []byte, filename string) error {
@@ -245,23 +245,23 @@ func saveToFile(audioChan <-chan []byte, filename string) error {
 
 ## 注意事项
 
-1. **URL有效性**: 确保音频URL可访问且返回有效音频文件
-2. **内存使用**: 长时间播放需要注意内存使用情况
-3. **网络稳定性**: 使用稳定的网络连接以获得最佳播放体验
-4. **上下文管理**: 及时取消不需要的播放任务
+1. **URL有效性**: 确保audioURL可访问且return有效audio文件
+2. **内存use**: 长time播放need注意内存use情况
+3. **网络稳定性**: use稳定of网络连接以获得最佳播放体验
+4. **上下文管理**: andwhen取消不needof播放任务
 
 ## 故障排除
 
 ### 常见问题
 
-**Q: 播放没有声音**
-A: 检查URL是否有效，音频格式是否支持
+**Q: 播放no声音**
+A: checkURLwhether有效，audio格式whether支持
 
 **Q: 播放延迟很高**
-A: 检查网络连接，确保URL响应速度较快
+A: check网络连接，确保URL响应速度较快
 
-**Q: 内存使用过高**
-A: 检查音频帧处理是否及时，避免通道积压
+**Q: 内存use过高**
+A: checkaudio frameprocesswhetherandwhen，避免通道积压
 
 ## License
 

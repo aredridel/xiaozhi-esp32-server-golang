@@ -18,7 +18,7 @@ type McpTransport struct {
 }
 
 func (c *McpTransport) SendMcpMsg(payload []byte) error {
-	//如果是initialize请求，则注入vision
+	//ifyesinitializerequest，then注入vision
 	var request transport.JSONRPCRequest
 	err := json.Unmarshal(payload, &request)
 	if err == nil {
@@ -58,14 +58,14 @@ func initMcp(clientState *ClientState, serverTransport *ServerTransport) {
 		mcp.AddDeviceMcpClient(clientState.DeviceID, mcpClientSession)
 	}
 
-	// 创建IotOverMcp客户端
+	// createIotOverMcpclient-side
 	mcpTransport := &McpTransport{
 		Client:          clientState,
 		ServerTransport: serverTransport,
 	}
 	iotOverMcpClient := mcp.NewIotOverMcpClient(clientState.DeviceID, mcpTransport)
 	if iotOverMcpClient == nil {
-		log.Errorf("创建IotOverMcp客户端失败")
+		log.Errorf("createIotOverMcpclient-sidefailed")
 		serverTransport.transport.Close()
 		return
 	}

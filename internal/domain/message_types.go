@@ -1,28 +1,28 @@
 package domain
 
-// 消息类型常量
+// messagetypeconstant
 const (
-	MessageTypeHello  = "hello"  // 握手消息
-	MessageTypeAbort  = "abort"  // 中止消息
-	MessageTypeListen = "listen" // 监听消息
-	MessageTypeIot    = "iot"    // 物联网消息
+	MessageTypeHello  = "hello"  // 握手message
+	MessageTypeAbort  = "abort"  // in止message
+	MessageTypeListen = "listen" // listenmessage
+	MessageTypeIot    = "iot"    // 物联网message
 )
 
-// 服务器消息类型常量
+// servermessagetypeconstant
 const (
-	ServerMessageTypeHello = "hello" // 握手消息
-	ServerMessageTypeStt   = "stt"   // 语音转文本
-	ServerMessageTypeTts   = "tts"   // 文本转语音
-	ServerMessageTypeIot   = "iot"   // 物联网消息
-	ServerMessageTypeLlm   = "llm"   // 大语言模型
-	ServerMessageTypeText  = "text"  // 文本消息
+	ServerMessageTypeHello = "hello" // 握手message
+	ServerMessageTypeStt   = "stt"   // voice转text
+	ServerMessageTypeTts   = "tts"   // text转voice
+	ServerMessageTypeIot   = "iot"   // 物联网message
+	ServerMessageTypeLlm   = "llm"   // largelanguagemodel
+	ServerMessageTypeText  = "text"  // textmessage
 )
 
-// 消息状态常量
+// messagestateconstant
 const (
-	MessageStateStart   = "start"   // 开始状态
-	MessageStateStop    = "stop"    // 停止状态
-	MessageStateDetect  = "detect"  // 检测状态
-	MessageStateAbort   = "abort"   // 中止状态
-	MessageStateSuccess = "success" // 成功状态
+	MessageStateStart   = "start"   // startstate
+	MessageStateStop    = "stop"    // stopstate
+	MessageStateDetect  = "detect"  // detectstate
+	MessageStateAbort   = "abort"   // in止state
+	MessageStateSuccess = "success" // successfulstate
 )

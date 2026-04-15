@@ -5,7 +5,7 @@ import (
 	"sync"
 )
 
-// SafeBuffer 是一个协程安全的缓冲区
+// SafeBuffer yesagoroutine安全ofbuffer区
 type SafeBuffer struct {
 	buf bytes.Buffer
 	mu  sync.Mutex

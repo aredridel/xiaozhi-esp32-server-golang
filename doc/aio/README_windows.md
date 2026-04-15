@@ -1,6 +1,6 @@
 # Xiaozhi Service Windows Usage Instructions
 
-Welcome to use Xiaozhi Service Windows aio package. This document contains startup, configuration and port descriptions.
+Welcome to use Xiaozhi Service Windows AIO package. This document contains startup, configuration and port descriptions.
 
 ## Directory Structure
 

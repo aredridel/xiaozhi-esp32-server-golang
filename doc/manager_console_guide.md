@@ -15,7 +15,7 @@ Automatically enters configuration wizard after first login, total of 5 steps.
 Configure OTA server information, used to configure websocket and mqtt addresses issued to Xiaozhi hardware.
 
 <!-- Screenshot position: OTA configuration interface -->
-> Figure: OTA configuration wizard interface
+Figure: OTA configuration wizard interface
 
 | Configuration Item | Description |
 |-------|------|
@@ -33,7 +33,7 @@ Configure OTA server information, used to configure websocket and mqtt addresses
 Select voice activity detection engine:
 
 <!-- Screenshot position: VAD configuration interface -->
-> Figure: VAD configuration wizard interface
+Figure: VAD configuration wizard interface
 
 | Engine | Description | Recommended Scenario |
 |-----|------|---------|
@@ -48,7 +48,7 @@ Select voice activity detection engine:
 Select speech recognition engine:
 
 <!-- Screenshot position: ASR configuration interface -->
-> Figure: ASR configuration wizard interface
+Figure: ASR configuration wizard interface
 
 | Engine | Description |
 |-----|------|
@@ -62,7 +62,7 @@ Select speech recognition engine:
 Select large language model:
 
 <!-- Screenshot position: LLM configuration interface -->
-> Figure: LLM configuration wizard interface
+Figure: LLM configuration wizard interface
 
 | Engine | Description |
 |-----|------|
@@ -77,7 +77,7 @@ Select large language model:
 Select text-to-speech engine:
 
 <!-- Screenshot position: TTS configuration interface -->
-> Figure: TTS configuration wizard interface
+Figure: TTS configuration wizard interface
 
 | Engine | Description |
 |-----|------|
@@ -94,7 +94,7 @@ Select text-to-speech engine:
 On each configuration page, click the "Test" button on the right side of the configuration item:
 
 <!-- Screenshot position: Single configuration test button -->
-> Figure: Configuration test button
+Figure: Configuration test button
 
 Test result description:
 
@@ -105,14 +105,14 @@ Test result description:
 | Message | Error details (if failed) |
 
 <!-- Screenshot position: Test result popup -->
-> Figure: Configuration test result popup
+Figure: Configuration test result popup
 
 ### Batch Testing
 
 On the configuration management page, click "Test All" to batch test all configurations:
 
 <!-- Screenshot position: Batch test interface -->
-> Figure: Batch test interface
+Figure: Batch test interface
 
 ### Supported Test Types
 
@@ -131,7 +131,7 @@ On the configuration management page, click "Test All" to batch test all configu
 View first packet latency statistics for each system module:
 
 <!-- Screenshot position: Latency monitoring interface -->
-> Figure: Latency monitoring interface
+Figure: Latency monitoring interface
 
 ### Latency Optimization Suggestions
 
@@ -150,7 +150,7 @@ View first packet latency statistics for each system module:
 Go to "Configuration Management" → Corresponding module → Edit configuration item
 
 <!-- Screenshot position: Configuration management interface -->
-> Figure: Configuration management interface
+Figure: Configuration management interface
 
 ### Enable/Disable Configuration
 

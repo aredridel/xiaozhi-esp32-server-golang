@@ -1,13 +1,13 @@
 # HTTP 组件
 
-统一的 HTTP 客户端组件，用于管理所有对 Manager 后端的 HTTP 调用。
+统一of HTTP 客户端组件，used for管理所有to Manager after端of HTTP 调用。
 
 ## 目录结构
 
 ```
 internal/components/http/
-├── client.go          # 通用 HTTP 客户端（支持重试、认证等）
-├── manager_client.go  # Manager 后端专用客户端
+├── client.go          # 通用 HTTP 客户端（支持重试、认证etc）
+├── manager_client.go  # Manager after端专用客户端
 ├── types.go           # 类型定义
 └── README.md          # 本文档
 ```
@@ -16,18 +16,18 @@ internal/components/http/
 
 ### Client（通用 HTTP 客户端）
 
-提供基础的 HTTP 请求功能：
-- 支持重试机制（使用 exponential backoff）
+provide基础of HTTP 请求功能：
+- 支持重试机制（use exponential backoff）
 - 支持认证 Token（Bearer Token）
-- 支持自定义超时时间
-- 统一错误处理
+- 支持自定义超whentime
+- 统一errorprocess
 - 自动 JSON 序列化/反序列化
 
-### ManagerClient（Manager 后端专用客户端）
+### ManagerClient（Manager after端专用客户端）
 
-基于通用客户端封装，专门用于调用 Manager 后端 API。
+基于通用客户端封装，专门used for调用 Manager after端 API。
 
-## 使用示例
+## use示例
 
 ### 创建 Manager 客户端
 
@@ -42,7 +42,7 @@ client := http.NewManagerClient(http.ManagerClientConfig{
 })
 ```
 
-### 发送 GET 请求
+### send GET 请求
 
 ```go
 var response MyResponse
@@ -56,7 +56,7 @@ err := client.DoRequest(ctx, http.RequestOptions{
 })
 ```
 
-### 发送 POST 请求
+### send POST 请求
 
 ```go
 request := MyRequest{
@@ -71,7 +71,7 @@ err := client.DoRequest(ctx, http.RequestOptions{
 })
 ```
 
-### 获取原始响应
+### get原始响应
 
 ```go
 body, err := client.DoRequestRaw(ctx, http.RequestOptions{
@@ -82,27 +82,27 @@ body, err := client.DoRequestRaw(ctx, http.RequestOptions{
 
 ## 重构说明
 
-### 重构前
+### 重构before
 
 - `HistoryClient` 和 `ConfigManager` 各自实现 HTTP 调用逻辑
 - 代码重复，维护成本高
-- 重试、认证等逻辑分散
+- 重试、认证etc逻辑分散
 
-### 重构后
+### 重构after
 
-- 统一的 HTTP 组件，集中管理
+- 统一of HTTP 组件，集in管理
 - 代码复用，易于维护
-- 统一的错误处理和重试机制
+- 统一oferrorprocess和重试机制
 
-## 已重构的模块
+## already重构of模块
 
-1. **internal/data/history/client.go** - 聊天历史客户端
-2. **internal/domain/config/manager/manager.go** - 配置管理器
+1. **internal/data/history/client.go** - chat history客户端
+2. **internal/domain/config/manager/manager.go** - config管理器
 3. **internal/domain/config/manager/auth.go** - 认证相关 API
 
 ## 注意事项
 
-- 所有对 Manager 后端的 HTTP 调用都应使用 `ManagerClient`
-- 如需调用其他后端服务，可以基于 `Client` 创建新的专用客户端
-- 重试机制默认最多 3 次，可通过配置调整
+- 所有to Manager after端of HTTP 调用都应use `ManagerClient`
+- 如需调用其他after端服务，can基于 `Client` 创建new专用客户端
+- 重试机制default最多 3 次，可throughconfig调整
 

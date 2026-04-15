@@ -14,34 +14,34 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// EdgeOfflineTTSProvider WebSocket TTS 提供者
+// EdgeOfflineTTSProvider WebSocket TTS provide者
 type EdgeOfflineTTSProvider struct {
 	ServerURL        string
 	Timeout          time.Duration
 	HandshakeTimeout time.Duration
 
-	// 连接管理
+	// joinmanage
 	conn      *websocket.Conn
 	connMutex sync.RWMutex
-	// 发送锁，确保同一时间只有一个请求在使用连接
+	// sendlock，ensureat the same timeatimeonlyhavearequestatusejoin
 	sendMutex sync.Mutex
 }
 
-// NewEdgeOfflineTTSProvider 创建新的 Edge Offline TTS 提供者
+// NewEdgeOfflineTTSProvider create new Edge Offline TTS provide者
 func NewEdgeOfflineTTSProvider(config map[string]interface{}) *EdgeOfflineTTSProvider {
 	serverURL, _ := config["server_url"].(string)
 	timeout, _ := config["timeout"].(float64)
 	handshakeTimeout, _ := config["handshake_timeout"].(float64)
 
-	// 设置默认值
+	// setdefault values
 	if serverURL == "" {
 		serverURL = "ws://localhost:8080/tts"
 	}
 	if timeout == 0 {
-		timeout = 30 // 默认30秒超时
+		timeout = 30 // default30secondtimeout
 	}
 	if handshakeTimeout == 0 {
-		handshakeTimeout = 10 // 默认10秒握手超时
+		handshakeTimeout = 10 // default10second握手timeout
 	}
 
 	return &EdgeOfflineTTSProvider{
@@ -51,9 +51,9 @@ func NewEdgeOfflineTTSProvider(config map[string]interface{}) *EdgeOfflineTTSPro
 	}
 }
 
-// getConnection 获取连接，如果不存在则创建
+// getConnection getjoin，ifno存atthencreate
 func (p *EdgeOfflineTTSProvider) getConnection(ctx context.Context) (*websocket.Conn, error) {
-	// 先尝试读取现有连接
+	// firsttryread现havejoin
 	p.connMutex.RLock()
 	conn := p.conn
 	p.connMutex.RUnlock()
@@ -62,30 +62,30 @@ func (p *EdgeOfflineTTSProvider) getConnection(ctx context.Context) (*websocket.
 		return conn, nil
 	}
 
-	// 需要创建新连接
+	// needcreate新join
 	p.connMutex.Lock()
 	defer p.connMutex.Unlock()
 
-	// 双重检查，可能其他 goroutine 已经创建了连接
+	// dual重inspect，mayother goroutine alreadycreatejoin
 	if p.conn != nil {
 		return p.conn, nil
 	}
 
-	// 创建新连接
+	// create新join
 	dialer := &websocket.Dialer{
 		HandshakeTimeout: p.HandshakeTimeout,
 	}
 	conn, _, err := dialer.DialContext(ctx, p.ServerURL, nil)
 	if err != nil {
-		return nil, fmt.Errorf("WebSocket连接失败: %v", err)
+		return nil, fmt.Errorf("WebSocketjoinfailed: %v", err)
 	}
 
 	p.conn = conn
-	log.Infof("WebSocket 连接已建立")
+	log.Infof("WebSocket joinalready建立")
 	return conn, nil
 }
 
-// clearConnection 清空连接（用于断线重连）
+// clearConnection clearjoin（used for断线reconnect）
 func (p *EdgeOfflineTTSProvider) clearConnection() {
 	p.connMutex.Lock()
 	defer p.connMutex.Unlock()
@@ -93,74 +93,74 @@ func (p *EdgeOfflineTTSProvider) clearConnection() {
 	if p.conn != nil {
 		p.conn.Close()
 		p.conn = nil
-		log.Infof("WebSocket 连接已清空，等待下次重连")
+		log.Infof("WebSocket joinalreadyclear，waitdowntimesreconnect")
 	}
 }
 
-// writeMessage 安全地向 WebSocket 连接写入消息
+// writeMessage 安全地to WebSocket joinwritemessage
 func (p *EdgeOfflineTTSProvider) writeMessage(conn *websocket.Conn, messageType int, data []byte) error {
-	// 使用读锁保护连接写入操作，防止并发写入导致数据混乱
+	// usereadlockprotectedjoinwrite操as，preventconcurrentwritecausedata混乱
 	p.connMutex.RLock()
 	defer p.connMutex.RUnlock()
 
-	// 检查连接是否有效
+	// inspectjoinwhethervalid
 	if conn == nil {
-		return fmt.Errorf("连接已关闭")
+		return fmt.Errorf("joinalreadyclose")
 	}
 
 	return conn.WriteMessage(messageType, data)
 }
 
-// TextToSpeech 将文本转换为语音，返回音频帧数据
+// TextToSpeech willtextconvertisvoice，returnaudio framedata
 func (p *EdgeOfflineTTSProvider) TextToSpeech(ctx context.Context, text string, sampleRate int, channels int, frameDuration int) ([][]byte, error) {
 	var frames [][]byte
 
-	// 使用发送锁保护，确保同一时间只有一个请求在使用连接
+	// usesendlockprotected，ensureat the same timeatimeonlyhavearequestatusejoin
 	p.sendMutex.Lock()
-	// 注意：不在函数返回时释放锁，而是在 goroutine 完成时释放
+	// 注意：noatfunctionreturnwhenreleaselock，而yesat goroutine completewhenrelease
 
-	// 获取连接（复用或创建）
+	// getjoin（复useorcreate）
 	conn, err := p.getConnection(ctx)
 	if err != nil {
-		p.sendMutex.Unlock() // 获取连接失败时立即释放锁
+		p.sendMutex.Unlock() // getjoinfailedwhenimmediatelyreleaselock
 		return nil, err
 	}
 
-	// 发送文本（使用受保护的写入方法）
+	// sendtext（use受protectedofwritemethod）
 	err = p.writeMessage(conn, websocket.TextMessage, []byte(text))
 	if err != nil {
-		// 发送失败，清空连接，下次使用时自动重连
-		log.Errorf("发送文本失败: %v，清空连接", err)
+		// sendfailed，clearjoin，downtimesusewhenautomaticreconnect
+		log.Errorf("sendtext failed: %v，clearjoin", err)
 		p.clearConnection()
-		p.sendMutex.Unlock() // 发送失败时立即释放锁
-		return nil, fmt.Errorf("发送文本失败: %v", err)
+		p.sendMutex.Unlock() // sendfailedwhenimmediatelyreleaselock
+		return nil, fmt.Errorf("sendtext failed: %v", err)
 	}
 
-	// 创建管道用于音频数据传输
+	// createpipeused foraudio data传输
 	pipeReader, pipeWriter := io.Pipe()
 	outputChan := make(chan []byte, 1000)
 	startTs := time.Now().UnixMilli()
 
-	// 创建音频解码器
+	// createaudiodecode器
 	audioDecoder, err := util.CreateAudioDecoder(ctx, pipeReader, outputChan, frameDuration, "mp3")
 	if err != nil {
 		pipeReader.Close()
-		p.sendMutex.Unlock() // 创建解码器失败时立即释放锁
-		return nil, fmt.Errorf("创建音频解码器失败: %v", err)
+		p.sendMutex.Unlock() // createdecode器failedwhenimmediatelyreleaselock
+		return nil, fmt.Errorf("createaudiodecode器failed: %v", err)
 	}
 
-	// 启动解码器
+	// startdecode器
 	go func() {
 		if err := audioDecoder.Run(startTs); err != nil {
-			log.Errorf("音频解码失败: %v", err)
+			log.Errorf("audiodecodefailed: %v", err)
 		}
 	}()
 
-	// 使用 WaitGroup 等待读取 goroutine 完成
+	// use WaitGroup waitread goroutine complete
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	// 接收WebSocket数据并写入管道；锁在此 goroutine 内统一由 defer 释放，确保无论正常结束、错误或 panic 都会释放
+	// receiveWebSocketdataandwritepipe；lockhere goroutine insideunifiedby defer release，ensurewhethernormalend、erroror panic arewillrelease
 	done := make(chan struct{})
 	go func() {
 		defer wg.Done()
@@ -174,81 +174,81 @@ func (p *EdgeOfflineTTSProvider) TextToSpeech(ctx context.Context, text string, 
 				if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
 					return
 				}
-				log.Errorf("读取WebSocket消息失败: %v，清空连接", err)
-				// 连接断开，清空连接，下次使用时自动重连
+				log.Errorf("readWebSocketmessagefailed: %v，clearjoin", err)
+				// joindisconnect，clearjoin，downtimesusewhenautomaticreconnect
 				p.clearConnection()
 				return
 			}
 
 			if messageType == websocket.BinaryMessage {
 				if _, err := pipeWriter.Write(data); err != nil {
-					log.Errorf("写入音频数据失败: %v", err)
+					log.Errorf("writeaudio datafailed: %v", err)
 					return
 				}
 			}
 		}
 	}()
 
-	// 收集所有的Opus帧
+	// receive集allofOpusframe
 	go func() {
 		for frame := range outputChan {
 			frames = append(frames, frame)
 		}
 	}()
 
-	// 等待完成或超时
+	// waitcompleteortimeout
 	select {
 	case <-ctx.Done():
-		return nil, fmt.Errorf("TTS合成超时或被取消")
+		return nil, fmt.Errorf("TTS合成timeoutorbecancel")
 	case <-done:
 		close(outputChan)
 		return frames, nil
 	}
 }
 
-// TextToSpeechStream 流式语音合成
+// TextToSpeechStream streamingvoice合成
 func (p *EdgeOfflineTTSProvider) TextToSpeechStream(ctx context.Context, text string, sampleRate int, channels int, frameDuration int) (chan []byte, error) {
 	outputChan := make(chan []byte, 100)
 
 	go func() {
-		// 使用发送锁保护，确保同一时间只有一个请求在使用连接
+		// usesendlockprotected，ensureat the same timeatimeonlyhavearequestatusejoin
 		p.sendMutex.Lock()
 
-		// 获取连接（复用或创建）
+		// getjoin（复useorcreate）
 		conn, err := p.getConnection(ctx)
 		if err != nil {
 			p.sendMutex.Unlock()
-			log.Errorf("获取WebSocket连接失败: %v", err)
+			log.Errorf("getWebSocketjoinfailed: %v", err)
 			return
 		}
 
-		// 发送文本（使用受保护的写入方法）
+		// sendtext（use受protectedofwritemethod）
 		err = p.writeMessage(conn, websocket.TextMessage, []byte(text))
 		if err != nil {
 			p.sendMutex.Unlock()
-			log.Errorf("发送文本失败: %v，清空连接", err)
-			// 发送失败，清空连接，下次使用时自动重连
+			log.Errorf("sendtext failed: %v，clearjoin", err)
+			// sendfailed，clearjoin，downtimesusewhenautomaticreconnect
 			p.clearConnection()
 			return
 		}
 
-		// 创建管道用于音频数据传输
+		// createpipeused foraudio data传输
 		pipeReader, pipeWriter := io.Pipe()
 		defer func() {
 			pipeWriter.Close()
-			// 读取完成后释放锁
+			// readcompleteafterreleaselock
 			log.Debugf("TextToSpeechStream read completed, release sendMutex")
 			p.sendMutex.Unlock()
 		}()
 
-		// 启动解码器（解码器会在 defer 中自动关闭 outputChan）
+		// startdecode器（decode器willat defer inautomaticclose outputChan）
 		go func() {
 
 			startTs := time.Now().UnixMilli()
-			// 创建音频解码器
+			// createaudiodecode器
 			audioDecoder, err := util.CreateAudioDecoderWithSampleRate(ctx, pipeReader, outputChan, frameDuration, "pcm", sampleRate)
 			if err != nil {
-				log.Errorf("创建音频解码器失败: %v", err)
+				log.Errorf("createaudiodecode器failed: %v", err)
 				return
 			}
 
@@ -258,36 +258,36 @@ func (p *EdgeOfflineTTSProvider) TextToSpeechStream(ctx context.Context, text st
 				Precision:   2,
 			})
 
-			// 解码器会在 defer 中自动关闭 outputChan
+			// decode器willat defer inautomaticclose outputChan
 			if err := audioDecoder.Run(startTs); err != nil {
-				log.Errorf("音频解码失败: %v", err)
+				log.Errorf("audiodecodefailed: %v", err)
 			}
 		}()
 
-		// 接收WebSocket数据并写入管道（读取过程中持有锁，确保串行化）
+		// receiveWebSocketdataandwritepipe（readpast程in持havelock，ensureserial化）
 		for {
 			select {
 			case <-ctx.Done():
 				log.Debugf("TextToSpeechStream context done, exit")
-				// 关闭 pipeWriter，让解码器自然结束并关闭 channel
+				// close pipeWriter，letdecode器自然endandclose channel
 				return
 			default:
 				messageType, data, err := conn.ReadMessage()
 				if err != nil {
-					// 关闭 pipeWriter，让解码器自然结束并关闭 channel
+					// close pipeWriter，letdecode器自然endandclose channel
 					pipeWriter.Close()
 					if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
 						return
 					}
-					log.Errorf("读取WebSocket消息失败: %v，清空连接", err)
-					// 连接断开，清空连接，下次使用时自动重连
+					log.Errorf("readWebSocketmessagefailed: %v，clearjoin", err)
+					// joindisconnect，clearjoin，downtimesusewhenautomaticreconnect
 					p.clearConnection()
 					return
 				}
 
 				if messageType == websocket.BinaryMessage {
 					if _, err := pipeWriter.Write(data); err != nil {
-						log.Errorf("写入音频数据失败: %v", err)
+						log.Errorf("writeaudio datafailed: %v", err)
 						return
 					}
 					return
@@ -299,25 +299,25 @@ func (p *EdgeOfflineTTSProvider) TextToSpeechStream(ctx context.Context, text st
 	return outputChan, nil
 }
 
-// SetVoice 设置音色参数（EdgeOffline 不支持动态设置音色，但不报错）
+// SetVoice setvoiceparameter（EdgeOffline unsupporteddynamicsetvoice，butno报错）
 func (p *EdgeOfflineTTSProvider) SetVoice(voiceConfig map[string]interface{}) error {
-	// EdgeOffline 通过 WebSocket 连接，音色由服务端控制，不支持客户端动态设置
-	// 返回 nil 表示操作成功（虽然实际上不执行任何操作）
+	// EdgeOffline through WebSocket join，voicebyserver-sidecontrol，unsupportedclient-sidedynamicset
+	// return nil indicate操assuccessful（虽然actualupnoexecute任何操as）
 	return nil
 }
 
-// Close 关闭资源，释放连接
+// Close closeresource，releasejoin
 func (p *EdgeOfflineTTSProvider) Close() error {
 	p.clearConnection()
 	return nil
 }
 
-// IsValid 检查资源是否有效
+// IsValid inspectresourcewhethervalid
 func (p *EdgeOfflineTTSProvider) IsValid() bool {
 	p.connMutex.RLock()
 	conn := p.conn
 	p.connMutex.RUnlock()
 
-	// 检查连接是否存在
+	// inspectjoinwhether存at
 	return conn != nil
 }

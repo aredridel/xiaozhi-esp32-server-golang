@@ -2,9 +2,9 @@
 
 Can achieve reply within 1-1.3s, should be faster with smaller models
 
-asr: funasr
-llm: Alibaba Cloud API qwen2.5-72b-instruct
-tts: cosyvoice 
+ASR: FunASR
+LLM: Alibaba Cloud API qwen2.5-72b-instruct
+TTS: CosyVoice 
 
 ```
 time="2025-05-22 19:33:09.940" level=debug msg="From receiving audio end asr->llm->tts first frame Overall time: 1394 ms" caller="client.go:428"
@@ -33,4 +33,4 @@ Supported test types:
 | TTS | Speech synthesis connectivity and first packet latency |
 | OTA | MQTT/UDP connectivity test |
 
-Detailed usage please refer to: **[Management Console Guide →](manager_console_guide.md)**
+Detailed usage please refer to: [Management Console Guide](manager_console_guide.md)

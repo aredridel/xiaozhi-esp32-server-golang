@@ -14,8 +14,8 @@ import (
 )
 
 var (
-	defaultManagerOpenClawEnterKeywords = []string{"打开龙虾", "进入龙虾"}
-	defaultManagerOpenClawExitKeywords  = []string{"关闭龙虾", "退出龙虾"}
+	defaultManagerOpenClawEnterKeywords = []string{"open龙虾", "enter龙虾"}
+	defaultManagerOpenClawExitKeywords  = []string{"close龙虾", "exit龙虾"}
 )
 
 func cloneOpenClawKeywords(keywords []string) []string {
@@ -36,26 +36,26 @@ func normalizeSpeakerChatMode(mode string) string {
 	}
 }
 
-// ConfigManager 配置管理器
-// 提供高层级的配置管理功能，包括缓存、热更新、配置验证等
+// ConfigManager configmanage器
+// providehighlayer级ofconfigmanagefunction，package括cache、热update、configvalidateetc
 type ConfigManager struct {
-	// HTTP客户端
+	// HTTPclient-side
 	client *http.ManagerClient
 }
 
-// NewConfigManager 创建新的配置管理器
+// NewConfigManager create newconfigmanage器
 func NewManagerUserConfigProvider(config map[string]interface{}) (*ConfigManager, error) {
-	// 从配置中获取后端管理系统的基础URL
+	// fromconfigingetafterendpointmanagesystemoffoundationURL
 	var baseURL string
 	if backendUrl := config["backend_url"]; backendUrl != nil {
 		baseURL = backendUrl.(string)
 	}
-	// 如果配置中没有，使用默认值
+	// ifconfiginno，usedefault values
 	if baseURL == "" {
-		baseURL = "http://localhost:8080" // 默认值
+		baseURL = "http://localhost:8080" // default values
 	}
 
-	// 创建Manager HTTP客户端
+	// createManager HTTPclient-side
 	authToken := util.GetManagerAuthToken()
 	if token, ok := config["auth_token"].(string); ok && strings.TrimSpace(token) != "" {
 		authToken = strings.TrimSpace(token)
@@ -71,12 +71,12 @@ func NewManagerUserConfigProvider(config map[string]interface{}) (*ConfigManager
 		client: managerClient,
 	}
 
-	//log.Log().Debug("配置管理器初始化成功", "backend_url", baseURL)
+	//log.Log().Debug("configmanage器initializesuccessful", "backend_url", baseURL)
 	return manager, nil
 }
 
 func (c *ConfigManager) GetUserConfig(ctx context.Context, deviceID string) (types.UConfig, error) {
-	// 解析响应
+	// parserespond
 	var response struct {
 		Data struct {
 			VAD struct {
@@ -123,7 +123,7 @@ func (c *ConfigManager) GetUserConfig(ctx context.Context, deviceID string) (typ
 		} `json:"data"`
 	}
 
-	// 发送HTTP请求
+	// sendHTTPrequest
 	err := c.client.DoRequest(ctx, http.RequestOptions{
 		Method: "GET",
 		Path:   "/api/configs",
@@ -133,27 +133,27 @@ func (c *ConfigManager) GetUserConfig(ctx context.Context, deviceID string) (typ
 		Response: &response,
 	})
 	if err != nil {
-		log.Log().Error("获取用户配置失败", "error", err, "device_id", deviceID)
+		log.Log().Error("getuserconfigfailed", "error", err, "device_id", deviceID)
 		return types.UConfig{}, err
 	}
 
-	// 解析JSON配置数据的辅助函数
+	// parseJSONconfigdataofauxiliaryfunction
 	parseJsonData := func(jsonStr string) map[string]interface{} {
 		var data map[string]interface{}
 		if jsonStr != "" {
 			if err := json.Unmarshal([]byte(jsonStr), &data); err != nil {
-				log.Log().Warn("解析JSON数据失败", "error", err, "json", jsonStr)
+				log.Log().Warn("parseJSONdatafailed", "error", err, "json", jsonStr)
 				return make(map[string]interface{})
 			}
 		}
 		return data
 	}
 
-	// 从设备配置获取声纹组信息（只获取声纹组配置，不获取服务地址）
-	// VoiceIdentify 是一个 map，key 是声纹组名称，value 包含 prompt、description 和 uuids
+	// fromdeviceconfiggetvoiceprintgroupinfo（onlygetvoiceprintgroupconfig，nogetserviceaddress）
+	// VoiceIdentify yesa map，key yesvoiceprintgroupname，value include prompt、description and uuids
 	voiceIdentifyData := make(map[string]types.SpeakerGroupInfo)
 	if len(response.Data.VoiceIdentify) > 0 {
-		// 将 map 格式的声纹组信息转换为配置格式
+		// will map formatofvoiceprintgroupinfoconvertisconfigformat
 		for groupName, groupInfo := range response.Data.VoiceIdentify {
 			groupData := types.SpeakerGroupInfo{
 				ID:                 groupInfo.ID,
@@ -169,7 +169,7 @@ func (c *ConfigManager) GetUserConfig(ctx context.Context, deviceID string) (typ
 		}
 	}
 
-	// 构建配置结果
+	// buildconfigresult
 	enterKeywords := response.Data.OpenClaw.EnterKeywords
 	if len(enterKeywords) == 0 {
 		enterKeywords = cloneOpenClawKeywords(defaultManagerOpenClawEnterKeywords)
@@ -180,7 +180,7 @@ func (c *ConfigManager) GetUserConfig(ctx context.Context, deviceID string) (typ
 	}
 
 	config := types.UConfig{
-		SystemPrompt: response.Data.Prompt, // 使用智能体的自定义提示
+		SystemPrompt: response.Data.Prompt, // useagentof自定义hint
 		Asr: types.AsrConfig{
 			Provider: response.Data.ASR.Provider,
 			Config:   parseJsonData(response.Data.ASR.JsonData),
@@ -218,89 +218,89 @@ func (c *ConfigManager) GetUserConfig(ctx context.Context, deviceID string) (typ
 	}
 	config.SpeakerChatMode = normalizeSpeakerChatMode(config.SpeakerChatMode)
 
-	log.Log().Infof("成功获取设备配置: deviceId: %s, config: %+v", deviceID, config)
+	log.Log().Infof("successfulgetdeviceconfig: deviceId: %s, config: %+v", deviceID, config)
 	return config, nil
 }
 
-// 获取 mqtt, mqtt_server, udp, ota, vision配置
+// get mqtt, mqtt_server, udp, ota, visionconfig
 func (c *ConfigManager) GetSystemConfig(ctx context.Context) (string, error) {
-	// 解析响应JSON
+	// parserespondJSON
 	var apiResponse struct {
 		Data map[string]interface{} `json:"data"`
 	}
 
-	// 发送HTTP请求
+	// sendHTTPrequest
 	err := c.client.DoRequest(ctx, http.RequestOptions{
 		Method:   "GET",
 		Path:     "/api/system/configs",
 		Response: &apiResponse,
 	})
 	if err != nil {
-		return "", fmt.Errorf("获取系统配置失败: %w", err)
+		return "", fmt.Errorf("getsystemconfigfailed: %w", err)
 	}
 
-	// 处理 voice_identify 配置，确保包含 threshold 字段
+	// process voice_identify config，ensureinclude threshold field
 	if voiceIdentifyData, exists := apiResponse.Data["voice_identify"]; exists {
 		if voiceIdentifyMap, ok := voiceIdentifyData.(map[string]interface{}); ok {
-			// 如果 voice_identify 配置存在但没有 threshold 字段，添加默认值
+			// if voice_identify config存atbutno threshold field，adddefault values
 			if _, hasThreshold := voiceIdentifyMap["threshold"]; !hasThreshold {
 				voiceIdentifyMap["threshold"] = 0.4
-				log.Log().Info("voice_identify 配置缺少 threshold 字段，已添加默认值 0.4")
+				log.Log().Info("voice_identify configMissing threshold field，alreadyadddefault values 0.4")
 			} else {
-				// 验证阈值范围
+				// validate阈valuerange
 				if thresholdVal, ok := voiceIdentifyMap["threshold"].(float64); ok {
 					if thresholdVal < 0 || thresholdVal > 1 {
-						log.Log().Warnf("voice_identify.threshold 值 %.4f 超出有效范围 [0.0, 1.0]，使用默认值 0.4", thresholdVal)
+						log.Log().Warnf("voice_identify.threshold value %.4f exceedvalidrange [0.0, 1.0]，usedefault values 0.4", thresholdVal)
 						voiceIdentifyMap["threshold"] = 0.4
 					}
 				}
 			}
-			// 更新配置数据
+			// updateconfigdata
 			apiResponse.Data["voice_identify"] = voiceIdentifyMap
 		}
 	}
-	//log.Debugf("从内控获取到系统配置: %+v", apiResponse.Data)
+	//log.Debugf("frominside控gettosystemconfig: %+v", apiResponse.Data)
 
-	// 将API响应转换为配置JSON字符串
+	// willAPIrespondconvertisconfigJSONcharstring
 	configJSON, err := json.Marshal(apiResponse.Data)
 	if err != nil {
-		return "", fmt.Errorf("序列化配置失败: %w", err)
+		return "", fmt.Errorf("serializeconfigfailed: %w", err)
 	}
 
 	return string(configJSON), nil
 }
 
-// LoadSystemConfigToViper 从backend API加载系统配置并设置到viper
+// LoadSystemConfigToViper frombackend APIloadsystemconfigandsettoviper
 func (c *ConfigManager) LoadSystemConfigToViper(ctx context.Context) error {
-	// 获取系统配置JSON字符串
+	// getsystemconfigJSONcharstring
 	configJSON, err := c.GetSystemConfig(ctx)
 	if err != nil {
-		return fmt.Errorf("获取系统配置失败: %w", err)
+		return fmt.Errorf("getsystemconfigfailed: %w", err)
 	}
 
-	// 使用viper.MergeConfigMap将配置设置到viper
-	// 首先将JSON字符串解析为map
+	// useviper.MergeConfigMapwillconfigsettoviper
+	// firstfirstwillJSONcharstringparseismap
 	var configMap map[string]interface{}
 	if err := json.Unmarshal([]byte(configJSON), &configMap); err != nil {
-		return fmt.Errorf("解析配置JSON失败: %w", err)
+		return fmt.Errorf("parseconfigJSONfailed: %w", err)
 	}
 
-	// 设置到viper（需要导入viper包）
+	// settoviper（needimportviperpackage）
 	// viper.MergeConfigMap(configMap)
 
-	log.Log().Info("系统配置已成功加载到viper", "config_size", len(configJSON))
+	log.Log().Info("systemconfigalreadysuccessfulloadtoviper", "config_size", len(configJSON))
 	return nil
 }
 
-// SwitchDeviceRoleByName 按角色名（支持模糊匹配）切换设备角色
+// SwitchDeviceRoleByName 按rolename（supportfuzzymatching）switchdevicerole
 func (c *ConfigManager) SwitchDeviceRoleByName(ctx context.Context, deviceID string, roleName string) (string, error) {
 	deviceID = strings.TrimSpace(deviceID)
 	roleName = strings.TrimSpace(roleName)
 	if deviceID == "" {
-		return "", fmt.Errorf("deviceID 不能为空")
+		return "", fmt.Errorf("deviceID cannot be empty")
 	}
 	if roleName == "" {
-		return "", fmt.Errorf("roleName 不能为空")
+		return "", fmt.Errorf("roleName cannot be empty")
 	}
 
 	var response struct {
@@ -320,22 +320,22 @@ func (c *ConfigManager) SwitchDeviceRoleByName(ctx context.Context, deviceID str
 		Response: &response,
 	})
 	if err != nil {
-		return "", fmt.Errorf("切换设备角色失败: %w", err)
+		return "", fmt.Errorf("switch device role failed: %w", err)
 	}
 	if response.Error != "" {
 		return "", fmt.Errorf(response.Error)
 	}
 	if strings.TrimSpace(response.Data.RoleName) == "" {
-		return "", fmt.Errorf("切换设备角色失败: 未返回匹配角色")
+		return "", fmt.Errorf("switch device role failed: notreturnmatchingrole")
 	}
 	return response.Data.RoleName, nil
 }
 
-// RestoreDeviceDefaultRole 恢复设备默认角色（清空设备绑定角色）
+// RestoreDeviceDefaultRole recoverydevicedefaultrole（cleardevicebindrole）
 func (c *ConfigManager) RestoreDeviceDefaultRole(ctx context.Context, deviceID string) error {
 	deviceID = strings.TrimSpace(deviceID)
 	if deviceID == "" {
-		return fmt.Errorf("deviceID 不能为空")
+		return fmt.Errorf("deviceID cannot be empty")
 	}
 
 	var response struct {
@@ -349,7 +349,7 @@ func (c *ConfigManager) RestoreDeviceDefaultRole(ctx context.Context, deviceID s
 		Response: &response,
 	})
 	if err != nil {
-		return fmt.Errorf("恢复默认角色失败: %w", err)
+		return fmt.Errorf("failed to restore default role: %w", err)
 	}
 	if response.Error != "" {
 		return fmt.Errorf(response.Error)
@@ -357,11 +357,11 @@ func (c *ConfigManager) RestoreDeviceDefaultRole(ctx context.Context, deviceID s
 	return nil
 }
 
-// SearchKnowledge 通过管理后台统一检索知识库（控制台按provider转发）
+// SearchKnowledge throughmanageafter台unifiedretrieveknowledgelibrary（control台按providerforward）
 func (c *ConfigManager) NotifyDeviceEvent(ctx context.Context, eventType string, eventData map[string]interface{}) {
 	_, err := SendDeviceRequest(ctx, eventType, eventData)
 	if err != nil {
-		log.Log().Error("发送设备事件失败", "error", err)
+		log.Log().Error("senddeviceeventfailed", "error", err)
 	}
 }
 

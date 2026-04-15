@@ -8,18 +8,18 @@ import (
 	log "xiaozhi-esp32-server-golang/logger"
 )
 
-// DoubaoV2Adapter 适配器，实现现有的AsrProvider接口
+// DoubaoV2Adapter adapter, implements AsrProvider interface
 type DoubaoV2Adapter struct {
 	engine *DoubaoV2ASR
 }
 
-// NewDoubaoV2Adapter 创建一个新的豆包ASR适配器
+// NewDoubaoV2Adapter creates a new doubao ASR adapter
 func NewDoubaoV2Adapter(config map[string]interface{}) (*DoubaoV2Adapter, error) {
 
-	// 创建豆包ASR配置
+	// create doubao ASR config
 	doubaoConfig := DefaultConfig
 
-	// 从map中获取配置项
+	// frommapingetconfig项
 	if appID, ok := config["appid"].(string); ok && appID != "" {
 		doubaoConfig.AppID = appID
 	}
@@ -74,30 +74,30 @@ func NewDoubaoV2Adapter(config map[string]interface{}) (*DoubaoV2Adapter, error)
 		doubaoConfig.Timeout = int(timeoutFloat)
 	}
 
-	// 创建豆包ASR引擎
+	// create doubao ASR engine
 	engine, err := NewDoubaoV2ASR(doubaoConfig)
 	if err != nil {
-		log.Errorf("创建豆包ASR引擎失败: %v", err)
-		return nil, fmt.Errorf("创建豆包ASR引擎失败: %v", err)
+		log.Errorf("create doubao ASR engine failed: %v", err)
+		return nil, fmt.Errorf("create doubao ASR engine failed: %v", err)
 	}
-	log.Info("豆包ASR引擎创建成功")
+	log.Info("doubao ASR engine create successful")
 
 	return &DoubaoV2Adapter{
 		engine: engine,
 	}, nil
 }
 
-// Process 实现一次性处理整段音频，返回完整识别结果
+// Process implementatimes性processwhole segmentaudio，return完bodyrecognizeresult
 func (d *DoubaoV2Adapter) Process(pcmData []float32) (string, error) {
 	return "", nil
 }
 
-// StreamingRecognize 实现流式识别接口
+// StreamingRecognize implementstreaming recognizeinterface
 func (d *DoubaoV2Adapter) StreamingRecognize(ctx context.Context, audioStream <-chan []float32) (chan types.StreamingResult, error) {
 	return d.engine.StreamingRecognize(ctx, audioStream)
 }
 
-// Close 关闭资源，释放连接等
+// Close closeresource，releasejoinetc
 func (d *DoubaoV2Adapter) Close() error {
 	if d.engine != nil {
 		return d.engine.Close()
@@ -105,7 +105,7 @@ func (d *DoubaoV2Adapter) Close() error {
 	return nil
 }
 
-// IsValid 检查资源是否有效
+// IsValid inspectresourcewhethervalid
 func (d *DoubaoV2Adapter) IsValid() bool {
 	return d != nil && d.engine != nil
 }

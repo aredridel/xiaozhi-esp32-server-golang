@@ -61,14 +61,14 @@ func filterGlobalToolsBySelectedServices(globalTools map[string]tool.InvokableTo
 }
 
 func GetToolByName(deviceId string, agentId string, toolName string, selectedMCPServiceNames string) (tool.InvokableTool, bool) {
-	// 优先从本地管理器获取
+	// priorityfromlocalmanage器get
 	localManager := GetLocalMCPManager()
 	tool, ok := localManager.GetToolByName(toolName)
 	if ok {
 		return tool, ok
 	}
 
-	// 其次从全局管理器获取
+	// 其timesfromglobalmanage器get
 	selected := parseSelectedMCPServiceNames(selectedMCPServiceNames)
 	if len(selected) == 0 {
 		tool, ok = globalManager.GetToolByName(toolName)
@@ -78,7 +78,7 @@ func GetToolByName(deviceId string, agentId string, toolName string, selectedMCP
 	} else {
 		globalTools := globalManager.GetAllTools()
 
-		// 兼容直接传入 "server_tool" 的场景
+		// 兼容direct传入 "server_tool" ofscenario
 		if invokable, exists := globalTools[toolName]; exists && isGlobalToolAllowed(toolName, selected) {
 			return invokable, true
 		}
@@ -91,12 +91,12 @@ func GetToolByName(deviceId string, agentId string, toolName string, selectedMCP
 		}
 	}
 
-	// 最后从设备MCP客户端池获取
+	// 最afterfromdeviceMCPclient-sidepoolget
 	tool, ok = mcpClientPool.GetToolByDeviceId(deviceId, toolName)
 	if ok {
 		return tool, true
 	}
-	// 兼容 AgentID 上报的 MCP 工具
+	// 兼容 AgentID up报of MCP tool
 	if agentId != "" && agentId != deviceId {
 		tool, ok = mcpClientPool.GetToolByDeviceId(agentId, toolName)
 		if ok {
@@ -123,39 +123,39 @@ func RemoveDeviceMcpClient(deviceId string) error {
 func GetToolsByDeviceId(deviceId string, agentId string, selectedMCPServiceNames string) (map[string]tool.InvokableTool, error) {
 	retTools := make(map[string]tool.InvokableTool)
 
-	// 优先从本地管理器获取
+	// priorityfromlocalmanage器get
 	localManager := GetLocalMCPManager()
 	localTools := localManager.GetAllTools()
 	for toolName, tool := range localTools {
 		retTools[toolName] = tool
 	}
-	log.Infof("从本地管理器获取到 %d 个工具", len(localTools))
+	log.Infof("fromlocalmanage器getto %d 个tool", len(localTools))
 
-	// 其次从全局管理器获取
+	// 其timesfromglobalmanage器get
 	globalTools := globalManager.GetAllTools()
 	filteredGlobalTools := filterGlobalToolsBySelectedServices(globalTools, selectedMCPServiceNames)
 	for toolName, tool := range filteredGlobalTools {
-		// 本地工具优先，如果已存在同名工具则不覆盖
+		// localtoolpriority，ifalready存atat the same timenametoolthenno覆盖
 		if _, exists := retTools[toolName]; !exists {
 			retTools[toolName] = tool
 		}
 	}
-	log.Infof("从全局管理器获取到 %d 个工具（过滤后）", len(filteredGlobalTools))
+	log.Infof("fromglobalmanage器getto %d 个tool（filterafter）", len(filteredGlobalTools))
 
-	// 最后从MCP客户端池获取
+	// 最afterfromMCPclient-sidepoolget
 	deviceTools, err := mcpClientPool.GetAllToolsByDeviceIdAndAgentId(deviceId, agentId)
 	if err != nil {
-		log.Errorf("获取设备 %s 的工具失败: %v", deviceId, err)
+		log.Errorf("getdevice %s oftoolfailed: %v", deviceId, err)
 		return retTools, nil
 	}
 	for toolName, tool := range deviceTools {
-		// 本地工具和全局工具优先，如果已存在同名工具则不覆盖
+		// localtoolandglobaltoolpriority，ifalready存atat the same timenametoolthenno覆盖
 		if _, exists := retTools[toolName]; !exists {
 			retTools[toolName] = tool
 		}
 	}
-	log.Infof("从设备 %s 获取到 %d 个工具", deviceId, len(deviceTools))
-	log.Infof("设备 %s 总共获取到 %d 个工具", deviceId, len(retTools))
+	log.Infof("fromdevice %s getto %d 个tool", deviceId, len(deviceTools))
+	log.Infof("device %s 总totalgetto %d 个tool", deviceId, len(retTools))
 
 	return retTools, nil
 }
@@ -164,7 +164,7 @@ func GetWsEndpointMcpTools(agentId string) (map[string]tool.InvokableTool, error
 	return mcpClientPool.GetWsEndpointMcpTools(agentId)
 }
 
-// GetReportedToolsByDeviceID 仅获取设备上报的MCP工具
+// GetReportedToolsByDeviceID onlygetdeviceup报ofMCPtool
 func GetReportedToolsByDeviceID(deviceId string) (map[string]tool.InvokableTool, error) {
 	retTools := make(map[string]tool.InvokableTool)
 	if deviceId == "" {
@@ -183,7 +183,7 @@ func GetReportedToolsByDeviceID(deviceId string) (map[string]tool.InvokableTool,
 	return retTools, nil
 }
 
-// GetReportedToolsByAgentID 仅获取智能体(WebSocket端点)上报的MCP工具
+// GetReportedToolsByAgentID onlygetagent(WebSocketendpointpoint)up报ofMCPtool
 func GetReportedToolsByAgentID(agentId string) (map[string]tool.InvokableTool, error) {
 	retTools := make(map[string]tool.InvokableTool)
 	if agentId == "" {
@@ -193,11 +193,11 @@ func GetReportedToolsByAgentID(agentId string) (map[string]tool.InvokableTool, e
 	return mcpClientPool.GetWsEndpointMcpTools(agentId)
 }
 
-// GetReportedToolByDeviceIDAndName 仅在设备上报工具中查找
+// GetReportedToolByDeviceIDAndName onlyatdeviceup报toolinfind
 func GetReportedToolByDeviceIDAndName(deviceId, toolName string) (tool.InvokableTool, bool) {
 	reportedTools, err := GetReportedToolsByDeviceID(deviceId)
 	if err != nil {
-		log.Errorf("获取设备上报MCP工具失败: device=%s err=%v", deviceId, err)
+		log.Errorf("getdeviceup报MCPtoolfailed: device=%s err=%v", deviceId, err)
 		return nil, false
 	}
 
@@ -205,11 +205,11 @@ func GetReportedToolByDeviceIDAndName(deviceId, toolName string) (tool.Invokable
 	return invokable, ok
 }
 
-// GetReportedToolByAgentIDAndName 仅在智能体上报工具中查找
+// GetReportedToolByAgentIDAndName onlyatagentup报toolinfind
 func GetReportedToolByAgentIDAndName(agentId, toolName string) (tool.InvokableTool, bool) {
 	reportedTools, err := GetReportedToolsByAgentID(agentId)
 	if err != nil {
-		log.Errorf("获取智能体上报MCP工具失败: agent=%s err=%v", agentId, err)
+		log.Errorf("getagentup报MCPtoolfailed: agent=%s err=%v", agentId, err)
 		return nil, false
 	}
 
@@ -217,7 +217,7 @@ func GetReportedToolByAgentIDAndName(agentId, toolName string) (tool.InvokableTo
 	return invokable, ok
 }
 
-// GetReportedToolsByDeviceIdAndAgentId 兼容方法：明确分流设备/智能体查询，不再混用
+// GetReportedToolsByDeviceIdAndAgentId 兼容method：明确minutestreamdevice/agentquery，no再混use
 func GetReportedToolsByDeviceIdAndAgentId(deviceId string, agentId string) (map[string]tool.InvokableTool, error) {
 	if deviceId != "" {
 		return GetReportedToolsByDeviceID(deviceId)
@@ -228,7 +228,7 @@ func GetReportedToolsByDeviceIdAndAgentId(deviceId string, agentId string) (map[
 	return make(map[string]tool.InvokableTool), nil
 }
 
-// GetReportedToolByName 兼容方法：按维度分流，不再混用
+// GetReportedToolByName 兼容method：按dimensionminutestream，no再混use
 func GetReportedToolByName(deviceId string, agentId string, toolName string) (tool.InvokableTool, bool) {
 	if deviceId != "" {
 		return GetReportedToolByDeviceIDAndName(deviceId, toolName)

@@ -17,7 +17,7 @@ xiaozhi:userconfig:{deviceid}
 
 #### 2. Prompt
 ##### 1. System prompt get/set
->xiaozhi:llm:system:{deviceid}
+xiaozhi:llm:system:{deviceid}
 
 ##### 2. Chat session prompt record sorted set structure
->xiaozhi:llm:{deviceid}
+xiaozhi:llm:{deviceid}

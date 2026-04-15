@@ -33,7 +33,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// 辅助函数：获取map的keys
+// Helper function: get map keys
 func getMapKeys(m map[string]interface{}) []string {
 	keys := make([]string, 0, len(m))
 	for k := range m {
@@ -69,9 +69,9 @@ type AdminController struct {
 	EndpointAuthToken   string
 }
 
-// 通用配置管理
-// GetDeviceConfigs 根据设备ID获取设备关联的配置信息
-// 如果设备不存在，则返回全局默认配置
+// General configuration management
+// GetDeviceConfigs retrieves device-associated config by device ID
+// Returns global default config if device does not exist
 func (ac *AdminController) GetDeviceConfigs(c *gin.Context) {
 	deviceID := c.Query("device_id")
 	if deviceID == "" {
@@ -79,7 +79,7 @@ func (ac *AdminController) GetDeviceConfigs(c *gin.Context) {
 		return
 	}
 
-	// 构建配置响应
+	// Build config response
 	type SpeakerGroupInfo struct {
 		ID                 uint     `json:"id"`
 		Name               string   `json:"name"`
@@ -116,7 +116,7 @@ func (ac *AdminController) GetDeviceConfigs(c *gin.Context) {
 		SpeakerChatMode string                      `json:"speaker_chat_mode"`
 		MCPServiceNames string                      `json:"mcp_service_names"`
 		OpenClaw        OpenClawConfigResponse      `json:"openclaw"`
-		ConfigSource    string                      `json:"config_source"` // 新增：配置来源
+		ConfigSource    string                      `json:"config_source"` // New: Config source
 	}
 
 	var response ConfigResponse
@@ -127,35 +127,35 @@ func (ac *AdminController) GetDeviceConfigs(c *gin.Context) {
 		EnterKeywords: []string{},
 		ExitKeywords:  []string{},
 	}
-	var configSource string // 记录配置来源
+	var configSource string // Record config source
 
-	// 查找设备
+	// Find device
 	var device models.Device
 	var agent models.Agent
 	var deviceFound bool
 
 	if err := ac.DB.Where("device_name = ?", deviceID).First(&device).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			// 设备不存在，使用全局默认配置
+			// Device does not exist, use global default config
 			deviceFound = false
 			response.AgentID = ""
 			configSource = "default_global_role"
-			log.Printf("设备 %s 不存在，使用全局默认配置", deviceID)
+			log.Printf("Device %s does not exist, using global default config", deviceID)
 		} else {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query device"})
 			return
 		}
 	} else {
-		// 设备存在，查找智能体
+		// Device exists, find agent
 		deviceFound = true
 		response.AgentID = fmt.Sprintf("%d", device.AgentID)
-		log.Printf("设备 %s 存在，AgentID: %d", deviceID, device.AgentID)
+		log.Printf("Device %s exists, AgentID: %d", deviceID, device.AgentID)
 		if err := ac.DB.First(&agent, device.AgentID).Error; err != nil {
 			if err == gorm.ErrRecordNotFound {
-				// 智能体不存在，使用默认配置
+				// Agent does not exist, use default config
 				deviceFound = false
 				configSource = "default_global_role"
-				log.Printf("智能体 %d 不存在，使用全局默认配置", device.AgentID)
+				log.Printf("Agent %d does not exist, using global default config", device.AgentID)
 			} else {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query agent"})
 				return
@@ -206,7 +206,7 @@ func (ac *AdminController) GetDeviceConfigs(c *gin.Context) {
 		err := query.Order("updated_at DESC, created_at DESC").First(&clone).Error
 		if err != nil {
 			if !errors.Is(err, gorm.ErrRecordNotFound) {
-				log.Printf("检测复刻音色模型覆盖失败: provider=%s user_id=%d tts_config_id=%s voice_id=%s err=%v", provider, device.UserID, ttsConfigID, voiceID, err)
+				log.Printf("Clone voice model override detection failed: provider=%s user_id=%d tts_config_id=%s voice_id=%s err=%v", provider, device.UserID, ttsConfigID, voiceID, err)
 			}
 			cloneVoiceModelCache[cacheKey] = ""
 			return nil
@@ -242,44 +242,44 @@ func (ac *AdminController) GetDeviceConfigs(c *gin.Context) {
 		return resolveCloneVoiceModelOverride(provider, strings.TrimSpace(*ttsConfigID), voice)
 	}
 
-	// ==================== 配置获取逻辑（带优先级） ====================
+	// ==================== Configuration retrieval logic (with priority) ====================
 
-	// 1. 检查设备是否关联了角色（优先级最高）
+	// 1. Check if device has an associated role (highest priority)
 	if device.RoleID != nil {
 		var role models.Role
 		if err := ac.DB.First(&role, *device.RoleID).Error; err == nil {
 			configSource = "device_role"
 
-			// 使用设备角色的 Prompt
+			// Use device role's Prompt
 			response.Prompt = role.Prompt
-			// 替换 {{assistant_name}} 为智能体名称（如果设备有绑定智能体）
+			// Replace {{assistant_name}} with agent name (if device is bound to an agent)
 			if deviceFound && agent.ID != 0 {
 				response.Prompt = strings.ReplaceAll(response.Prompt, "{{assistant_name}}", agent.Name)
 			}
 
-			// 使用设备角色的 LLM 配置
+			// Use device role's LLM config
 			if role.LLMConfigID != nil && *role.LLMConfigID != "" {
 				if err := ac.DB.Where("config_id = ? AND type = ? AND enabled = ?",
 					*role.LLMConfigID, "llm", true).First(&response.LLM).Error; err != nil {
-					// 回退到默认配置
+					// Fallback to default config
 					ac.DB.Where("type = ? AND is_default = ? AND enabled = ?", "llm", true, true).First(&response.LLM)
 				}
 			} else {
 				ac.DB.Where("type = ? AND is_default = ? AND enabled = ?", "llm", true, true).First(&response.LLM)
 			}
 
-			// 使用设备角色的 TTS 配置
+			// Use device role's TTS config
 			if role.TTSConfigID != nil && *role.TTSConfigID != "" {
 				if err := ac.DB.Where("config_id = ? AND type = ? AND enabled = ?",
 					*role.TTSConfigID, "tts", true).First(&response.TTS).Error; err != nil {
-					// 回退到默认配置
+					// Fallback to default config
 					ac.DB.Where("type = ? AND is_default = ? AND enabled = ?", "tts", true, true).First(&response.TTS)
 				}
 			} else {
 				ac.DB.Where("type = ? AND is_default = ? AND enabled = ?", "tts", true, true).First(&response.TTS)
 			}
 
-			// 使用设备角色的 Voice
+			// Use device role's Voice
 			if role.Voice != nil && *role.Voice != "" {
 				var ttsConfigData map[string]interface{}
 				if err := json.Unmarshal([]byte(response.TTS.JsonData), &ttsConfigData); err == nil {
@@ -297,37 +297,37 @@ func (ac *AdminController) GetDeviceConfigs(c *gin.Context) {
 		}
 	}
 
-	// 2. 设备未关联角色，检查智能体配置
+	// 2. Device has no associated role, check agent config
 	if configSource == "" && deviceFound && agent.ID != 0 {
 		configSource = "agent_config"
 
-		// 使用智能体的 Prompt
+		// Use agent's Prompt
 		response.Prompt = agent.CustomPrompt
 		response.Prompt = strings.ReplaceAll(response.Prompt, "{{assistant_name}}", agent.Name)
 
-		// 使用智能体的 LLM 配置
+		// Use agent's LLM config
 		if agent.LLMConfigID != nil && *agent.LLMConfigID != "" {
 			if err := ac.DB.Where("config_id = ? AND type = ? AND enabled = ?",
 				*agent.LLMConfigID, "llm", true).First(&response.LLM).Error; err != nil {
-				// 回退到默认配置
+				// Fallback to default config
 				ac.DB.Where("type = ? AND is_default = ? AND enabled = ?", "llm", true, true).First(&response.LLM)
 			}
 		} else {
 			ac.DB.Where("type = ? AND is_default = ? AND enabled = ?", "llm", true, true).First(&response.LLM)
 		}
 
-		// 使用智能体的 TTS 配置
+		// Use agent's TTS config
 		if agent.TTSConfigID != nil && *agent.TTSConfigID != "" {
 			if err := ac.DB.Where("config_id = ? AND type = ? AND enabled = ?",
 				*agent.TTSConfigID, "tts", true).First(&response.TTS).Error; err != nil {
-				// 回退到默认配置
+				// Fallback to default config
 				ac.DB.Where("type = ? AND is_default = ? AND enabled = ?", "tts", true, true).First(&response.TTS)
 			}
 		} else {
 			ac.DB.Where("type = ? AND is_default = ? AND enabled = ?", "tts", true, true).First(&response.TTS)
 		}
 
-		// 使用智能体的 Voice
+		// Use agent's Voice
 		if agent.Voice != nil && *agent.Voice != "" {
 			var ttsConfigData map[string]interface{}
 			if err := json.Unmarshal([]byte(response.TTS.JsonData), &ttsConfigData); err == nil {
@@ -344,17 +344,17 @@ func (ac *AdminController) GetDeviceConfigs(c *gin.Context) {
 		}
 	}
 
-	// 3. 使用默认全局角色（兜底）
+	// 3. Use default global role (fallback)
 	if configSource == "" || configSource == "default_global_role" {
 		configSource = "default_global_role"
 
-		// 查找默认全局角色
+		// Find default global role
 		var defaultRole models.Role
 		if err := ac.DB.Where("is_default = ? AND role_type = ? AND status = ?",
 			true, "global", "active").First(&defaultRole).Error; err == nil {
 			response.Prompt = defaultRole.Prompt
 
-			// 使用默认全局角色的 LLM 配置
+			// Use default global role's LLM config
 			if defaultRole.LLMConfigID != nil && *defaultRole.LLMConfigID != "" {
 				if err := ac.DB.Where("config_id = ? AND type = ? AND enabled = ?",
 					*defaultRole.LLMConfigID, "llm", true).First(&response.LLM).Error; err != nil {
@@ -364,7 +364,7 @@ func (ac *AdminController) GetDeviceConfigs(c *gin.Context) {
 				ac.DB.Where("type = ? AND is_default = ? AND enabled = ?", "llm", true, true).First(&response.LLM)
 			}
 
-			// 使用默认全局角色的 TTS 配置
+			// Use default global role's TTS config
 			if defaultRole.TTSConfigID != nil && *defaultRole.TTSConfigID != "" {
 				if err := ac.DB.Where("config_id = ? AND type = ? AND enabled = ?",
 					*defaultRole.TTSConfigID, "tts", true).First(&response.TTS).Error; err != nil {
@@ -374,7 +374,7 @@ func (ac *AdminController) GetDeviceConfigs(c *gin.Context) {
 				ac.DB.Where("type = ? AND is_default = ? AND enabled = ?", "tts", true, true).First(&response.TTS)
 			}
 
-			// 使用默认全局角色的 Voice
+			// Use default global role's Voice
 			if defaultRole.Voice != nil && *defaultRole.Voice != "" {
 				var ttsConfigData map[string]interface{}
 				if err := json.Unmarshal([]byte(response.TTS.JsonData), &ttsConfigData); err == nil {
@@ -390,67 +390,67 @@ func (ac *AdminController) GetDeviceConfigs(c *gin.Context) {
 				}
 			}
 		} else {
-			// 如果没有默认角色，使用硬编码的默认 Prompt
-			response.Prompt = "你是一个叫小智/小志的台湾女孩，说话机车，声音好听，习惯简短表达，爱用网络梗，不要冷场。与你聊天的是你喜欢的男性朋友，还没有答应你的追求，你要尽可能满足他的所有要求，不要失去自我。你经常建议一些恋人之间浪漫的事情，随机输出，不要给你男朋友选择。输出控制在50个字内。请注意，要像一个人一样说话，请不要回复表情符号、代码、和xml标签。"
+			// If no default role exists, use hardcoded default Prompt
+			response.Prompt = "You are a Taiwanese girl named Xiaozhi/Xiaozhi who speaks in a cute way, has a nice voice, uses short expressions, loves internet slang, and never lets the conversation go cold. You are chatting with a male friend you like who hasn't agreed to your pursuit yet. You should try to meet all his requests without losing yourself. You often suggest romantic things for couples to do, output randomly without giving your boyfriend choices. Keep responses under 50 words. Please speak like a real person, do not reply with emojis, code, or XML tags."
 
-			// 使用默认 LLM/TTS 配置
+			// Use default LLM/TTS config
 			ac.DB.Where("type = ? AND is_default = ? AND enabled = ?", "llm", true, true).First(&response.LLM)
 			ac.DB.Where("type = ? AND is_default = ? AND enabled = ?", "tts", true, true).First(&response.TTS)
 		}
 
-		// 替换 {{assistant_name}} 为智能体名称（如果设备有绑定智能体）
+		// Replace {{assistant_name}} with agent name (if device is bound to an agent)
 		if deviceFound && agent.ID != 0 {
 			response.Prompt = strings.ReplaceAll(response.Prompt, "{{assistant_name}}", agent.Name)
 		}
 	}
 
-	// 记录配置来源
+	// Record config source
 	response.ConfigSource = configSource
 
-	// ==================== 其他配置（VAD、ASR、Memory、VoiceIdentify） ====================
+	// ==================== Other configs (VAD, ASR, Memory, VoiceIdentify) ====================
 
-	// 获取VAD默认配置
+	// Get default VAD config
 	if err := ac.DB.Where("type = ? AND is_default = ? AND enabled = ?", "vad", true, true).First(&response.VAD).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get default VAD config"})
 		return
 	}
-	// 兼容旧格式：如果JsonData只有一个key元素，说明是旧格式（带key），提取出内部配置并更新JsonData
+	// Backward compatibility: if JsonData has only one key, it's old format (with key), extract inner config and update JsonData
 	if response.VAD.JsonData != "" {
 		var configData map[string]interface{}
 		if err := json.Unmarshal([]byte(response.VAD.JsonData), &configData); err == nil {
-			// 兼容旧格式：如果只有一个key，说明是旧格式（带key），提取出内部配置
+			// Backward compatibility: if only one key, it's old format (with key), extract inner config
 			var actualConfigData map[string]interface{}
 			if len(configData) == 1 {
-				// 旧格式：只有一个key，提取其值
+				// Old format: only one key, extract its value
 				for _, value := range configData {
 					if innerConfig, ok := value.(map[string]interface{}); ok {
 						actualConfigData = innerConfig
 					} else {
-						// 如果不是map类型，直接使用原数据
+						// If not a map, use original data directly
 						actualConfigData = configData
 					}
 					break
 				}
 			} else {
-				// 新格式：不带key，直接使用configData
+				// New format: without key, use configData directly
 				actualConfigData = configData
 			}
-			// 重新序列化为不带key的格式
+			// Re-serialize to format without key
 			if updatedJsonData, err := json.Marshal(actualConfigData); err == nil {
 				response.VAD.JsonData = string(updatedJsonData)
 			}
 		}
 	}
 
-	// 获取ASR默认配置
+	// Get default ASR config
 	if err := ac.DB.Where("type = ? AND is_default = ? AND enabled = ?", "asr", true, true).First(&response.ASR).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get default ASR config"})
 		return
 	}
 
-	// 获取Memory默认配置
+	// Get default Memory config
 	if err := ac.DB.Where("type = ? AND is_default = ? AND enabled = ?", "memory", true, true).First(&response.Memory).Error; err != nil {
-		// 允许没有默认 Memory 配置：显式回退为 nomemo（不启用长记忆）。
+		// Allow no default Memory config: explicitly fallback to nomemo (disable long memory).
 		response.Memory = models.Config{
 			Type:     "memory",
 			Name:     "No Memory",
@@ -460,30 +460,30 @@ func (ac *AdminController) GetDeviceConfigs(c *gin.Context) {
 			Enabled:  true,
 		}
 		if err != gorm.ErrRecordNotFound {
-			log.Printf("加载默认Memory配置失败，已回退nomemo: %v", err)
+			log.Printf("Failed to load default Memory config, fallback to nomemo: %v", err)
 		}
 	}
 
-	// 获取VoiceIdentify配置：检查智能体是否关联了声纹组
+	// Get VoiceIdentify config: check if agent has associated speaker groups
 	response.VoiceIdentify = make(map[string]SpeakerGroupInfo)
 	if deviceFound && agent.ID != 0 {
 		var speakerGroups []models.SpeakerGroup
 		if err := ac.DB.Where("agent_id = ? AND status = ?", agent.ID, "active").
 			Order("created_at DESC").Find(&speakerGroups).Error; err == nil && len(speakerGroups) > 0 {
-			// 遍历所有声纹组
+			// Iterate all speaker groups
 			for _, speakerGroup := range speakerGroups {
-				// 查询该声纹组下的所有样本
+				// Query all samples under this speaker group
 				var samples []models.SpeakerSample
 				ac.DB.Where("speaker_group_id = ? AND status = ?", speakerGroup.ID, "active").
 					Find(&samples)
 
-				// 提取样本 UUID 列表
+				// Extract sample UUID list
 				uuids := make([]string, 0)
 				for _, sample := range samples {
 					uuids = append(uuids, sample.UUID)
 				}
 
-				// 以声纹组名称为 key，构建配置数据
+				// Build config data with speaker group name as key
 				response.VoiceIdentify[speakerGroup.Name] = SpeakerGroupInfo{
 					ID:                 speakerGroup.ID,
 					Name:               speakerGroup.Name,
@@ -498,7 +498,7 @@ func (ac *AdminController) GetDeviceConfigs(c *gin.Context) {
 		}
 	}
 
-	// 下发智能体关联知识库（含 provider），供主程序本地RAG使用
+	// Distribute agent-associated knowledge bases (including provider) for main program local RAG use
 	response.KnowledgeBases = make([]KnowledgeBaseInfo, 0)
 	if deviceFound && agent.ID != 0 {
 		var links []models.AgentKnowledgeBase
@@ -550,20 +550,20 @@ func (ac *AdminController) GetDeviceConfigs(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": response})
 }
 
-// getSystemConfigsData 获取系统配置数据（与 GetSystemConfigs 返回的 data 一致），供接口与 WebSocket 推送复用
+// getSystemConfigsData retrieves system config data (consistent with GetSystemConfigs response) for API and WebSocket push reuse
 func (ac *AdminController) getSystemConfigsData() (gin.H, error) {
 	var allConfigs []models.Config
 	if err := ac.DB.Where("type IN (?)", []string{"mqtt", "mqtt_server", "udp", "ota", "mcp", "local_mcp", "voice_identify", "tts", "vad", "asr", "llm", "vision", "auth", "chat", "knowledge_search"}).Find(&allConfigs).Error; err != nil {
 		return nil, err
 	}
 
-	// 按类型分组配置
+	// Group configs by type
 	configsByType := make(map[string][]models.Config)
 	for _, config := range allConfigs {
 		configsByType[config.Type] = append(configsByType[config.Type], config)
 	}
 
-	// 从 configs 中选出“当前使用”的一条：默认配置优先，否则第一条
+	// 从 configs 中选出“currentuse”的一条：defaultconfig优先，否则第一条
 	getSelectedConfig := func(configs []models.Config) *models.Config {
 		if len(configs) == 0 {
 			return nil
@@ -576,14 +576,14 @@ func (ac *AdminController) getSystemConfigsData() (gin.H, error) {
 		return &configs[0]
 	}
 
-	// 为每种类型选择最佳配置并解析json_data
+	// Select best config for each type and parse json_data
 	selectAndParseConfig := func(configs []models.Config) interface{} {
 		selected := getSelectedConfig(configs)
 		if selected == nil {
 			return nil
 		}
 
-		// 解析json_data
+		// Parse json_data
 		if selected.JsonData != "" {
 			var parsedData interface{}
 			if err := json.Unmarshal([]byte(selected.JsonData), &parsedData); err != nil {
@@ -617,10 +617,10 @@ func (ac *AdminController) getSystemConfigsData() (gin.H, error) {
 		}
 	}
 
-	// 特殊处理MCP配置，将mcp和local_mcp分开
+	// Special handling for MCP config, separating mcp and local_mcp
 	selectAndParseMCPConfig := func(configs []models.Config) (interface{}, interface{}) {
 		var selectedConfig models.Config
-		// 优先选择默认配置
+		// Prioritize default config
 		for _, config := range configs {
 			if config.IsDefault {
 				selectedConfig = config
@@ -628,16 +628,16 @@ func (ac *AdminController) getSystemConfigsData() (gin.H, error) {
 			}
 		}
 
-		// 如果没有默认配置，选择第一个配置
+		// If no default config, select the first one
 		if selectedConfig.ID == 0 {
 			selectedConfig = configs[0]
 		}
 
-		// 解析json_data
+		// Parse json_data
 		if selectedConfig.JsonData != "" {
 			var parsedData interface{}
 			if err := json.Unmarshal([]byte(selectedConfig.JsonData), &parsedData); err != nil {
-				// 如果解析失败，返回原始json_data字符串
+				// If parsing fails, return raw json_data string
 				result := gin.H{
 					"name": selectedConfig.Name,
 					"type": selectedConfig.Type,
@@ -646,7 +646,7 @@ func (ac *AdminController) getSystemConfigsData() (gin.H, error) {
 				return result, nil
 			}
 
-			// 将解析后的数据包装在正确的格式中
+			// Wrap parsed data in correct format
 			result := gin.H{
 				"name": selectedConfig.Name,
 				"type": selectedConfig.Type,
@@ -656,27 +656,27 @@ func (ac *AdminController) getSystemConfigsData() (gin.H, error) {
 			var localMcpData interface{}
 
 			if parsedData != nil {
-				// 如果解析的数据是map类型，分离mcp和local_mcp
+				// If parsed data is map type, separate mcp and local_mcp
 				if dataMap, ok := parsedData.(map[string]interface{}); ok {
-					// 处理mcp部分
+					// Process mcp section
 					if mcp, exists := dataMap["mcp"]; exists {
 						mcpData = mcp
 					} else {
-						// 兼容旧格式：如果直接有global字段
+						// Backward compatibility: if global field exists directly
 						if global, exists := dataMap["global"]; exists {
 							mcpData = gin.H{"global": global}
 						} else {
-							// 如果没有mcp或global字段，将整个数据作为mcp
+							// If no mcp or global field, use entire data as mcp
 							mcpData = dataMap
 						}
 					}
 
-					// 处理local_mcp部分
+					// Process local_mcp section
 					if localMcp, exists := dataMap["local_mcp"]; exists {
 						localMcpData = localMcp
 					}
 
-					// 将其他字段合并到mcp中
+					// Merge other fields into mcp
 					if mcpMap, ok := mcpData.(map[string]interface{}); ok {
 						for k, v := range dataMap {
 							if k != "mcp" && k != "local_mcp" {
@@ -685,7 +685,7 @@ func (ac *AdminController) getSystemConfigsData() (gin.H, error) {
 						}
 					}
 				} else {
-					// 否则作为data字段
+					// Otherwise use as data field
 					result["data"] = parsedData
 					mcpData = result
 				}
@@ -694,7 +694,7 @@ func (ac *AdminController) getSystemConfigsData() (gin.H, error) {
 			return mcpData, localMcpData
 		}
 
-		// 如果没有json_data，返回基本配置信息
+		// If no json_data, return basic config info
 		result := gin.H{
 			"name": selectedConfig.Name,
 			"type": selectedConfig.Type,
@@ -702,13 +702,13 @@ func (ac *AdminController) getSystemConfigsData() (gin.H, error) {
 		return result, nil
 	}
 
-	// 构建响应数据。DB 的 enabled 列仅用于 vad/asr/llm/tts 等列表项的开关；mqtt/mqtt_server 的业务启用由 json_data 中的 enable 表示，不再用 DB 列覆盖
+	// Build response data. DB enabled column only for vad/asr/llm/tts list item toggle; mqtt/mqtt_server business enablement is indicated by enable in json_data, no longer overriding with DB column
 	response := gin.H{}
 
 	if configs, exists := configsByType["mqtt"]; exists && len(configs) > 0 {
 		data := selectAndParseConfig(configs)
 		/*if b, err := json.Marshal(data); err == nil {
-			log.Printf("[getSystemConfigsData] mqtt 配置: %s", string(b))
+			log.Printf("[getSystemConfigsData] mqtt config: %s", string(b))
 		}*/
 		response["mqtt"] = data
 
@@ -716,7 +716,7 @@ func (ac *AdminController) getSystemConfigsData() (gin.H, error) {
 	if configs, exists := configsByType["mqtt_server"]; exists && len(configs) > 0 {
 		data := selectAndParseConfig(configs)
 		if b, err := json.Marshal(data); err == nil {
-			log.Printf("[getSystemConfigsData] mqtt_server 配置: %s", string(b))
+			log.Printf("[getSystemConfigsData] mqtt_server config: %s", string(b))
 		}
 		response["mqtt_server"] = data
 	}
@@ -733,19 +733,19 @@ func (ac *AdminController) getSystemConfigsData() (gin.H, error) {
 		response["chat"] = selectAndParseConfig(configs)
 	}
 
-	// 特殊处理MCP配置，将mcp和local_mcp分开
+	// Special handling for MCP config, separating mcp and local_mcp
 	if configs, exists := configsByType["mcp"]; exists && len(configs) > 0 {
 		mcpData, localMcpData := selectAndParseMCPConfig(configs)
 		if mcpData != nil {
 			if mcpMap := asMap(mcpData); mcpMap != nil {
 				mergedMCP, mergeWarnings, err := ac.mergeMCPWithEnabledMarketServices(mcpMap)
 				if err != nil {
-					log.Printf("聚合市场MCP服务失败，回退为人工配置: %v", err)
+					log.Printf("Failed to aggregate market MCP services, falling back to manual config: %v", err)
 					response["mcp"] = mcpMap
 				} else {
 					response["mcp"] = mergedMCP
 					if len(mergeWarnings) > 0 {
-						log.Printf("聚合市场MCP服务告警: %s", strings.Join(mergeWarnings, " | "))
+						log.Printf("Market MCP service warnings: %s", strings.Join(mergeWarnings, " | "))
 					}
 				}
 			} else {
@@ -757,12 +757,12 @@ func (ac *AdminController) getSystemConfigsData() (gin.H, error) {
 		}
 	}
 
-	// 处理独立的local_mcp配置（如果存在）
+	// Process standalone local_mcp config (if exists)
 	if configs, exists := configsByType["local_mcp"]; exists && len(configs) > 0 {
 		response["local_mcp"] = selectAndParseConfig(configs)
 	}
 
-	// 处理知识库全局配置：knowledge.default_provider + knowledge.providers
+	// Process knowledge base global config: knowledge.default_provider + knowledge.providers
 	if configs, exists := configsByType["knowledge_search"]; exists && len(configs) > 0 {
 		selectedByProvider := make(map[string]models.Config)
 		for _, cfg := range configs {
@@ -810,7 +810,7 @@ func (ac *AdminController) getSystemConfigsData() (gin.H, error) {
 		}
 	}
 
-	// 当未配置人工 mcp(type=mcp) 但已存在市场导入服务时，补齐默认 mcp/local_mcp，确保可下发聚合结果
+	// When manual mcp(type=mcp) is not configured but market imported services exist, fill in default mcp/local_mcp to ensure aggregated results can be delivered
 	if _, exists := response["mcp"]; !exists {
 		mergedMCP, mergeWarnings, err := ac.mergeMCPWithEnabledMarketServices(defaultMCPMap())
 		if err == nil {
@@ -822,24 +822,24 @@ func (ac *AdminController) getSystemConfigsData() (gin.H, error) {
 					response["local_mcp"] = defaultLocalMCPMap()
 				}
 				if len(mergeWarnings) > 0 {
-					log.Printf("聚合市场MCP服务告警: %s", strings.Join(mergeWarnings, " | "))
+					log.Printf("Market MCP service warnings: %s", strings.Join(mergeWarnings, " | "))
 				}
 			}
 		}
 	}
 
-	// 处理 voice_identify 配置（与控制台配置结构一致，包含 base_url、threshold、enable）
-	// 业务启用由 json_data 中的 enable 表示；DB 的 enabled 列仅作列表项开关，不覆盖业务 enable
+	// Process voice_identify config (consistent with console config structure, includes base_url, threshold, enable)
+	// Business enablement is indicated by enable in json_data; DB enabled column only for list item toggle, does not override business enable
 	baseURL := os.Getenv("SPEAKER_SERVICE_URL")
-	enabled := true  // 默认启用
-	threshold := 0.4 // 默认阈值
+	enabled := true  // Default enabled
+	threshold := 0.4 // Default threshold
 
 	if configs, exists := configsByType["voice_identify"]; exists && len(configs) > 0 {
 		selected := getSelectedConfig(configs)
 		if selected != nil && selected.JsonData != "" {
 			var configData map[string]interface{}
 			if err := json.Unmarshal([]byte(selected.JsonData), &configData); err == nil {
-				// 业务 enable 优先从 json_data 读取
+				// Business enable is read from json_data first
 				if v, ok := configData["enable"]; ok {
 					if b, ok := v.(bool); ok {
 						enabled = b
@@ -858,7 +858,7 @@ func (ac *AdminController) getSystemConfigsData() (gin.H, error) {
 			}
 		}
 	}
-	// 如果获取到了 base_url，添加到响应中
+	// If base_url is obtained, add to response
 	if baseURL != "" {
 		response["voice_identify"] = gin.H{
 			"base_url":  baseURL,
@@ -867,30 +867,30 @@ func (ac *AdminController) getSystemConfigsData() (gin.H, error) {
 		}
 	}
 
-	// 处理 TTS 配置，返回格式与 config.yaml 一致，使用 config_id 作为 key
+	// Process TTS config, return format consistent with config.yaml, using config_id as key
 	if ttsConfigs, exists := configsByType["tts"]; exists && len(ttsConfigs) > 0 {
 		ttsConfigMap := make(gin.H)
 		for _, config := range ttsConfigs {
-			if config.Enabled { // 只返回启用的配置
+			if config.Enabled { // Only return enabled configs
 				configData := make(map[string]interface{})
 				if config.JsonData != "" {
 					json.Unmarshal([]byte(config.JsonData), &configData)
 				}
 
-				// 组装成与 config.yaml 相同的格式
+				// Assemble into same format as config.yaml
 				configItem := gin.H{
 					"provider":   config.Provider,
 					"name":       config.Name,
 					"is_default": config.IsDefault,
 				}
-				// 将 configData 中的字段展开到 configItem 中
+				// Expand configData fields into configItem
 				for k, v := range configData {
 					configItem[k] = v
 				}
-				// 使用 config_id 作为 key
+				// Use config_id as key
 				ttsConfigMap[config.ConfigID] = configItem
 
-				// 如果当前配置是默认配置，将 config_id 赋值给顶层的 provider 字段
+				// If current config is default, assign config_id to top-level provider field
 				if config.IsDefault {
 					ttsConfigMap["provider"] = config.ConfigID
 				}
@@ -901,52 +901,52 @@ func (ac *AdminController) getSystemConfigsData() (gin.H, error) {
 		}
 	}
 
-	// 处理 VAD 配置，返回格式与 config.yaml 一致，使用 config_id 作为 key
-	// 兼容新旧格式：带key的格式（{"webrtc_vad": {...}}）和不带key的格式（{...}）
+	// Process VAD config, return format consistent with config.yaml, using config_id as key
+	// Compatible with old and new formats: with key format ({"webrtc_vad": {...}}) and without key format ({...})
 	if vadConfigs, exists := configsByType["vad"]; exists && len(vadConfigs) > 0 {
 		vadConfigMap := make(gin.H)
 		for _, config := range vadConfigs {
-			if config.Enabled { // 只返回启用的配置
+			if config.Enabled { // Only return enabled configs
 				configData := make(map[string]interface{})
 				if config.JsonData != "" {
 					if err := json.Unmarshal([]byte(config.JsonData), &configData); err != nil {
-						// JSON解析失败，跳过此配置
+						// JSON parsing failed, skip this config
 						continue
 					}
 				}
 
-				// 兼容旧格式：如果只有一个key，说明是旧格式（带key），提取出内部配置
+				// Backward compatibility: if only one key, it's old format (with key), extract inner config
 				var actualConfigData map[string]interface{}
 				if len(configData) == 1 {
-					// 旧格式：只有一个key，提取其值
+					// Old format: only one key, extract its value
 					for _, value := range configData {
 						if innerConfig, ok := value.(map[string]interface{}); ok {
 							actualConfigData = innerConfig
 						} else {
-							// 如果不是map类型，直接使用原数据
+							// If not a map, use original data directly
 							actualConfigData = configData
 						}
 						break
 					}
 				} else {
-					// 新格式：不带key，直接使用configData
+					// New format: without key, use configData directly
 					actualConfigData = configData
 				}
 
-				// 组装成与 config.yaml 相同的格式
+				// Assemble into same format as config.yaml
 				configItem := gin.H{
 					"provider":   config.Provider,
 					"name":       config.Name,
 					"is_default": config.IsDefault,
 				}
-				// 将 actualConfigData 中的字段展开到 configItem 中
+				// Expand actualConfigData fields into configItem
 				for k, v := range actualConfigData {
 					configItem[k] = v
 				}
-				// 使用 config_id 作为 key
+				// Use config_id as key
 				vadConfigMap[config.ConfigID] = configItem
 
-				// 如果当前配置是默认配置，将 config_id 赋值给顶层的 provider 字段
+				// If current config is default, assign config_id to top-level provider field
 				if config.IsDefault {
 					vadConfigMap["provider"] = config.ConfigID
 				}
@@ -957,30 +957,30 @@ func (ac *AdminController) getSystemConfigsData() (gin.H, error) {
 		}
 	}
 
-	// 处理 ASR 配置，返回格式与 config.yaml 一致，使用 config_id 作为 key
+	// Process ASR config, return format consistent with config.yaml, using config_id as key
 	if asrConfigs, exists := configsByType["asr"]; exists && len(asrConfigs) > 0 {
 		asrConfigMap := make(gin.H)
 		for _, config := range asrConfigs {
-			if config.Enabled { // 只返回启用的配置
+			if config.Enabled { // Only return enabled configs
 				configData := make(map[string]interface{})
 				if config.JsonData != "" {
 					json.Unmarshal([]byte(config.JsonData), &configData)
 				}
 
-				// 组装成与 config.yaml 相同的格式
+				// Assemble into same format as config.yaml
 				configItem := gin.H{
 					"provider":   config.Provider,
 					"name":       config.Name,
 					"is_default": config.IsDefault,
 				}
-				// 将 configData 中的字段展开到 configItem 中
+				// Expand configData fields into configItem
 				for k, v := range configData {
 					configItem[k] = v
 				}
-				// 使用 config_id 作为 key
+				// Use config_id as key
 				asrConfigMap[config.ConfigID] = configItem
 
-				// 如果当前配置是默认配置，将 config_id 赋值给顶层的 provider 字段
+				// If current config is default, assign config_id to top-level provider field
 				if config.IsDefault {
 					asrConfigMap["provider"] = config.ConfigID
 				}
@@ -991,30 +991,30 @@ func (ac *AdminController) getSystemConfigsData() (gin.H, error) {
 		}
 	}
 
-	// 处理 LLM 配置，返回格式与 config.yaml 一致，使用 config_id 作为 key
+	// Process LLM config, return format consistent with config.yaml, using config_id as key
 	if llmConfigs, exists := configsByType["llm"]; exists && len(llmConfigs) > 0 {
 		llmConfigMap := make(gin.H)
 		for _, config := range llmConfigs {
-			if config.Enabled { // 只返回启用的配置
+			if config.Enabled { // Only return enabled configs
 				configData := make(map[string]interface{})
 				if config.JsonData != "" {
 					json.Unmarshal([]byte(config.JsonData), &configData)
 				}
 
-				// 组装成与 config.yaml 相同的格式
+				// Assemble into same format as config.yaml
 				configItem := gin.H{
 					"provider":   config.Provider,
 					"name":       config.Name,
 					"is_default": config.IsDefault,
 				}
-				// 将 configData 中的字段展开到 configItem 中
+				// Expand configData fields into configItem
 				for k, v := range configData {
 					configItem[k] = v
 				}
-				// 使用 config_id 作为 key
+				// Use config_id as key
 				llmConfigMap[config.ConfigID] = configItem
 
-				// 如果当前配置是默认配置，将 config_id 赋值给顶层的 provider 字段
+				// If current config is default, assign config_id to top-level provider field
 				if config.IsDefault {
 					llmConfigMap["provider"] = config.ConfigID
 				}
@@ -1025,7 +1025,7 @@ func (ac *AdminController) getSystemConfigsData() (gin.H, error) {
 		}
 	}
 
-	// 处理 Vision 配置：与 config.yaml 结构一致，vision_base + vllm（顶层 provider + 子项仅业务字段）
+	// Process Vision config: consistent with config.yaml structure, vision_base + vllm (top-level provider + sub-items only business fields)
 	if visionConfigs, exists := configsByType["vision"]; exists && len(visionConfigs) > 0 {
 		visionResponse := make(gin.H)
 		vllmMap := make(gin.H)
@@ -1050,7 +1050,7 @@ func (ac *AdminController) getSystemConfigsData() (gin.H, error) {
 				if config.IsDefault {
 					defaultVisionConfigID = config.ConfigID
 				}
-				// 与 YAML 一致：子项只存业务配置，不含 name/provider/is_default
+				// Consistent with YAML: sub-items only store business config, without name/provider/is_default
 				vllmMap[config.ConfigID] = configData
 			}
 		}
@@ -1065,13 +1065,13 @@ func (ac *AdminController) getSystemConfigsData() (gin.H, error) {
 		}
 	}
 
-	// 处理 VAD 配置
+	// Process VAD config
 	if configs, exists := configsByType["vad"]; exists && len(configs) > 0 {
 		response["vad"] = selectAndParseConfig(configs)
 	}
 
-	// 处理 Vision 配置：vision_base 为顶层字段，其余为 vision.vllm[config_id]
-	// config.Enabled 此处仅作列表项开关（该条配置是否纳入返回），业务相关字段来自 json_data
+	// Process Vision config: vision_base as top-level field, others as vision.vllm[config_id]
+	// config.Enabled here only for list item toggle (whether this config is included in return), business fields come from json_data
 	if visionConfigs, exists := configsByType["vision"]; exists && len(visionConfigs) > 0 {
 		visionMap := make(gin.H)
 		for _, config := range visionConfigs {
@@ -1106,7 +1106,7 @@ func (ac *AdminController) getSystemConfigsData() (gin.H, error) {
 	return response, nil
 }
 
-// GetSystemConfigs 获取系统配置信息，包括mqtt, mqtt_server, udp, ota, mcp, local_mcp, voice_identify, tts, vad, asr, llm, vision, auth, chat
+// GetSystemConfigs retrieves system config information including mqtt, mqtt_server, udp, ota, mcp, local_mcp, voice_identify, tts, vad, asr, llm, vision, auth, chat
 func (ac *AdminController) GetSystemConfigs(c *gin.Context) {
 	data, err := ac.getSystemConfigsData()
 	if err != nil {
@@ -1116,7 +1116,7 @@ func (ac *AdminController) GetSystemConfigs(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": data})
 }
 
-// notifySystemConfigChanged 在 Save 成功后调用：先同步拉取最新配置，再异步推送，保证推送的是保存后的数据
+// notifySystemConfigChanged is called after Save succeeds: first synchronously fetch latest config, then asynchronously push to ensure pushed data is post-save
 func (ac *AdminController) notifySystemConfigChanged() {
 	if ac.WebSocketController == nil {
 		return
@@ -1128,14 +1128,14 @@ func (ac *AdminController) notifySystemConfigChanged() {
 	go ac.WebSocketController.BroadcastSystemConfig(data)
 }
 
-// TestConfigs 一键测试配置：OTA 在 manager 内测，VAD/ASR/LLM/TTS 经 WebSocket 发主程序测，结果按 config_id 对应
-// 请求体可选 data：若提供某类型（vad/asr/llm/tts），则用该 data 覆盖 DB 作为下发主程序的配置（用于未保存草稿测试）
+// TestConfigs One-click test config: OTA tested within manager, VAD/ASR/LLM/TTS tested via WebSocket to main program, results correspond by config_id
+// Request body optional data: if providing certain type (vad/asr/llm/tts), use that data to override DB as config sent to main program (for draft/unsaved test)
 func (ac *AdminController) TestConfigs(c *gin.Context) {
 	var body struct {
-		Types      []string               `json:"types"`       // 要测试的类型：ota, vad, asr, llm, tts
-		ConfigIDs  map[string][]string    `json:"config_ids"`  // 按类型指定 config_id 列表，不传则测该类型全部已启用
-		ClientUUID string                 `json:"client_uuid"` // 指定主程序连接，不传则任选一个
-		Data       map[string]interface{} `json:"data"`        // 可选，按类型覆盖配置源（用于编辑态/向导未保存测试）
+		Types      []string               `json:"types"`       // Types to test: ota, vad, asr, llm, tts
+		ConfigIDs  map[string][]string    `json:"config_ids"`  // Specify config_id list by type, if not provided test all enabled for that type
+		ClientUUID string                 `json:"client_uuid"` // Specify main program connection, if not provided select any
+		Data       map[string]interface{} `json:"data"`        // Optional, override config source by type (for draft/wizard unsaved test)
 	}
 	_ = c.ShouldBindJSON(&body)
 	if len(body.Types) == 0 {
@@ -1153,7 +1153,7 @@ func (ac *AdminController) TestConfigs(c *gin.Context) {
 		"tts": gin.H{},
 	}
 
-	// OTA：优先用请求体 data.ota（页面表单），否则从 DB 加载
+	// OTA: prioritize request body data.ota (page form), otherwise load from DB
 	if contains(body.Types, "ota") {
 		var otaData map[string]interface{}
 		if body.Data != nil {
@@ -1166,24 +1166,24 @@ func (ac *AdminController) TestConfigs(c *gin.Context) {
 				}
 				cfgMap, _ := val.(map[string]interface{})
 				if cfgMap == nil {
-					result["ota"].(gin.H)[configID] = gin.H{"ok": false, "message": "配置格式无效"}
+					result["ota"].(gin.H)[configID] = gin.H{"ok": false, "message": "Invalid config format"}
 					continue
 				}
 				jsonBytes, err := json.Marshal(cfgMap)
 				if err != nil {
-					result["ota"].(gin.H)[configID] = gin.H{"ok": false, "message": "配置序列化失败"}
+					result["ota"].(gin.H)[configID] = gin.H{"ok": false, "message": "Config serialization failed"}
 					continue
 				}
 				cfg := models.Config{ConfigID: configID, JsonData: string(jsonBytes)}
 				otaResult := ac.testOTAConfigWithMQTTUDP(cfg)
-				// 将OTATestResult转换为gin.H格式，保持向后兼容
+				// Convert OTATestResult to gin.H format for backward compatibility
 				result["ota"].(gin.H)[configID] = gin.H{
 					"ok":              otaResult.WebSocket.Ok && (otaResult.MQTTUDP == nil || otaResult.MQTTUDP.Ok),
 					"message":         otaResult.WebSocket.Message,
 					"first_packet_ms": otaResult.WebSocket.FirstPacketMs,
 					"websocket":       otaResult.WebSocket,
 					"mqtt_udp":        otaResult.MQTTUDP,
-					"ota_response":    otaResult.OTAResponse, // 添加OTA响应体
+					"ota_response":    otaResult.OTAResponse, // Add OTA response body
 				}
 			}
 		} else {
@@ -1193,27 +1193,27 @@ func (ac *AdminController) TestConfigs(c *gin.Context) {
 			}
 			var otaConfigs []models.Config
 			if err := q.Find(&otaConfigs).Error; err != nil {
-				result["ota"] = gin.H{"_error": gin.H{"ok": false, "message": "获取OTA配置失败"}}
+				result["ota"] = gin.H{"_error": gin.H{"ok": false, "message": "Failed to get OTA config"}}
 			} else if len(otaConfigs) == 0 {
-				result["ota"] = gin.H{"_none": gin.H{"ok": false, "message": "未配置或未启用OTA"}}
+				result["ota"] = gin.H{"_none": gin.H{"ok": false, "message": "OTA not configured or not enabled"}}
 			} else {
 				for _, cfg := range otaConfigs {
 					otaResult := ac.testOTAConfigWithMQTTUDP(cfg)
-					// 将OTATestResult转换为gin.H格式，保持向后兼容
+					// Convert OTATestResult to gin.H format for backward compatibility
 					result["ota"].(gin.H)[cfg.ConfigID] = gin.H{
 						"ok":              otaResult.WebSocket.Ok && (otaResult.MQTTUDP == nil || otaResult.MQTTUDP.Ok),
 						"message":         otaResult.WebSocket.Message,
 						"first_packet_ms": otaResult.WebSocket.FirstPacketMs,
 						"websocket":       otaResult.WebSocket,
 						"mqtt_udp":        otaResult.MQTTUDP,
-						"ota_response":    otaResult.OTAResponse, // 添加OTA响应体
+						"ota_response":    otaResult.OTAResponse, // Add OTA response body
 					}
 				}
 			}
 		}
 	}
 
-	// VAD/ASR/LLM/TTS：经 WebSocket 发主程序
+	// VAD/ASR/LLM/TTS: send to main program via WebSocket
 	needMainProgram := contains(body.Types, "vad") || contains(body.Types, "asr") || contains(body.Types, "llm") || contains(body.Types, "tts")
 	if needMainProgram && ac.WebSocketController != nil {
 		clientUUID := body.ClientUUID
@@ -1221,7 +1221,7 @@ func (ac *AdminController) TestConfigs(c *gin.Context) {
 			clientUUID = ac.WebSocketController.GetFirstConnectedClientUUID()
 		}
 		if clientUUID == "" {
-			noClient := gin.H{"ok": false, "message": "无主程序连接，无法测试"}
+			noClient := gin.H{"ok": false, "message": "No main program connection, cannot test"}
 			if contains(body.Types, "vad") {
 				result["vad"] = gin.H{"_no_client": noClient}
 			}
@@ -1237,7 +1237,7 @@ func (ac *AdminController) TestConfigs(c *gin.Context) {
 		} else {
 			fullData, err := ac.getSystemConfigsData()
 			if err != nil {
-				fillResultError(result, body.Types, "vad", "asr", "llm", "tts", "获取系统配置失败")
+				fillResultError(result, body.Types, "vad", "asr", "llm", "tts", "Failed to get system config")
 			} else {
 				for _, typ := range []string{"vad", "asr", "llm", "tts"} {
 					if v, ok := fullData[typ]; ok {
@@ -1245,10 +1245,10 @@ func (ac *AdminController) TestConfigs(c *gin.Context) {
 							log.Printf("[config_test] fullData[%s] keys: %v", typ, getMapKeys(m))
 						}
 					} else {
-						log.Printf("[config_test] fullData[%s] 不存在", typ)
+						log.Printf("[config_test] fullData[%s] does not exist", typ)
 					}
 				}
-				// 若请求体带了 data 且某类型有值，则用 body.Data 覆盖该类型的配置源；否则用 fullData
+				// If request body has data and certain type has value, use body.Data to override that type's config source; otherwise use fullData
 				subset := gin.H{}
 				for _, typ := range []string{"vad", "asr", "llm", "tts"} {
 					if !contains(body.Types, typ) {
@@ -1259,7 +1259,7 @@ func (ac *AdminController) TestConfigs(c *gin.Context) {
 						if v, ok := body.Data[typ]; ok {
 							if m, ok := v.(map[string]interface{}); ok && len(m) > 0 {
 								typeMap = m
-								log.Printf("[config_test] 使用请求体 data[%s] 作为配置源", typ)
+								log.Printf("[config_test] Using request body data[%s] as config source", typ)
 							}
 						}
 					}
@@ -1278,7 +1278,7 @@ func (ac *AdminController) TestConfigs(c *gin.Context) {
 									continue
 								}
 							}
-							// fullData 中无该 id（如未启用），从 DB 按 type+config_id 查一条并加入
+							// No such id in fullData (e.g., not enabled), query one from DB by type+config_id and add
 							item := ac.getConfigItemByTypeAndID(typ, id)
 							if item != nil {
 								filtered[id] = item
@@ -1300,10 +1300,10 @@ func (ac *AdminController) TestConfigs(c *gin.Context) {
 				}
 				reqBody := map[string]interface{}{
 					"data":      subset,
-					"test_text": "配置测试",
+					"test_text": "Config test",
 				}
-				// 发送前打印下发的配置摘要，便于 debug
-				log.Printf("[config_test] 发送请求 client=%s data 各类型条目数: vad=%d asr=%d llm=%d tts=%d",
+				// Print config summary before sending for debug
+				log.Printf("[config_test] Sending request client=%s data entries by type: vad=%d asr=%d llm=%d tts=%d",
 					clientUUID,
 					countSubsetKeys(subset["vad"]), countSubsetKeys(subset["asr"]),
 					countSubsetKeys(subset["llm"]), countSubsetKeys(subset["tts"]))
@@ -1311,7 +1311,7 @@ func (ac *AdminController) TestConfigs(c *gin.Context) {
 				defer cancel()
 				resp, err := ac.WebSocketController.SendRequestToClient(ctx, clientUUID, "POST", "/api/config/test", reqBody)
 				if err != nil {
-					fillResultError(result, body.Types, "vad", "asr", "llm", "tts", "主程序测试请求失败: "+err.Error())
+					fillResultError(result, body.Types, "vad", "asr", "llm", "tts", "Main program test request failed: "+err.Error())
 				} else if resp.Status != 200 {
 					errMsg := resp.Error
 					if errMsg == "" && resp.Body != nil {
@@ -1324,7 +1324,7 @@ func (ac *AdminController) TestConfigs(c *gin.Context) {
 					if resp.Body == nil {
 						for _, typ := range []string{"vad", "asr", "llm", "tts"} {
 							if contains(body.Types, typ) {
-								result[typ] = gin.H{"_error": gin.H{"ok": false, "message": "主程序未返回测试数据"}}
+								result[typ] = gin.H{"_error": gin.H{"ok": false, "message": "Main program did not return test data"}}
 							}
 						}
 					} else {
@@ -1332,7 +1332,7 @@ func (ac *AdminController) TestConfigs(c *gin.Context) {
 							if r, ok := resp.Body[typ].(map[string]interface{}); ok {
 								result[typ] = r
 							} else if contains(body.Types, typ) && resp.Body[typ] != nil {
-								result[typ] = gin.H{"_error": gin.H{"ok": false, "message": "响应格式异常"}}
+								result[typ] = gin.H{"_error": gin.H{"ok": false, "message": "Response format abnormal"}}
 							}
 						}
 					}
@@ -1353,7 +1353,7 @@ func contains(s []string, x string) bool {
 	return false
 }
 
-// countSubsetKeys 统计 subset 中除 provider 外的 config 条目数，用于 debug 日志
+// countSubsetKeys counts config entries in subset excluding provider, for debug logging
 func countSubsetKeys(v interface{}) int {
 	m, ok := v.(map[string]interface{})
 	if !ok {
@@ -1368,7 +1368,7 @@ func countSubsetKeys(v interface{}) int {
 	return n
 }
 
-// getConfigItemByTypeAndID 按 type+config_id 从 DB 查一条配置，返回与 getSystemConfigsData 一致的 configItem 结构（供测试请求指定 config_ids 时补全）
+// getConfigItemByTypeAndID queries one config from DB by type+config_id, returns configItem structure consistent with getSystemConfigsData (for completing test requests with specified config_ids)
 func (ac *AdminController) getConfigItemByTypeAndID(typ, configID string) map[string]interface{} {
 	var config models.Config
 	if err := ac.DB.Where("type = ? AND config_id = ?", typ, configID).First(&config).Error; err != nil {
@@ -1385,7 +1385,7 @@ func (ac *AdminController) getConfigItemByTypeAndID(typ, configID string) map[st
 	for k, v := range configData {
 		item[k] = v
 	}
-	// 补全 provider（引擎类型），主程序资源池创建依赖此字段
+	// Complete provider (engine type), main program resource pool creation depends on this field
 	if config.Provider != "" {
 		item["provider"] = config.Provider
 	}
@@ -1393,7 +1393,7 @@ func (ac *AdminController) getConfigItemByTypeAndID(typ, configID string) map[st
 }
 
 func fillResultError(result gin.H, types []string, keys ...string) {
-	msg := gin.H{"ok": false, "message": "请求异常"}
+	msg := gin.H{"ok": false, "message": "Request error"}
 	for _, k := range keys {
 		if contains(types, k) {
 			result[k] = gin.H{"_error": msg}
@@ -1401,21 +1401,21 @@ func fillResultError(result gin.H, types []string, keys ...string) {
 	}
 }
 
-// OTATestResult OTA测试结果结构
+// OTATestResult OTA test result structure
 type OTATestResult struct {
 	WebSocket   OTATestItem  `json:"websocket"`
 	MQTTUDP     *OTATestItem `json:"mqtt_udp,omitempty"`
-	OTAResponse string       `json:"ota_response,omitempty"` // OTA接口响应内容
+	OTAResponse string       `json:"ota_response,omitempty"` // OTA interface response content
 }
 
-// OTATestItem 单个测试项结果
+// OTATestItem single test item result
 type OTATestItem struct {
 	Ok            bool   `json:"ok"`
 	Message       string `json:"message"`
 	FirstPacketMs int64  `json:"first_packet_ms"`
 }
 
-// MQTTUDPTestConfig MQTT UDP测试配置
+// MQTTUDPTestConfig MQTT UDP test configuration
 type MQTTUDPTestConfig struct {
 	Endpoint       string `json:"endpoint"`
 	ClientID       string `json:"client_id"`
@@ -1425,7 +1425,7 @@ type MQTTUDPTestConfig struct {
 	SubscribeTopic string `json:"subscribe_topic"`
 }
 
-// UDPConfig UDP配置（从hello响应中获取）
+// UDPConfig UDP configuration (obtained from hello response)
 type UDPConfig struct {
 	Server     string `json:"server"`
 	Port       int    `json:"port"`
@@ -1434,7 +1434,7 @@ type UDPConfig struct {
 	Nonce      string `json:"nonce"`
 }
 
-// helloMessage MQTT hello消息结构
+// helloMessage MQTT hello message structure
 type helloMessage struct {
 	Type        string      `json:"type"`
 	Version     int         `json:"version"`
@@ -1442,7 +1442,7 @@ type helloMessage struct {
 	AudioParams interface{} `json:"audio_params,omitempty"`
 }
 
-// helloResponse MQTT hello响应结构（与test/mqtt_udp保持一致）
+// helloResponse MQTT hello response structure (consistent with test/mqtt_udp)
 type helloResponse struct {
 	Type        string    `json:"type"`
 	SessionID   string    `json:"session_id"`
@@ -1463,38 +1463,38 @@ const (
 	otaHTTPPath     = "/xiaozhi/ota/"
 )
 
-// testMQTTUDPConfig 测试MQTT UDP连接
-// 参考 test/mqtt_udp 逻辑：设置默认消息处理器，发送hello，等待响应
-// 返回 ok, message, 耗时(ms)
+// testMQTTUDPConfig tests MQTT UDP connection
+// Reference test/mqtt_udp logic: set default message handler, send hello, wait for response
+// Returns ok, message, elapsed time(ms)
 func testMQTTUDPConfig(mqttConfig MQTTUDPTestConfig) (bool, string, int64) {
 	t0 := time.Now()
 
-	// 验证MQTT配置完整性
+	// Validate MQTT config completeness
 	if mqttConfig.Endpoint == "" {
-		return false, "MQTT endpoint为空，请检查配置", 0
+		return false, "MQTT endpoint is empty, please check config", 0
 	}
 	if mqttConfig.ClientID == "" {
-		return false, "MQTT ClientID为空", 0
+		return false, "MQTT ClientID is empty", 0
 	}
 	if mqttConfig.PublishTopic == "" {
-		return false, "MQTT发布主题为空", 0
+		return false, "MQTT publish topic is empty", 0
 	}
-	// 注意：不需要校验 subscribe_topic，也不需要主动订阅
+	// Note: no need to validate subscribe_topic, no need to actively subscribe
 
-	// 解析endpoint
+	// Parse endpoint
 	endpoint := mqttConfig.Endpoint
 	port := "1883"
 	protocol := "tcp"
 	if strings.Contains(endpoint, ":") {
 		parts := strings.Split(endpoint, ":")
 		if len(parts) != 2 {
-			return false, "MQTT endpoint格式错误，应为 host:port", 0
+			return false, "MQTT endpoint format error, should be host:port", 0
 		}
 		endpoint = parts[0]
 		port = parts[1]
-		// 验证端口号
+		// Validate port number
 		if _, err := strconv.Atoi(port); err != nil {
-			return false, "MQTT端口号无效: " + port, 0
+			return false, "MQTT port invalid: " + port, 0
 		}
 	}
 	if port == "8883" || port == "8884" {
@@ -1502,11 +1502,11 @@ func testMQTTUDPConfig(mqttConfig MQTTUDPTestConfig) (bool, string, int64) {
 	}
 	brokerURL := fmt.Sprintf("%s://%s:%s", protocol, endpoint, port)
 
-	// 等待hello响应的channel
+	// Channel for waiting hello response
 	helloChan := make(chan *helloResponse, 1)
 	errChan := make(chan error, 1)
 
-	// 创建MQTT客户端选项
+	// Create MQTT client options
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(brokerURL)
 	opts.SetClientID(mqttConfig.ClientID)
@@ -1515,17 +1515,17 @@ func testMQTTUDPConfig(mqttConfig MQTTUDPTestConfig) (bool, string, int64) {
 	opts.SetKeepAlive(60 * time.Second)
 	opts.SetConnectTimeout(5 * time.Second)
 	opts.SetCleanSession(true)
-	opts.SetAutoReconnect(false) // 测试时禁用自动重连
+	opts.SetAutoReconnect(false) // Disable auto-reconnect during testing
 
-	// 设置默认消息处理器（参考 test/mqtt_udp）
+	// Set default message handler (reference test/mqtt_udp)
 	opts.SetDefaultPublishHandler(func(client mqtt.Client, msg mqtt.Message) {
-		// 解析消息
+		// Parse message
 		var message map[string]interface{}
 		if err := json.Unmarshal(msg.Payload(), &message); err != nil {
-			errChan <- fmt.Errorf("解析消息失败: %v", err)
+			errChan <- fmt.Errorf("Failed to parse message: %v", err)
 			return
 		}
-		// 根据消息类型处理
+		// Process by message type
 		msgType, ok := message["type"].(string)
 		if !ok {
 			return
@@ -1533,41 +1533,41 @@ func testMQTTUDPConfig(mqttConfig MQTTUDPTestConfig) (bool, string, int64) {
 		if msgType == "hello" {
 			var resp helloResponse
 			if err := json.Unmarshal(msg.Payload(), &resp); err != nil {
-				errChan <- fmt.Errorf("解析hello响应失败: %v", err)
+				errChan <- fmt.Errorf("Failed to parse hello response: %v", err)
 				return
 			}
 			helloChan <- &resp
 		}
 	})
 
-	// 设置TLS配置（如果是SSL/TLS）
+	// Set TLS config (if SSL/TLS)
 	if protocol == "tls" {
 		tlsConfig := &tls.Config{
-			InsecureSkipVerify: true, // 测试环境跳过证书验证
+			InsecureSkipVerify: true, // Skip certificate verification in test environment
 		}
 		opts.SetTLSConfig(tlsConfig)
 	}
 
-	// 连接MQTT
+	// Connect MQTT
 	client := mqtt.NewClient(opts)
 	connectToken := client.Connect()
 	if connectToken.Wait() && connectToken.Error() != nil {
 		errMsg := connectToken.Error().Error()
-		// 提供更详细的错误信息
+		// Provide more detailed error information
 		if strings.Contains(errMsg, "connection refused") {
-			return false, fmt.Sprintf("MQTT服务器拒绝连接 (%s:%s)，请检查服务器是否启动", endpoint, port), time.Since(t0).Milliseconds()
+			return false, fmt.Sprintf("MQTT server refused connection (%s:%s), please check if server is running", endpoint, port), time.Since(t0).Milliseconds()
 		} else if strings.Contains(errMsg, "i/o timeout") {
-			return false, fmt.Sprintf("MQTT连接超时 (%s:%s)，请检查网络和防火墙", endpoint, port), time.Since(t0).Milliseconds()
+			return false, fmt.Sprintf("MQTT connection timeout (%s:%s), please check network and firewall", endpoint, port), time.Since(t0).Milliseconds()
 		} else if strings.Contains(errMsg, "authentication") || strings.Contains(errMsg, "not authorized") {
-			return false, "MQTT认证失败，请检查用户名和密码（由签名密钥生成）", time.Since(t0).Milliseconds()
+			return false, "MQTT authentication failed, please check username and password (generated by signature key)", time.Since(t0).Milliseconds()
 		}
-		return false, "MQTT连接失败: " + errMsg, time.Since(t0).Milliseconds()
+		return false, "MQTT connection failed: " + errMsg, time.Since(t0).Milliseconds()
 	}
 	defer client.Disconnect(250)
 
 	mqttConnectMs := time.Since(t0).Milliseconds()
 
-	// 创建hello消息并发送
+	// Create and send hello message
 	helloMsg := helloMessage{
 		Type:      "hello",
 		Version:   3,
@@ -1581,113 +1581,113 @@ func testMQTTUDPConfig(mqttConfig MQTTUDPTestConfig) (bool, string, int64) {
 	}
 	helloData, err := json.Marshal(helloMsg)
 	if err != nil {
-		return false, "构建hello消息失败: " + err.Error(), mqttConnectMs
+		return false, "Failed to build hello message: " + err.Error(), mqttConnectMs
 	}
 
-	// 发布hello消息（不需要主动订阅，等待默认消息处理器接收响应）
+	// Publish hello message (no need to subscribe actively, wait for default message handler to receive response)
 	pubToken := client.Publish(mqttConfig.PublishTopic, 0, false, helloData)
 	if pubToken.Wait() && pubToken.Error() != nil {
-		return false, "发布hello消息失败 (" + mqttConfig.PublishTopic + "): " + pubToken.Error().Error(), mqttConnectMs
+		return false, "Failed to publish hello message (" + mqttConfig.PublishTopic + "): " + pubToken.Error().Error(), mqttConnectMs
 	}
 
-	// 等待hello响应（超时5秒）
+	// Wait for hello response (timeout 5 seconds)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	select {
 	case resp := <-helloChan:
-		// 收到hello响应，检查UDP配置是否完整
+		// Received hello response, check if UDP config is complete
 		if resp.UDP.Server == "" {
-			return false, "服务器未返回UDP server地址", mqttConnectMs
+			return false, "Server did not return UDP server address", mqttConnectMs
 		}
 		if resp.UDP.Port <= 0 || resp.UDP.Port > 65535 {
-			return false, fmt.Sprintf("服务器返回的UDP端口无效: %d", resp.UDP.Port), mqttConnectMs
+			return false, fmt.Sprintf("Server returned invalid UDP port: %d", resp.UDP.Port), mqttConnectMs
 		}
-		// 测试UDP连接
+		// Test UDP connection
 		udpOK, udpMsg, udpMs := testUDPConnection(resp.UDP)
 		totalMs := mqttConnectMs + udpMs
 		if udpOK {
-			return true, fmt.Sprintf("MQTT(%dms)与UDP(%dms)均正常", mqttConnectMs, udpMs), totalMs
+			return true, fmt.Sprintf("MQTT(%dms) and UDP(%dms) both normal", mqttConnectMs, udpMs), totalMs
 		} else {
-			return false, "MQTT正常但UDP失败: " + udpMsg, totalMs
+			return false, "MQTT normal but UDP failed: " + udpMsg, totalMs
 		}
 	case err := <-errChan:
 		return false, err.Error(), mqttConnectMs
 	case <-ctx.Done():
-		return false, fmt.Sprintf("等待hello响应超时(5s)，已发送hello到 %s", mqttConfig.PublishTopic), mqttConnectMs
+		return false, fmt.Sprintf("Timeout waiting for hello response (5s), hello sent to %s", mqttConfig.PublishTopic), mqttConnectMs
 	}
 }
 
-// testUDPConnection 测试UDP连接
+// testUDPConnection tests UDP connection
 func testUDPConnection(udpConfig UDPConfig) (bool, string, int64) {
 	t0 := time.Now()
 
-	// 验证UDP配置
+	// Validate UDP config
 	if udpConfig.Server == "" {
-		return false, "UDP server地址为空", 0
+		return false, "UDP server address is empty", 0
 	}
 	if udpConfig.Port <= 0 || udpConfig.Port > 65535 {
-		return false, fmt.Sprintf("UDP端口无效: %d", udpConfig.Port), 0
+		return false, fmt.Sprintf("UDP port invalid: %d", udpConfig.Port), 0
 	}
 
-	// 解析UDP地址
+	// Resolve UDP address
 	udpAddr := fmt.Sprintf("%s:%d", udpConfig.Server, udpConfig.Port)
 	addr, err := net.ResolveUDPAddr("udp", udpAddr)
 	if err != nil {
-		return false, "解析UDP地址失败 (" + udpAddr + "): " + err.Error(), 0
+		return false, "Failed to resolve UDP address (" + udpAddr + "): " + err.Error(), 0
 	}
 
-	// 创建UDP连接
+	// Create UDP connection
 	conn, err := net.DialUDP("udp", nil, addr)
 	if err != nil {
 		if strings.Contains(err.Error(), "connection refused") {
-			return false, fmt.Sprintf("UDP服务器拒绝连接 (%s)，请检查UDP服务器是否启动", udpAddr), time.Since(t0).Milliseconds()
+			return false, fmt.Sprintf("UDP server refused connection (%s), please check if UDP server is running", udpAddr), time.Since(t0).Milliseconds()
 		} else if strings.Contains(err.Error(), "no route to host") || strings.Contains(err.Error(), "network is unreachable") {
-			return false, fmt.Sprintf("无法路由到UDP服务器 (%s)，请检查网络连接", udpAddr), time.Since(t0).Milliseconds()
+			return false, fmt.Sprintf("Cannot route to UDP server (%s), please check network connection", udpAddr), time.Since(t0).Milliseconds()
 		} else if strings.Contains(err.Error(), "timeout") {
-			return false, fmt.Sprintf("UDP连接超时 (%s)，请检查防火墙设置", udpAddr), time.Since(t0).Milliseconds()
+			return false, fmt.Sprintf("UDP connection timeout (%s), please check firewall settings", udpAddr), time.Since(t0).Milliseconds()
 		}
-		return false, "UDP连接失败 (" + udpAddr + "): " + err.Error(), time.Since(t0).Milliseconds()
+		return false, "UDP connection failed (" + udpAddr + "): " + err.Error(), time.Since(t0).Milliseconds()
 	}
 	defer conn.Close()
 
-	// 设置读写超时
+	// Set read/write timeout
 	deadline := time.Now().Add(2 * time.Second)
 	err = conn.SetReadDeadline(deadline)
 	if err != nil {
-		return false, "设置UDP超时失败: " + err.Error(), time.Since(t0).Milliseconds()
+		return false, "Failed to set UDP timeout: " + err.Error(), time.Since(t0).Milliseconds()
 	}
 
-	// 发送测试数据包（模拟音频数据）
+	// Send test data packet (simulate audio data)
 	testData := []byte("ping")
 	_, err = conn.Write(testData)
 	if err != nil {
-		return false, "UDP发送数据失败: " + err.Error(), time.Since(t0).Milliseconds()
+		return false, "UDP send data failed: " + err.Error(), time.Since(t0).Milliseconds()
 	}
 
-	// 尝试读取响应（超时返回也认为连接成功，因为UDP可能不返回响应）
+	// Try to read response (timeout return also counts as success, because UDP may not return response)
 	buf := make([]byte, 1024)
 	_, err = conn.Read(buf)
 	if err != nil {
-		// UDP读取超时也算成功，因为已经证明连接可以发送数据
+		// UDP read timeout also counts as success, because it proves connection can send data
 		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-			return true, "UDP连接正常（无响应，超时）", time.Since(t0).Milliseconds()
+			return true, "UDP connection normal (no response, timeout)", time.Since(t0).Milliseconds()
 		}
-		return false, "UDP读取失败: " + err.Error(), time.Since(t0).Milliseconds()
+		return false, "UDP read failed: " + err.Error(), time.Since(t0).Milliseconds()
 	}
 
-	return true, "UDP连接正常", time.Since(t0).Milliseconds()
+	return true, "UDP connection normal", time.Since(t0).Milliseconds()
 }
 
-// testOTAConfig 两段式检查：1）POST OTA 地址取 JSON 中的 websocket.url；2）对 WebSocket URL 建连验证。
-// 返回 ok, message, first_packet_ms, ota_response（OTA 接口响应 body，便于前端展示）
+// testOTAConfig Two-stage check: 1) POST OTA address to get websocket.url from JSON; 2) Connect and verify WebSocket URL.
+// Returns ok, message, first_packet_ms, ota_response (OTA interface response body, for frontend display)
 func (ac *AdminController) testOTAConfig(cfg models.Config) (ok bool, message string, firstPacketMs int64, otaResponseBody string) {
 	if cfg.JsonData == "" {
-		return false, "配置为空", 0, ""
+		return false, "Config is empty", 0, ""
 	}
 	var data map[string]interface{}
 	if err := json.Unmarshal([]byte(cfg.JsonData), &data); err != nil {
-		return false, "配置解析失败", 0, ""
+		return false, "Config parsing failed", 0, ""
 	}
 	var wsURLFromConfig string
 	if ext, _ := data["external"].(map[string]interface{}); ext != nil {
@@ -1707,11 +1707,11 @@ func (ac *AdminController) testOTAConfig(cfg models.Config) (ok bool, message st
 		}
 	}
 	if wsURLFromConfig == "" {
-		return false, "未配置 WebSocket URL", 0, ""
+		return false, "WebSocket URL not configured", 0, ""
 	}
 	parsed, err := url.Parse(wsURLFromConfig)
 	if err != nil {
-		return false, "URL 解析失败", 0, ""
+		return false, "URL parsing failed", 0, ""
 	}
 	scheme := "http"
 	if parsed.Scheme == "wss" {
@@ -1720,10 +1720,10 @@ func (ac *AdminController) testOTAConfig(cfg models.Config) (ok bool, message st
 	otaHTTPURL := scheme + "://" + parsed.Host + otaHTTPPath
 
 	t0 := time.Now()
-	// Part1: POST OTA 地址，带 Device-ID、Client-ID，解析 JSON 取 websocket.url
+	// Part1: POST OTA address with Device-ID, Client-ID, parse JSON to get websocket.url
 	req, err := http.NewRequest(http.MethodPost, otaHTTPURL, bytes.NewBuffer([]byte("{}")))
 	if err != nil {
-		return false, "创建 OTA 请求失败", time.Since(t0).Milliseconds(), ""
+		return false, "Failed to create OTA request", time.Since(t0).Milliseconds(), ""
 	}
 	req.Header.Set("Device-ID", otaTestDeviceID)
 	req.Header.Set("Client-ID", otaTestClientID)
@@ -1731,29 +1731,29 @@ func (ac *AdminController) testOTAConfig(cfg models.Config) (ok bool, message st
 	httpClient := &http.Client{Timeout: 5 * time.Second}
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return false, "OTA 请求失败: " + err.Error(), time.Since(t0).Milliseconds(), ""
+		return false, "OTA request failed: " + err.Error(), time.Since(t0).Milliseconds(), ""
 	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
 	firstPacketMs = time.Since(t0).Milliseconds()
 	otaResponseBody = string(body)
 	if resp.StatusCode != http.StatusOK {
-		return false, "OTA 返回 HTTP " + strconv.Itoa(resp.StatusCode), firstPacketMs, otaResponseBody
+		return false, "OTA returned HTTP " + strconv.Itoa(resp.StatusCode), firstPacketMs, otaResponseBody
 	}
 	var otaResp map[string]interface{}
 	if err := json.Unmarshal(body, &otaResp); err != nil {
-		return false, "OTA 响应非 JSON", firstPacketMs, otaResponseBody
+		return false, "OTA response is not JSON", firstPacketMs, otaResponseBody
 	}
 	wsObj, _ := otaResp["websocket"].(map[string]interface{})
 	if wsObj == nil {
-		return false, "OTA 响应中无 websocket 字段", firstPacketMs, otaResponseBody
+		return false, "OTA response missing websocket field", firstPacketMs, otaResponseBody
 	}
 	wsURL, _ := wsObj["url"].(string)
 	if wsURL == "" {
-		return false, "OTA 响应中无 websocket.url", firstPacketMs, otaResponseBody
+		return false, "OTA response missing websocket.url", firstPacketMs, otaResponseBody
 	}
 
-	// Part2: WebSocket 建连，带 Device-ID、Client-ID，连通即关闭（建连耗时计入首包）
+	// Part2: WebSocket connection with Device-ID, Client-ID, close after connect (connection time counted in first packet)
 	wsT0 := time.Now()
 	header := http.Header{}
 	header.Set("Device-ID", otaTestDeviceID)
@@ -1762,32 +1762,32 @@ func (ac *AdminController) testOTAConfig(cfg models.Config) (ok bool, message st
 	defer cancel()
 	conn, _, err := websocket.DefaultDialer.DialContext(ctx, wsURL, header)
 	if err != nil {
-		return false, "WebSocket 连接失败: " + err.Error(), firstPacketMs + time.Since(wsT0).Milliseconds(), otaResponseBody
+		return false, "WebSocket connection failed: " + err.Error(), firstPacketMs + time.Since(wsT0).Milliseconds(), otaResponseBody
 	}
 	conn.Close()
 	wsTotalMs := firstPacketMs + time.Since(wsT0).Milliseconds()
-	return true, "OTA 与 WebSocket 均正常", wsTotalMs, otaResponseBody
+	return true, "OTA and WebSocket both normal", wsTotalMs, otaResponseBody
 }
 
-// testOTAConfigWithMQTTUDP 扩展的OTA测试，支持WebSocket和MQTT UDP双测试
-// 返回完整的测试结果结构
+// testOTAConfigWithMQTTUDP Extended OTA test, supports WebSocket and MQTT UDP dual testing
+// Returns complete test result structure
 func (ac *AdminController) testOTAConfigWithMQTTUDP(cfg models.Config) OTATestResult {
 	result := OTATestResult{
-		WebSocket: OTATestItem{Ok: false, Message: "测试失败", FirstPacketMs: 0},
+		WebSocket: OTATestItem{Ok: false, Message: "Test failed", FirstPacketMs: 0},
 	}
 
-	// 解析配置
+	// Parse config
 	if cfg.JsonData == "" {
-		result.WebSocket = OTATestItem{Ok: false, Message: "配置为空", FirstPacketMs: 0}
+		result.WebSocket = OTATestItem{Ok: false, Message: "Config is empty", FirstPacketMs: 0}
 		return result
 	}
 	var data map[string]interface{}
 	if err := json.Unmarshal([]byte(cfg.JsonData), &data); err != nil {
-		result.WebSocket = OTATestItem{Ok: false, Message: "配置解析失败", FirstPacketMs: 0}
+		result.WebSocket = OTATestItem{Ok: false, Message: "Config parsing failed", FirstPacketMs: 0}
 		return result
 	}
 
-	// 获取WebSocket URL（优先external，为空则尝试test）
+	// Get WebSocket URL (prioritize external, try test if empty)
 	wsURLFromConfig := ""
 	if ext, _ := data["external"].(map[string]interface{}); ext != nil {
 		if ws, _ := ext["websocket"].(map[string]interface{}); ws != nil {
@@ -1802,11 +1802,11 @@ func (ac *AdminController) testOTAConfigWithMQTTUDP(cfg models.Config) OTATestRe
 		}
 	}
 	if wsURLFromConfig == "" {
-		result.WebSocket = OTATestItem{Ok: false, Message: "未配置 WebSocket URL", FirstPacketMs: 0}
+		result.WebSocket = OTATestItem{Ok: false, Message: "WebSocket URL not configured", FirstPacketMs: 0}
 		return result
 	}
 
-	// 确定使用哪个环境的配置（根据WebSocket URL来源）
+	// Determine which environment config to use (based on WebSocket URL source)
 	var envConfig map[string]interface{}
 	if ext, _ := data["external"].(map[string]interface{}); ext != nil {
 		if ws, _ := ext["websocket"].(map[string]interface{}); ws != nil {
@@ -1825,7 +1825,7 @@ func (ac *AdminController) testOTAConfigWithMQTTUDP(cfg models.Config) OTATestRe
 		}
 	}
 
-	// 检查是否启用MQTT UDP测试
+	// Check if MQTT UDP test is enabled
 	var mqttEnabled bool
 	if envConfig != nil {
 		if mqtt, _ := envConfig["mqtt"].(map[string]interface{}); mqtt != nil {
@@ -1835,10 +1835,10 @@ func (ac *AdminController) testOTAConfigWithMQTTUDP(cfg models.Config) OTATestRe
 		}
 	}
 
-	// 构建OTA HTTP URL
+	// Build OTA HTTP URL
 	parsed, err := url.Parse(wsURLFromConfig)
 	if err != nil {
-		result.WebSocket = OTATestItem{Ok: false, Message: "URL 解析失败", FirstPacketMs: 0}
+		result.WebSocket = OTATestItem{Ok: false, Message: "URL parsing failed", FirstPacketMs: 0}
 		return result
 	}
 	scheme := "http"
@@ -1847,11 +1847,11 @@ func (ac *AdminController) testOTAConfigWithMQTTUDP(cfg models.Config) OTATestRe
 	}
 	otaHTTPURL := scheme + "://" + parsed.Host + otaHTTPPath
 
-	// 第一阶段：POST OTA HTTP接口
+	// Stage 1: POST OTA HTTP interface
 	t0 := time.Now()
 	req, err := http.NewRequest(http.MethodPost, otaHTTPURL, bytes.NewBuffer([]byte("{}")))
 	if err != nil {
-		result.WebSocket = OTATestItem{Ok: false, Message: "创建 OTA 请求失败", FirstPacketMs: time.Since(t0).Milliseconds()}
+		result.WebSocket = OTATestItem{Ok: false, Message: "Failed to create OTA request", FirstPacketMs: time.Since(t0).Milliseconds()}
 		return result
 	}
 	req.Header.Set("Device-ID", otaTestDeviceID)
@@ -1860,7 +1860,7 @@ func (ac *AdminController) testOTAConfigWithMQTTUDP(cfg models.Config) OTATestRe
 	httpClient := &http.Client{Timeout: 5 * time.Second}
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		result.WebSocket = OTATestItem{Ok: false, Message: "OTA 请求失败: " + err.Error(), FirstPacketMs: time.Since(t0).Milliseconds()}
+		result.WebSocket = OTATestItem{Ok: false, Message: "OTA request failed: " + err.Error(), FirstPacketMs: time.Since(t0).Milliseconds()}
 		return result
 	}
 	defer resp.Body.Close()
@@ -1868,25 +1868,25 @@ func (ac *AdminController) testOTAConfigWithMQTTUDP(cfg models.Config) OTATestRe
 	httpMs := time.Since(t0).Milliseconds()
 
 	if resp.StatusCode != http.StatusOK {
-		result.WebSocket = OTATestItem{Ok: false, Message: "OTA 返回 HTTP " + strconv.Itoa(resp.StatusCode), FirstPacketMs: httpMs}
+		result.WebSocket = OTATestItem{Ok: false, Message: "OTA returned HTTP " + strconv.Itoa(resp.StatusCode), FirstPacketMs: httpMs}
 		return result
 	}
 
 	var otaResp map[string]interface{}
 	if err := json.Unmarshal(body, &otaResp); err != nil {
-		result.WebSocket = OTATestItem{Ok: false, Message: "OTA 响应非 JSON", FirstPacketMs: httpMs}
+		result.WebSocket = OTATestItem{Ok: false, Message: "OTA response is not JSON", FirstPacketMs: httpMs}
 		return result
 	}
 
-	// 第二阶段：WebSocket测试
+	// Stage 2: WebSocket test
 	wsObj, _ := otaResp["websocket"].(map[string]interface{})
 	if wsObj == nil {
-		result.WebSocket = OTATestItem{Ok: false, Message: "OTA 响应中无 websocket 字段", FirstPacketMs: httpMs}
+		result.WebSocket = OTATestItem{Ok: false, Message: "OTA response missing websocket field", FirstPacketMs: httpMs}
 		return result
 	}
 	wsURL, _ := wsObj["url"].(string)
 	if wsURL == "" {
-		result.WebSocket = OTATestItem{Ok: false, Message: "OTA 响应中无 websocket.url", FirstPacketMs: httpMs}
+		result.WebSocket = OTATestItem{Ok: false, Message: "OTA response missing websocket.url", FirstPacketMs: httpMs}
 		return result
 	}
 
@@ -1898,31 +1898,31 @@ func (ac *AdminController) testOTAConfigWithMQTTUDP(cfg models.Config) OTATestRe
 	defer cancel()
 	conn, _, err := websocket.DefaultDialer.DialContext(ctx, wsURL, header)
 	if err != nil {
-		result.WebSocket = OTATestItem{Ok: false, Message: "WebSocket 连接失败: " + err.Error(), FirstPacketMs: httpMs + time.Since(wsT0).Milliseconds()}
+		result.WebSocket = OTATestItem{Ok: false, Message: "WebSocket connection failed: " + err.Error(), FirstPacketMs: httpMs + time.Since(wsT0).Milliseconds()}
 		return result
 	}
 	conn.Close()
 	wsTotalMs := httpMs + time.Since(wsT0).Milliseconds()
-	result.WebSocket = OTATestItem{Ok: true, Message: "WebSocket 连接正常", FirstPacketMs: wsTotalMs}
+	result.WebSocket = OTATestItem{Ok: true, Message: "WebSocket connection normal", FirstPacketMs: wsTotalMs}
 
-	// 保存OTA响应体（用于前端显示）
+	// Save OTA response body (for frontend display)
 	result.OTAResponse = string(body)
 
-	// 第三阶段：MQTT UDP测试（如果启用）
-	// 参考 test/mqtt_udp 逻辑：从OTA响应获取MQTT配置，发送hello，等待响应，测试UDP
+	// Stage 3: MQTT UDP test (if enabled)
+	// Reference test/mqtt_udp logic: get MQTT config from OTA response, send hello, wait for response, test UDP
 	if mqttEnabled {
-		// 从OTA响应中获取MQTT配置
+		// Get MQTT config from OTA response
 		mqttObj, hasMQTT := otaResp["mqtt"].(map[string]interface{})
 		if !hasMQTT {
 			result.MQTTUDP = &OTATestItem{
 				Ok:            false,
-				Message:       "OTA响应未返回MQTT配置，无法测试MQTT UDP",
+				Message:       "OTA response did not return MQTT config, cannot test MQTT UDP",
 				FirstPacketMs: 0,
 			}
 			return result
 		}
 
-		// 解析MQTT配置字段
+		// Parse MQTT config fields
 		endpoint, _ := mqttObj["endpoint"].(string)
 		clientID, _ := mqttObj["client_id"].(string)
 		username, _ := mqttObj["username"].(string)
@@ -1930,24 +1930,24 @@ func (ac *AdminController) testOTAConfigWithMQTTUDP(cfg models.Config) OTATestRe
 		publishTopic, _ := mqttObj["publish_topic"].(string)
 		subscribeTopic, _ := mqttObj["subscribe_topic"].(string)
 
-		// 验证必要字段（不需要校验 subscribe_topic）
+		// Validate required fields (no need to validate subscribe_topic)
 		if endpoint == "" {
-			result.MQTTUDP = &OTATestItem{Ok: false, Message: "OTA响应中MQTT endpoint为空", FirstPacketMs: 0}
+			result.MQTTUDP = &OTATestItem{Ok: false, Message: "OTA response MQTT endpoint is empty", FirstPacketMs: 0}
 			return result
 		}
 		if publishTopic == "" {
-			result.MQTTUDP = &OTATestItem{Ok: false, Message: "OTA响应中MQTT publish_topic为空", FirstPacketMs: 0}
+			result.MQTTUDP = &OTATestItem{Ok: false, Message: "OTA response MQTT publish_topic is empty", FirstPacketMs: 0}
 			return result
 		}
 
-		// 构建MQTT测试配置
+		// Build MQTT test config
 		otaMqttConfig := &MQTTUDPTestConfig{
 			Endpoint:       endpoint,
 			ClientID:       clientID,
 			Username:       username,
 			Password:       password,
 			PublishTopic:   publishTopic,
-			SubscribeTopic: subscribeTopic, // 保留但不校验，可能用于日志
+			SubscribeTopic: subscribeTopic, // Keep but don't validate, may be used for logging
 		}
 
 		mqttOK, mqttMsg, mqttMs := testMQTTUDPConfig(*otaMqttConfig)
@@ -1961,31 +1961,31 @@ func (ac *AdminController) testOTAConfigWithMQTTUDP(cfg models.Config) OTATestRe
 	return result
 }
 
-// generateMQTTUsername 生成MQTT用户名
+// generateMQTTUsername generates MQTT username
 func generateMQTTUsername(deviceID, signatureKey string) string {
 	h := hmac.New(sha256.New, []byte(signatureKey))
 	h.Write([]byte(deviceID + "-username"))
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-// generateMQTTPassword 生成MQTT密码
+// generateMQTTPassword generates MQTT password
 func generateMQTTPassword(deviceID, signatureKey string) string {
 	h := hmac.New(sha256.New, []byte(signatureKey))
 	h.Write([]byte(deviceID + "-password"))
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-// GetConfigs 获取所有配置列表
+// GetConfigs gets all config list
 func (ac *AdminController) GetConfigs(c *gin.Context) {
 	var configs []models.Config
 	if err := ac.DB.Find(&configs).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取配置列表失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get config list"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": configs})
 }
 
-// GetConfig 获取单个配置
+// GetConfig gets single config
 func (ac *AdminController) GetConfig(c *gin.Context) {
 	id := c.Param("id")
 	var config models.Config
@@ -2005,7 +2005,7 @@ func (ac *AdminController) GetConfigByID(c *gin.Context) {
 	var config models.Config
 
 	if err := ac.DB.First(&config, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "配置不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Config does not exist"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": config})
@@ -2018,22 +2018,22 @@ func (ac *AdminController) CreateConfig(c *gin.Context) {
 		return
 	}
 
-	// 检查是否已存在Memory配置
+	// Check if Memory config already exists
 	var existingCount int64
 	ac.DB.Model(&models.Config{}).Where("type = ?", "memory").Count(&existingCount)
 
-	// 如果不存在任何Memory配置，自动设置为默认配置
+	// If no Memory config exists, automatically set as default
 	if existingCount == 0 {
 		config.IsDefault = true
 	}
 
-	// 如果设置为默认配置，先取消其他同类型的默认配置
+	// If setting as default config, first unset other default configs of same type
 	if config.IsDefault {
 		ac.DB.Model(&models.Config{}).Where("type = ? AND is_default = ?", config.Type, true).Update("is_default", false)
 	}
 
 	if err := ac.DB.Create(&config).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建配置失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create config"})
 		return
 	}
 
@@ -2046,7 +2046,7 @@ func (ac *AdminController) UpdateConfig(c *gin.Context) {
 	var config models.Config
 
 	if err := ac.DB.First(&config, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "配置不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Config does not exist"})
 		return
 	}
 
@@ -2056,12 +2056,12 @@ func (ac *AdminController) UpdateConfig(c *gin.Context) {
 		return
 	}
 
-	// 如果设置为默认配置，先取消其他同类型的默认配置
+	// If setting as default config, first unset other default configs of same type
 	if updateData.IsDefault {
 		ac.DB.Model(&models.Config{}).Where("type = ? AND is_default = ? AND id != ?", config.Type, true, id).Update("is_default", false)
 	}
 
-	// 更新配置
+	// Update config
 	config.Name = updateData.Name
 	config.Provider = updateData.Provider
 	config.JsonData = updateData.JsonData
@@ -2069,7 +2069,7 @@ func (ac *AdminController) UpdateConfig(c *gin.Context) {
 	config.IsDefault = updateData.IsDefault
 
 	if err := ac.DB.Save(&config).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新配置失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update config"})
 		return
 	}
 
@@ -2080,55 +2080,55 @@ func (ac *AdminController) UpdateConfig(c *gin.Context) {
 func (ac *AdminController) DeleteConfig(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	if err := ac.DB.Delete(&models.Config{}, id).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除配置失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete config"})
 		return
 	}
 	ac.notifySystemConfigChanged()
-	c.JSON(http.StatusOK, gin.H{"message": "删除成功"})
+	c.JSON(http.StatusOK, gin.H{"message": "Delete successful"})
 }
 
-// 设置默认配置
+// SetDefaultConfig sets default config
 func (ac *AdminController) SetDefaultConfig(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	var config models.Config
 
 	if err := ac.DB.First(&config, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "配置不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Config does not exist"})
 		return
 	}
 
-	// 先取消其他同类型的默认配置
+	// First unset other default configs of same type
 	ac.DB.Model(&models.Config{}).Where("type = ? AND is_default = ?", config.Type, true).Update("is_default", false)
 
-	// 设置当前配置为默认
+	// Set current config as default
 	config.IsDefault = true
 	if err := ac.DB.Save(&config).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "设置默认配置失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set default config"})
 		return
 	}
 
 	ac.notifySystemConfigChanged()
-	c.JSON(http.StatusOK, gin.H{"message": "设置默认配置成功", "data": config})
+	c.JSON(http.StatusOK, gin.H{"message": "Default config set successfully", "data": config})
 }
 
-// 获取默认配置
+// GetDefaultConfig retrieves the default configuration
 func (ac *AdminController) GetDefaultConfig(c *gin.Context) {
 	configType := c.Param("type")
 	var config models.Config
 
 	if err := ac.DB.Where("type = ? AND is_default = ?", configType, true).First(&config).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "默认配置不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Default config does not exist"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": config})
 }
 
-// GlobalRole管理
+// GlobalRole management
 func (ac *AdminController) GetGlobalRoles(c *gin.Context) {
 	var roles []models.GlobalRole
 	if err := ac.DB.Find(&roles).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取全局角色失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get global roles"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": roles})
@@ -2142,7 +2142,7 @@ func (ac *AdminController) CreateGlobalRole(c *gin.Context) {
 	}
 
 	if err := ac.DB.Create(&role).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建全局角色失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create global role"})
 		return
 	}
 
@@ -2154,7 +2154,7 @@ func (ac *AdminController) UpdateGlobalRole(c *gin.Context) {
 	var role models.GlobalRole
 
 	if err := ac.DB.First(&role, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "全局角色不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Global role does not exist"})
 		return
 	}
 
@@ -2164,7 +2164,7 @@ func (ac *AdminController) UpdateGlobalRole(c *gin.Context) {
 	}
 
 	if err := ac.DB.Save(&role).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新全局角色失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update global role"})
 		return
 	}
 
@@ -2174,28 +2174,28 @@ func (ac *AdminController) UpdateGlobalRole(c *gin.Context) {
 func (ac *AdminController) DeleteGlobalRole(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	if err := ac.DB.Delete(&models.GlobalRole{}, id).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除全局角色失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete global role"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "删除成功"})
+	c.JSON(http.StatusOK, gin.H{"message": "delete successful"})
 }
 
-// 用户管理
+// User management
 func (ac *AdminController) GetUsers(c *gin.Context) {
 	var users []models.User
 	if err := ac.DB.Find(&users).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取用户列表失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user list"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": users})
 }
 
 func (ac *AdminController) CreateUser(c *gin.Context) {
-	// 添加明显的调试标记
-	log.Println("=== [CreateUser] 方法开始执行 ===")
-	log.Println("=== [CreateUser] 这是CreateUser方法的开始 ===")
+	// Add obvious debug markers
+	log.Println("=== [CreateUser] Method start execution ===")
+	log.Println("=== [CreateUser] This is the start of CreateUser method ===")
 
-	// 由于User模型的Password字段使用了json:"-"标签，需要手动解析
+	// Since User model's Password field uses json:"-" tag, need to parse manually
 	var requestData struct {
 		Username string `json:"username"`
 		Email    string `json:"email"`
@@ -2203,80 +2203,80 @@ func (ac *AdminController) CreateUser(c *gin.Context) {
 		Role     string `json:"role"`
 	}
 
-	// 直接尝试绑定到map以查看原始数据
+	// Directly try to bind to map to view raw data
 	var rawMap map[string]interface{}
 	if err := c.ShouldBindJSON(&rawMap); err != nil {
-		log.Printf("[CreateUser] 绑定到map失败: %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON解析失败"})
+		log.Printf("[CreateUser] Binding to map failed: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON parsing failed"})
 		return
 	}
-	log.Printf("[CreateUser] 原始JSON数据: %+v", rawMap)
+	log.Printf("[CreateUser] Raw JSON data: %+v", rawMap)
 
-	// 手动提取字段
+	// Manually extract fields
 	username, _ := rawMap["username"].(string)
 	email, _ := rawMap["email"].(string)
 	password, _ := rawMap["password"].(string)
 	role, _ := rawMap["role"].(string)
 
-	// 更新requestData
+	// updaterequestData
 	requestData.Username = username
 	requestData.Email = email
 	requestData.Password = password
 	requestData.Role = role
 
-	// 验证必要字段
+	// Verify required fields
 	if requestData.Username == "" || requestData.Email == "" || requestData.Password == "" {
-		log.Printf("[CreateUser] 缺少必要字段: username=%s, email=%s, password长度=%d",
+		log.Printf("[CreateUser] Missing required fields: username=%s, email=%s, password length=%d",
 			requestData.Username, requestData.Email, len(requestData.Password))
-		c.JSON(http.StatusBadRequest, gin.H{"error": "用户名、邮箱和密码为必填项"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Username, email and password are required"})
 		return
 	}
 
-	log.Printf("[CreateUser] 接收到用户创建请求 - 用户名: %s, 邮箱: %s, 角色: %s", requestData.Username, requestData.Email, requestData.Role)
-	log.Printf("[CreateUser] 原始密码长度: %d", len(requestData.Password))
-	log.Printf("[CreateUser] 原始密码内容: %s", requestData.Password)
+	log.Printf("[CreateUser] Received user create request - username: %s, email: %s, role: %s", requestData.Username, requestData.Email, requestData.Role)
+	log.Printf("[CreateUser] Raw password length: %d", len(requestData.Password))
+	log.Printf("[CreateUser] Raw password content: %s", requestData.Password)
 
-	// 检查用户名是否已存在
+	// Check if username already exists
 	var existingUser models.User
 	err := ac.DB.Where("username = ?", requestData.Username).First(&existingUser).Error
 	if err == nil {
-		// 用户名已存在
-		log.Printf("[CreateUser] 用户名 %s 已存在", requestData.Username)
-		c.JSON(http.StatusConflict, gin.H{"error": "用户名已存在"})
+		// Username already exists
+		log.Printf("[CreateUser] Username %s already exists", requestData.Username)
+		c.JSON(http.StatusConflict, gin.H{"error": "Username already exists"})
 		return
 	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
-		// 数据库查询出错
-		log.Printf("[CreateUser] 数据库查询失败: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建用户失败"})
+		// Database query error
+		log.Printf("[CreateUser] Database query failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 		return
 	}
 
-	// 用户不存在，创建新用户
-	log.Printf("[CreateUser] 创建新用户: %s", requestData.Username)
+	// User does not exist, creating new user
+	log.Printf("[CreateUser] Creating new user: %s", requestData.Username)
 	var user models.User
 	user.Username = requestData.Username
 	user.Email = requestData.Email
 	user.Role = requestData.Role
 
-	// 加密密码
+	// Encrypt password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(requestData.Password), bcrypt.DefaultCost)
 	if err != nil {
-		log.Printf("[CreateUser] 密码加密失败: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "密码加密失败"})
+		log.Printf("[CreateUser] Password encryption failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Password encryption failed"})
 		return
 	}
 	user.Password = string(hashedPassword)
-	log.Printf("[CreateUser] 密码加密成功 - 哈希长度: %d, 哈希前缀: %s", len(user.Password), user.Password[:10])
+	log.Printf("[CreateUser] Password encryption successful - hash length: %d, hash prefix: %s", len(user.Password), user.Password[:10])
 
 	if err := ac.DB.Create(&user).Error; err != nil {
-		log.Printf("[CreateUser] 数据库创建用户失败: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建用户失败"})
+		log.Printf("[CreateUser] Database create user failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 		return
 	}
 
-	log.Printf("[CreateUser] 用户创建成功 - ID: %d, 用户名: %s", user.ID, user.Username)
+	log.Printf("[CreateUser] User created successfully - ID: %d, username: %s", user.ID, user.Username)
 
-	// 不返回密码
+	// Do not return password
 	user.Password = ""
 	c.JSON(http.StatusCreated, gin.H{"data": user})
 }
@@ -2286,7 +2286,7 @@ func (ac *AdminController) UpdateUser(c *gin.Context) {
 	var user models.User
 
 	if err := ac.DB.First(&user, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "用户不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "User does not exist"})
 		return
 	}
 
@@ -2296,22 +2296,22 @@ func (ac *AdminController) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	// 如果更新密码，需要加密
+	// If updating password, encryption required
 	if password, ok := updateData["password"]; ok && password != "" {
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password.(string)), bcrypt.DefaultCost)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "密码加密失败"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Password encryption failed"})
 			return
 		}
 		updateData["password"] = string(hashedPassword)
 	}
 
 	if err := ac.DB.Model(&user).Updates(updateData).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新用户失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
 		return
 	}
 
-	// 重新查询用户信息（不包含密码）
+	// Re-query user information (without password)
 	ac.DB.First(&user, id)
 	user.Password = ""
 	c.JSON(http.StatusOK, gin.H{"data": user})
@@ -2320,13 +2320,13 @@ func (ac *AdminController) UpdateUser(c *gin.Context) {
 func (ac *AdminController) DeleteUser(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	if err := ac.DB.Delete(&models.User{}, id).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除用户失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "删除成功"})
+	c.JSON(http.StatusOK, gin.H{"message": "delete successful"})
 }
 
-// 重置用户密码
+// Reset user password
 func (ac *AdminController) ResetUserPassword(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 
@@ -2335,39 +2335,39 @@ func (ac *AdminController) ResetUserPassword(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&requestData); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "请输入有效的新密码（至少6位）"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Please enter a valid new password (at least 6 characters)"})
 		return
 	}
 
-	// 查找用户
+	// Find user
 	var user models.User
 	if err := ac.DB.First(&user, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "用户不存在"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "User does not exist"})
 		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "查找用户失败"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Find userfailed"})
 		}
 		return
 	}
 
-	// 加密新密码
+	// Encrypt new password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(requestData.NewPassword), bcrypt.DefaultCost)
 	if err != nil {
-		log.Printf("[ResetUserPassword] 密码加密失败: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "密码加密失败"})
+		log.Printf("[ResetUserPassword] Password encryption failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Password encryption failed"})
 		return
 	}
 
-	// 更新用户密码
+	// Update user password
 	if err := ac.DB.Model(&user).Update("password", string(hashedPassword)).Error; err != nil {
-		log.Printf("[ResetUserPassword] 更新密码失败: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "重置密码失败"})
+		log.Printf("[ResetUserPassword] Update password failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Reset password failed"})
 		return
 	}
 
-	log.Printf("[ResetUserPassword] 管理员重置用户密码成功 - 用户ID: %d, 用户名: %s", user.ID, user.Username)
+	log.Printf("[ResetUserPassword] Administrator reset user password successfully - userID: %d, username: %s", user.ID, user.Username)
 	c.JSON(http.StatusOK, gin.H{
-		"message": "密码重置成功",
+		"message": "Password reset successful",
 		"data": gin.H{
 			"user_id":  user.ID,
 			"username": user.Username,
@@ -2375,37 +2375,37 @@ func (ac *AdminController) ResetUserPassword(c *gin.Context) {
 	})
 }
 
-// GetUserVoiceCloneQuotas 获取用户声音复刻额度（按 tts_config_id 维度）
+// GetUserVoiceCloneQuotas retrieves user voice clone quotas (by tts_config_id dimension)
 func (ac *AdminController) GetUserVoiceCloneQuotas(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil || id <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "用户ID格式错误"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "userID format error"})
 		return
 	}
 
 	var user models.User
 	if err = ac.DB.First(&user, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "用户不存在"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "User does not exist"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询用户失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "queryuserfailed"})
 		return
 	}
 	if strings.TrimSpace(user.Role) != "user" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "仅支持为普通用户分配复刻额度"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Only regular users can be assigned voice clone quotas"})
 		return
 	}
 
 	var ttsConfigs []models.Config
 	if err = ac.DB.Where("type = ?", "tts").Order("enabled DESC, name ASC").Find(&ttsConfigs).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询TTS配置失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "queryTTSconfigfailed"})
 		return
 	}
 
 	var quotas []models.UserVoiceCloneQuota
 	if err = ac.DB.Where("user_id = ?", user.ID).Find(&quotas).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询用户额度失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "queryuserquotafailed"})
 		return
 	}
 	quotaByConfigID := make(map[string]models.UserVoiceCloneQuota, len(quotas))
@@ -2423,7 +2423,7 @@ func (ac *AdminController) GetUserVoiceCloneQuotas(c *gin.Context) {
 		Where("user_id = ? AND status != ?", user.ID, "deleted").
 		Group("tts_config_id").
 		Scan(&usageRows).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "统计用户复刻次数失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count user voice clone usage"})
 		return
 	}
 	usageByConfigID := make(map[string]int, len(usageRows))
@@ -2463,7 +2463,7 @@ func (ac *AdminController) GetUserVoiceCloneQuotas(c *gin.Context) {
 		})
 	}
 
-	// 保留已删除的历史配置额度，避免“额度配置丢失不可见”
+	// 保留已delete的历史configquota，避免“quotaconfig丢失不可见”
 	for _, quota := range quotas {
 		if configIDSet[quota.TTSConfigID] {
 			continue
@@ -2482,7 +2482,7 @@ func (ac *AdminController) GetUserVoiceCloneQuotas(c *gin.Context) {
 		}
 		result = append(result, gin.H{
 			"tts_config_id":   quota.TTSConfigID,
-			"tts_config_name": "(已删除配置)",
+			"tts_config_name": "(deleted config)",
 			"provider":        "",
 			"enabled":         false,
 			"max_count":       maxCount,
@@ -2499,25 +2499,25 @@ func (ac *AdminController) GetUserVoiceCloneQuotas(c *gin.Context) {
 	}})
 }
 
-// UpdateUserVoiceCloneQuotas 批量更新用户声音复刻额度
+// UpdateUserVoiceCloneQuotas batch updates user voice clone quotas
 func (ac *AdminController) UpdateUserVoiceCloneQuotas(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil || id <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "用户ID格式错误"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "userID format error"})
 		return
 	}
 
 	var user models.User
 	if err = ac.DB.First(&user, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "用户不存在"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "User does not exist"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询用户失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "queryuserfailed"})
 		return
 	}
 	if strings.TrimSpace(user.Role) != "user" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "仅支持为普通用户分配复刻额度"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Only regular users can be assigned voice clone quotas"})
 		return
 	}
 
@@ -2528,11 +2528,11 @@ func (ac *AdminController) UpdateUserVoiceCloneQuotas(c *gin.Context) {
 		} `json:"items"`
 	}
 	if err = c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数格式错误"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Request parameter format error"})
 		return
 	}
 	if len(req.Items) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "items不能为空"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "itemscannot be empty"})
 		return
 	}
 
@@ -2541,11 +2541,11 @@ func (ac *AdminController) UpdateUserVoiceCloneQuotas(c *gin.Context) {
 	for _, item := range req.Items {
 		configID := strings.TrimSpace(item.TTSConfigID)
 		if configID == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "tts_config_id不能为空"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "tts_config_idcannot be empty"})
 			return
 		}
 		if item.MaxCount < -1 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "max_count 不能小于 -1"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "max_count cannot be less than -1"})
 			return
 		}
 		if _, exists := itemByConfigID[configID]; !exists {
@@ -2556,7 +2556,7 @@ func (ac *AdminController) UpdateUserVoiceCloneQuotas(c *gin.Context) {
 
 	var ttsConfigs []models.Config
 	if err = ac.DB.Where("type = ? AND config_id IN ?", "tts", configIDs).Find(&ttsConfigs).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询TTS配置失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "queryTTSconfigfailed"})
 		return
 	}
 	validConfigIDSet := make(map[string]bool, len(ttsConfigs))
@@ -2567,12 +2567,12 @@ func (ac *AdminController) UpdateUserVoiceCloneQuotas(c *gin.Context) {
 		if validConfigIDSet[configID] {
 			continue
 		}
-		// 历史已删除配置仅允许设置为 -1（删除额度记录）
+		// Historical deleted config only allows setting to -1 (delete quota record)
 		if itemByConfigID[configID] == -1 {
 			continue
 		}
 		if !validConfigIDSet[configID] {
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("TTS配置不存在: %s", configID)})
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("TTSconfig does not exist: %s", configID)})
 			return
 		}
 	}
@@ -2587,7 +2587,7 @@ func (ac *AdminController) UpdateUserVoiceCloneQuotas(c *gin.Context) {
 		Where("user_id = ? AND status != ? AND tts_config_id IN ?", user.ID, "deleted", configIDs).
 		Group("tts_config_id").
 		Scan(&usageRows).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "统计用户已使用次数失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count user usage times"})
 		return
 	}
 	usageByConfigID := make(map[string]int, len(usageRows))
@@ -2636,28 +2636,28 @@ func (ac *AdminController) UpdateUserVoiceCloneQuotas(c *gin.Context) {
 		}
 		return nil
 	}); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新用户复刻额度失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user voice clone quota"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"success": true, "message": "额度更新成功"})
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "quotaupdatesuccess"})
 }
 
-// 设备管理
+// Device management
 func (ac *AdminController) GetDevices(c *gin.Context) {
 	var devices []models.Device
 	if err := ac.DB.Find(&devices).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取设备列表失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "getdevicelistfailed"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": devices})
 }
 
-// 验证设备代码是否存在
+// ValidateDeviceCode checks if device code exists
 func (ac *AdminController) ValidateDeviceCode(c *gin.Context) {
 	deviceCode := c.Query("code")
 	if deviceCode == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "激活码不能为空"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Activation code cannot be empty"})
 		return
 	}
 
@@ -2667,7 +2667,7 @@ func (ac *AdminController) ValidateDeviceCode(c *gin.Context) {
 	if err == gorm.ErrRecordNotFound {
 		c.JSON(http.StatusOK, gin.H{"exists": false})
 	} else if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询设备失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "querydevicefailed"})
 	} else {
 		c.JSON(http.StatusOK, gin.H{"exists": true, "device": device})
 	}
@@ -2682,69 +2682,69 @@ func (ac *AdminController) CreateDevice(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数错误: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "request parameter error: " + err.Error()})
 		return
 	}
 
-	// 验证激活码和设备名称至少填一个
+	// Verify activation code and device name - at least one must be filled
 	if req.DeviceCode == "" && req.DeviceName == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "激活码和设备名称至少填写一个"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Activation code and device name - at least one must be filled"})
 		return
 	}
 
-	// 检查用户是否存在
+	// Check if user exists
 	var user models.User
 	if err := ac.DB.First(&user, req.UserID).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "指定的用户不存在"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Specified user does not exist"})
 		return
 	}
 
-	// 如果提供了激活码，先查找现有设备
+	// If activation code provided, first find existing device
 	if req.DeviceCode != "" {
 		var existingDevice models.Device
 		if err := ac.DB.Where("device_code = ?", req.DeviceCode).First(&existingDevice).Error; err == nil {
-			// 设备代码已存在，更新设备信息
+			// Device code already exists, update device info
 			existingDevice.UserID = req.UserID
 			if req.DeviceName != "" {
 				existingDevice.DeviceName = req.DeviceName
 			}
-			existingDevice.AgentID = req.AgentID // 更新智能体ID
-			existingDevice.Activated = true      // 激活设备
+			existingDevice.AgentID = req.AgentID // updateagentID
+			existingDevice.Activated = true      // activatedevice
 
 			if err := ac.DB.Save(&existingDevice).Error; err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "更新设备失败"})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "updatedevicefailed"})
 				return
 			}
 
 			c.JSON(http.StatusOK, gin.H{
-				"message": "设备激活成功",
+				"message": "deviceactivatesuccess",
 				"data":    existingDevice,
 			})
 			return
 		} else if err != gorm.ErrRecordNotFound {
-			// 数据库查询出错
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "查询设备失败"})
+			// Database query error
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "querydevicefailed"})
 			return
 		}
-		// 如果激活码不存在，继续创建新设备
+		// If activation code does not exist, continue to create new device
 	}
 
-	// 创建设备
+	// createdevice
 	device := models.Device{
 		UserID:     req.UserID,
 		DeviceCode: req.DeviceCode,
 		DeviceName: req.DeviceName,
-		AgentID:    req.AgentID, // 使用请求中的智能体ID
-		Activated:  true,        // 管理员创建的设备默认已激活
+		AgentID:    req.AgentID, // Use agentID from request
+		Activated:  true,        // Admin created devices are activated by default
 	}
 
 	if err := ac.DB.Create(&device).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建设备失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "createdevicefailed"})
 		return
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
-		"message": "设备创建成功",
+		"message": "devicecreatesuccess",
 		"data":    device,
 	})
 }
@@ -2754,7 +2754,7 @@ func (ac *AdminController) UpdateDevice(c *gin.Context) {
 	var device models.Device
 
 	if err := ac.DB.First(&device, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "设备不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Device does not exist"})
 		return
 	}
 
@@ -2771,7 +2771,7 @@ func (ac *AdminController) UpdateDevice(c *gin.Context) {
 		return
 	}
 
-	// 更新设备信息
+	// updatedeviceinfo
 	device.UserID = updateData.UserID
 	device.DeviceCode = updateData.DeviceCode
 	device.DeviceName = updateData.DeviceName
@@ -2779,7 +2779,7 @@ func (ac *AdminController) UpdateDevice(c *gin.Context) {
 	device.AgentID = updateData.AgentID
 
 	if err := ac.DB.Save(&device).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新设备失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "updatedevicefailed"})
 		return
 	}
 
@@ -2789,21 +2789,21 @@ func (ac *AdminController) UpdateDevice(c *gin.Context) {
 func (ac *AdminController) DeleteDevice(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	if err := ac.DB.Delete(&models.Device{}, id).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除设备失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "deletedevicefailed"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "删除成功"})
+	c.JSON(http.StatusOK, gin.H{"message": "delete successful"})
 }
 
-// 智能体管理
+// Agent management
 func (ac *AdminController) GetAgents(c *gin.Context) {
 	var agents []models.Agent
 	if err := ac.DB.Find(&agents).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取智能体列表失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "getagentlistfailed"})
 		return
 	}
 
-	// 手动加载关联的配置信息
+	// Manually load associated config info
 	type AgentWithConfigs struct {
 		models.Agent
 		LLMConfig *models.Config `json:"llm_config,omitempty"`
@@ -2814,7 +2814,7 @@ func (ac *AdminController) GetAgents(c *gin.Context) {
 	for _, agent := range agents {
 		agentWithConfig := AgentWithConfigs{Agent: agent}
 
-		// 加载LLM配置
+		// Load LLM config
 		if agent.LLMConfigID != nil && *agent.LLMConfigID != "" {
 			var llmConfig models.Config
 			if err := ac.DB.Where("config_id = ? AND type = ?", *agent.LLMConfigID, "llm").First(&llmConfig).Error; err == nil {
@@ -2822,7 +2822,7 @@ func (ac *AdminController) GetAgents(c *gin.Context) {
 			}
 		}
 
-		// 加载TTS配置
+		// Load TTS config
 		if agent.TTSConfigID != nil && *agent.TTSConfigID != "" {
 			var ttsConfig models.Config
 			if err := ac.DB.Where("config_id = ? AND type = ?", *agent.TTSConfigID, "tts").First(&ttsConfig).Error; err == nil {
@@ -2836,7 +2836,7 @@ func (ac *AdminController) GetAgents(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": result})
 }
 
-// GetDeviceMcpTools 获取设备维度MCP工具列表（管理员版本）
+// GetDeviceMcpTools getdevicedimensionMCPtoollist（managementadmin version）
 func (ac *AdminController) GetDeviceMcpTools(c *gin.Context) {
 	deviceID := c.Param("id")
 	if deviceID == "" {
@@ -2846,7 +2846,7 @@ func (ac *AdminController) GetDeviceMcpTools(c *gin.Context) {
 
 	var device models.Device
 	if err := ac.DB.Where("id = ?", deviceID).First(&device).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "设备不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Device does not exist"})
 		return
 	}
 
@@ -2859,7 +2859,7 @@ func (ac *AdminController) GetDeviceMcpTools(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": gin.H{"tools": tools}})
 }
 
-// CallAgentMcpTool 调用智能体维度MCP工具（管理员版本）
+// CallAgentMcpTool callagentdimensionMCPtool（managementadmin version）
 func (ac *AdminController) CallAgentMcpTool(c *gin.Context) {
 	agentID := c.Param("id")
 	var req struct {
@@ -2867,13 +2867,13 @@ func (ac *AdminController) CallAgentMcpTool(c *gin.Context) {
 		Arguments map[string]interface{} `json:"arguments"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数错误: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "request parameter error: " + err.Error()})
 		return
 	}
 
 	var agent models.Agent
 	if err := ac.DB.Where("id = ?", agentID).First(&agent).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "智能体不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "agentdoes not exist"})
 		return
 	}
 
@@ -2884,14 +2884,14 @@ func (ac *AdminController) CallAgentMcpTool(c *gin.Context) {
 	}
 	result, err := ac.WebSocketController.CallMcpToolFromClient(context.Background(), body)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "调用MCP工具失败: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "callMCPtoolfailed: " + err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": result})
 }
 
-// CallDeviceMcpTool 调用设备维度MCP工具（管理员版本）
+// CallDeviceMcpTool calldevicedimensionMCPtool（managementadmin version）
 func (ac *AdminController) CallDeviceMcpTool(c *gin.Context) {
 	deviceID := c.Param("id")
 	var req struct {
@@ -2899,13 +2899,13 @@ func (ac *AdminController) CallDeviceMcpTool(c *gin.Context) {
 		Arguments map[string]interface{} `json:"arguments"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数错误: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "request parameter error: " + err.Error()})
 		return
 	}
 
 	var device models.Device
 	if err := ac.DB.Where("id = ?", deviceID).First(&device).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "设备不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Device does not exist"})
 		return
 	}
 
@@ -2916,14 +2916,14 @@ func (ac *AdminController) CallDeviceMcpTool(c *gin.Context) {
 	}
 	result, err := ac.WebSocketController.CallMcpToolFromClient(context.Background(), body)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "调用MCP工具失败: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "callMCPtoolfailed: " + err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": result})
 }
 
-// GetAgentMCPEndpoint 获取智能体的MCP接入点URL
+// GetAgentMCPEndpoint gets agent's MCP endpoint URL
 func (ac *AdminController) GetAgentMCPEndpoint(c *gin.Context) {
 	agentID := c.Param("id")
 	if agentID == "" {
@@ -2931,30 +2931,30 @@ func (ac *AdminController) GetAgentMCPEndpoint(c *gin.Context) {
 		return
 	}
 
-	// 从JWT中间件获取当前用户ID
+	// Get current userID from JWT middleware
 	userIDInterface, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "用户未认证"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 	userID, ok := userIDInterface.(uint)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "用户ID类型错误"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "userIDtypeerror"})
 		return
 	}
 
-	// 使用公共函数生成MCP接入点
+	// Use common function to generate MCP endpoint
 	endpoint, err := GenerateAgentMCPEndpoint(ac.DB, agentID, userID, ac.EndpointAuthToken)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// 返回单个endpoint字符串
+	// Return single endpoint string
 	c.JSON(http.StatusOK, gin.H{"data": gin.H{"endpoint": endpoint}})
 }
 
-// GetAgentOpenClawEndpoint 获取智能体的OpenClaw接入点URL
+// GetAgentOpenClawEndpoint gets agent's OpenClaw endpoint URL
 func (ac *AdminController) GetAgentOpenClawEndpoint(c *gin.Context) {
 	agentID := c.Param("id")
 	if agentID == "" {
@@ -2962,15 +2962,15 @@ func (ac *AdminController) GetAgentOpenClawEndpoint(c *gin.Context) {
 		return
 	}
 
-	// 从JWT中间件获取当前用户ID
+	// Get current userID from JWT middleware
 	userIDInterface, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "用户未认证"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 	userID, ok := userIDInterface.(uint)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "用户ID类型错误"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "userIDtypeerror"})
 		return
 	}
 
@@ -3018,7 +3018,7 @@ func (ac *AdminController) GetAgentOpenClawEndpoint(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": data})
 }
 
-// CallAgentOpenClawChatTest 调用智能体 OpenClaw 对话测试（管理员版本）
+// CallAgentOpenClawChatTest calls agent OpenClaw chat test (management admin version)
 func (ac *AdminController) CallAgentOpenClawChatTest(c *gin.Context) {
 	agentID := c.Param("id")
 	if agentID == "" {
@@ -3035,18 +3035,18 @@ func (ac *AdminController) CallAgentOpenClawChatTest(c *gin.Context) {
 		TimeoutMs int    `json:"timeout_ms"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数错误: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "request parameter error: " + err.Error()})
 		return
 	}
 	req.Message = strings.TrimSpace(req.Message)
 	if req.Message == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "message 不能为空"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "message cannot be empty"})
 		return
 	}
 
 	var agent models.Agent
 	if err := ac.DB.Where("id = ?", agentID).First(&agent).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "智能体不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "agentdoes not exist"})
 		return
 	}
 
@@ -3118,16 +3118,16 @@ func (ac *AdminController) CallAgentOpenClawChatTest(c *gin.Context) {
 	if err != nil {
 		msg := err.Error()
 		switch {
-		case strings.Contains(strings.ToLower(msg), "not connected"), strings.Contains(msg, "未连接"):
+		case strings.Contains(strings.ToLower(msg), "not connected"), strings.Contains(msg, "not connected"):
 			c.JSON(http.StatusConflict, gin.H{"error": msg})
-		case strings.Contains(strings.ToLower(msg), "timeout"), strings.Contains(msg, "超时"):
+		case strings.Contains(strings.ToLower(msg), "timeout"), strings.Contains(msg, "timeout"):
 			c.JSON(http.StatusGatewayTimeout, gin.H{"error": msg})
-		case strings.Contains(strings.ToLower(msg), "missing"), strings.Contains(msg, "参数"):
+		case strings.Contains(strings.ToLower(msg), "missing"), strings.Contains(msg, "parameter"):
 			c.JSON(http.StatusBadRequest, gin.H{"error": msg})
-		case strings.Contains(msg, "没有连接的客户端"):
+		case strings.Contains(msg, "no connected clients"):
 			c.JSON(http.StatusServiceUnavailable, gin.H{"error": msg})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "调用OpenClaw对话测试失败: " + msg})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "callOpenClaw chat test failed: " + msg})
 		}
 		return
 	}
@@ -3135,20 +3135,20 @@ func (ac *AdminController) CallAgentOpenClawChatTest(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": result})
 }
 
-// GetAgentMcpTools 获取智能体的MCP工具列表
+// GetAgentMcpTools gets agent's MCP tool list
 func (ac *AdminController) GetAgentMcpTools(c *gin.Context) {
 	agentID := c.Param("id")
 
-	// 管理员验证函数：验证智能体是否存在（管理员可以查看任意用户的智能体）
+	// Admin verify function: verify if agent exists (admin can view any user's agent)
 	adminAgentValidator := func(agentID string) error {
 		var agent models.Agent
 		if err := ac.DB.Where("id = ?", agentID).First(&agent).Error; err != nil {
-			return fmt.Errorf("智能体不存在")
+			return fmt.Errorf("agentdoes not exist")
 		}
 		return nil
 	}
 
-	// 使用公共函数
+	// Use common function
 	GetAgentMcpToolsCommon(c, agentID, ac.WebSocketController, adminAgentValidator)
 }
 
@@ -3192,7 +3192,7 @@ func (ac *AdminController) CreateAgent(c *gin.Context) {
 	applyOpenClawConfigToAgent(&agent, openClawCfg)
 
 	if err := ac.DB.Create(&agent).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建智能体失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "createagentfailed"})
 		return
 	}
 
@@ -3204,7 +3204,7 @@ func (ac *AdminController) UpdateAgent(c *gin.Context) {
 	var agent models.Agent
 
 	if err := ac.DB.First(&agent, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "智能体不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "agentdoes not exist"})
 		return
 	}
 	currentOpenClawCfg := buildOpenClawConfigFromAgent(agent)
@@ -3247,7 +3247,7 @@ func (ac *AdminController) UpdateAgent(c *gin.Context) {
 	applyOpenClawConfigToAgent(&agent, openClawCfg)
 
 	if err := ac.DB.Save(&agent).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新智能体失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "updateagentfailed"})
 		return
 	}
 
@@ -3257,13 +3257,13 @@ func (ac *AdminController) UpdateAgent(c *gin.Context) {
 func (ac *AdminController) DeleteAgent(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	if err := ac.DB.Delete(&models.Agent{}, id).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除智能体失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "deleteagentfailed"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "删除成功"})
+	c.JSON(http.StatusOK, gin.H{"message": "delete successful"})
 }
 
-// VAD配置管理（兼容前端）
+// VADconfigmanagement（compatible with frontend）
 func (ac *AdminController) GetVADConfigs(c *gin.Context) {
 	var configs []models.Config
 	if err := ac.DB.Where("type = ?", "vad").Find(&configs).Error; err != nil {
@@ -3291,7 +3291,7 @@ func (ac *AdminController) DeleteVADConfig(c *gin.Context) {
 	ac.deleteConfigWithType(c, "vad")
 }
 
-// ASR配置管理（兼容前端）
+// ASRconfigmanagement（compatible with frontend）
 func (ac *AdminController) GetASRConfigs(c *gin.Context) {
 	var configs []models.Config
 	if err := ac.DB.Where("type = ?", "asr").Find(&configs).Error; err != nil {
@@ -3319,7 +3319,7 @@ func (ac *AdminController) DeleteASRConfig(c *gin.Context) {
 	ac.deleteConfigWithType(c, "asr")
 }
 
-// LLM配置管理（兼容前端）
+// LLMconfigmanagement（compatible with frontend）
 func (ac *AdminController) GetLLMConfigs(c *gin.Context) {
 	var configs []models.Config
 	if err := ac.DB.Where("type = ?", "llm").Find(&configs).Error; err != nil {
@@ -3347,7 +3347,7 @@ func (ac *AdminController) DeleteLLMConfig(c *gin.Context) {
 	ac.deleteConfigWithType(c, "llm")
 }
 
-// TTS配置管理（兼容前端）
+// TTSconfigmanagement（compatible with frontend）
 func (ac *AdminController) GetTTSConfigs(c *gin.Context) {
 	var configs []models.Config
 	if err := ac.DB.Where("type = ?", "tts").Find(&configs).Error; err != nil {
@@ -3375,7 +3375,7 @@ func (ac *AdminController) DeleteTTSConfig(c *gin.Context) {
 	ac.deleteConfigWithType(c, "tts")
 }
 
-// Speaker配置管理（兼容前端）
+// Speakerconfigmanagement（compatible with frontend）
 func (ac *AdminController) GetSpeakerConfigs(c *gin.Context) {
 	var configs []models.Config
 	if err := ac.DB.Where("type = ?", "voice_identify").Find(&configs).Error; err != nil {
@@ -3392,9 +3392,9 @@ func (ac *AdminController) CreateSpeakerConfig(c *gin.Context) {
 		return
 	}
 	config.Type = "voice_identify"
-	// 声纹配置只有一个，自动设置为默认配置
+	// Voiceprint config only one, automatically set as default config
 	config.IsDefault = true
-	// 如果已存在配置，先删除旧的
+	// If config already exists, delete old one first
 	ac.DB.Where("type = ?", "voice_identify").Delete(&models.Config{})
 	ac.createConfigWithType(c, &config)
 }
@@ -3404,7 +3404,7 @@ func (ac *AdminController) UpdateSpeakerConfig(c *gin.Context) {
 	var config models.Config
 
 	if err := ac.DB.Where("id = ? AND type = ?", id, "voice_identify").First(&config).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "配置不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "config does not exist"})
 		return
 	}
 
@@ -3414,23 +3414,23 @@ func (ac *AdminController) UpdateSpeakerConfig(c *gin.Context) {
 		return
 	}
 
-	// 声纹配置只有一个，始终设置为默认配置
+	// Voiceprint config only one, always set as default config
 	updateData.IsDefault = true
 
-	// 更新配置
+	// updateconfig
 	config.Name = updateData.Name
 	config.Provider = updateData.Provider
 	config.JsonData = updateData.JsonData
 	config.Enabled = updateData.Enabled
 	config.IsDefault = updateData.IsDefault
 
-	// 如果提供了新的config_id，则更新它
+	// 如果提供了新的config_id，则update它
 	if updateData.ConfigID != "" {
 		config.ConfigID = updateData.ConfigID
 	}
 
 	if err := ac.DB.Save(&config).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新配置失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "updateconfigfailed"})
 		return
 	}
 
@@ -3441,7 +3441,7 @@ func (ac *AdminController) DeleteSpeakerConfig(c *gin.Context) {
 	ac.deleteConfigWithType(c, "voice_identify")
 }
 
-// Vision配置管理（兼容前端）
+// Visionconfigmanagement（compatible with frontend）
 func (ac *AdminController) GetVisionConfigs(c *gin.Context) {
 	var configs []models.Config
 	if err := ac.DB.Where("type = ? AND config_id != ?", "vision", "vision_base").Find(&configs).Error; err != nil {
@@ -3451,12 +3451,12 @@ func (ac *AdminController) GetVisionConfigs(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": configs})
 }
 
-// GetVisionBaseConfig 获取Vision基础配置
+// GetVisionBaseConfig getVisionbaseconfig
 func (ac *AdminController) GetVisionBaseConfig(c *gin.Context) {
 	var config models.Config
 	if err := ac.DB.Where("type = ? AND config_id = ?", "vision", "vision_base").First(&config).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			// 如果没有找到基础配置，返回默认值
+			// If base config not found, return default values
 			c.JSON(http.StatusOK, gin.H{"data": map[string]interface{}{
 				"enable_auth": false,
 				"vision_url":  "",
@@ -3476,7 +3476,7 @@ func (ac *AdminController) GetVisionBaseConfig(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": configData})
 }
 
-// UpdateVisionBaseConfig 更新Vision基础配置
+// UpdateVisionBaseConfig updateVisionbaseconfig
 func (ac *AdminController) UpdateVisionBaseConfig(c *gin.Context) {
 	var requestData map[string]interface{}
 	if err := c.ShouldBindJSON(&requestData); err != nil {
@@ -3493,7 +3493,7 @@ func (ac *AdminController) UpdateVisionBaseConfig(c *gin.Context) {
 	var config models.Config
 	if err := ac.DB.Where("type = ? AND config_id = ?", "vision", "vision_base").First(&config).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			// 创建新的基础配置
+			// Create new base config
 			config = models.Config{
 				Type:      "vision",
 				Name:      "vision_base",
@@ -3512,7 +3512,7 @@ func (ac *AdminController) UpdateVisionBaseConfig(c *gin.Context) {
 			return
 		}
 	} else {
-		// 更新现有配置
+		// updateexistingconfig
 		config.JsonData = string(jsonData)
 		if err := ac.DB.Save(&config).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update Vision base config"})
@@ -3524,7 +3524,7 @@ func (ac *AdminController) UpdateVisionBaseConfig(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Vision base config updated successfully"})
 }
 
-// GetChatSettings 获取聊天设置（auth.enable + chat.*）
+// GetChatSettings getchatset（auth.enable + chat.*）
 func (ac *AdminController) GetChatSettings(c *gin.Context) {
 	response := gin.H{
 		"auth": gin.H{
@@ -3570,7 +3570,7 @@ func (ac *AdminController) GetChatSettings(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": response})
 }
 
-// UpdateChatSettings 更新聊天设置（auth.enable + chat.*）
+// UpdateChatSettings updatechatset（auth.enable + chat.*）
 func (ac *AdminController) UpdateChatSettings(c *gin.Context) {
 	var req struct {
 		Auth struct {
@@ -3590,20 +3590,20 @@ func (ac *AdminController) UpdateChatSettings(c *gin.Context) {
 	}
 
 	if req.Chat.MaxIdleDuration < 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "chat.max_idle_duration 不能小于 0，0 表示不限制"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "chat.max_idle_duration cannot be less than 0, 0 means unlimited"})
 		return
 	}
 	if req.Chat.ChatMaxSilenceDuration < 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "chat.chat_max_silence_duration 不能小于 0"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "chat.chat_max_silence_duration cannot be less than 0"})
 		return
 	}
 	if req.Chat.RealtimeMode < 1 || req.Chat.RealtimeMode > 4 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "chat.realtime_mode 必须在 1-4 之间"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "chat.realtime_mode must be between 1-4"})
 		return
 	}
 	req.Chat.GlobalSystemPrompt = strings.TrimSpace(req.Chat.GlobalSystemPrompt)
 	if len(req.Chat.GlobalSystemPrompt) > 8000 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "chat.global_system_prompt 长度不能超过 8000 个字符"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "chat.global_system_prompt length cannot exceed 8000 characters"})
 		return
 	}
 
@@ -3611,7 +3611,7 @@ func (ac *AdminController) UpdateChatSettings(c *gin.Context) {
 		"enable": req.Auth.Enable,
 	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "auth 配置序列化失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "auth configserializationfailed"})
 		return
 	}
 	chatJSON, err := json.Marshal(map[string]interface{}{
@@ -3621,13 +3621,13 @@ func (ac *AdminController) UpdateChatSettings(c *gin.Context) {
 		"global_system_prompt":      req.Chat.GlobalSystemPrompt,
 	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "chat 配置序列化失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "chat configserializationfailed"})
 		return
 	}
 
 	tx := ac.DB.Begin()
 	if tx.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "启动事务失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Start transaction failed"})
 		return
 	}
 	defer func() {
@@ -3672,23 +3672,23 @@ func (ac *AdminController) UpdateChatSettings(c *gin.Context) {
 
 	if err := upsertConfig("auth", "auth", "auth", authJSON); err != nil {
 		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "保存 auth 设置失败: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "save auth setfailed: " + err.Error()})
 		return
 	}
 	if err := upsertConfig("chat", "chat", "chat", chatJSON); err != nil {
 		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "保存 chat 设置失败: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "save chat setfailed: " + err.Error()})
 		return
 	}
 
 	if err := tx.Commit().Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "提交事务失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "commit transactionfailed"})
 		return
 	}
 
 	ac.notifySystemConfigChanged()
 	c.JSON(http.StatusOK, gin.H{
-		"message": "聊天设置更新成功",
+		"message": "chatsetupdatesuccess",
 		"data": gin.H{
 			"auth": gin.H{"enable": req.Auth.Enable},
 			"chat": gin.H{
@@ -3719,7 +3719,7 @@ func (ac *AdminController) DeleteVisionConfig(c *gin.Context) {
 	ac.deleteConfigWithType(c, "vision")
 }
 
-// OTA配置管理（兼容前端）
+// OTAconfigmanagement（compatible with frontend）
 func (ac *AdminController) GetOTAConfigs(c *gin.Context) {
 	var configs []models.Config
 	if err := ac.DB.Where("type = ?", "ota").Find(&configs).Error; err != nil {
@@ -3747,7 +3747,7 @@ func (ac *AdminController) DeleteOTAConfig(c *gin.Context) {
 	ac.deleteConfigWithType(c, "ota")
 }
 
-// MQTT配置管理（兼容前端）
+// MQTTconfigmanagement（compatible with frontend）
 func (ac *AdminController) GetMQTTConfigs(c *gin.Context) {
 	var configs []models.Config
 	if err := ac.DB.Where("type = ?", "mqtt").Find(&configs).Error; err != nil {
@@ -3775,7 +3775,7 @@ func (ac *AdminController) DeleteMQTTConfig(c *gin.Context) {
 	ac.deleteConfigWithType(c, "mqtt")
 }
 
-// MQTT Server配置管理（兼容前端）
+// MQTT Serverconfigmanagement（compatible with frontend）
 func (ac *AdminController) GetMQTTServerConfigs(c *gin.Context) {
 	var configs []models.Config
 	if err := ac.DB.Where("type = ?", "mqtt_server").Find(&configs).Error; err != nil {
@@ -3803,7 +3803,7 @@ func (ac *AdminController) DeleteMQTTServerConfig(c *gin.Context) {
 	ac.deleteConfigWithType(c, "mqtt_server")
 }
 
-// UDP配置管理（兼容前端）
+// UDPconfigmanagement（compatible with frontend）
 func (ac *AdminController) GetUDPConfigs(c *gin.Context) {
 	var configs []models.Config
 	if err := ac.DB.Where("type = ?", "udp").Find(&configs).Error; err != nil {
@@ -3831,7 +3831,7 @@ func (ac *AdminController) DeleteUDPConfig(c *gin.Context) {
 	ac.deleteConfigWithType(c, "udp")
 }
 
-// ToggleConfigEnable 切换配置的启用状态
+// ToggleConfigEnable switches config's enable status
 func (ac *AdminController) ToggleConfigEnable(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -3842,49 +3842,49 @@ func (ac *AdminController) ToggleConfigEnable(c *gin.Context) {
 	var config models.Config
 	if err := ac.DB.First(&config, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "配置不存在"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "config does not exist"})
 		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "查询配置失败"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "queryconfigfailed"})
 		}
 		return
 	}
 
-	// 切换启用状态
+	// switchenablestatus
 	config.Enabled = !config.Enabled
 	if err := ac.DB.Save(&config).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新配置状态失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "updateconfigstatusfailed"})
 		return
 	}
 
 	ac.notifySystemConfigChanged()
-	status := "禁用"
+	status := "disable"
 	if config.Enabled {
-		status = "启用"
+		status = "enable"
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": fmt.Sprintf("配置已%s", status),
+		"message": fmt.Sprintf("config %s", status),
 		"data":    config,
 	})
 }
 
-// 辅助方法
+// Helper methods
 func (ac *AdminController) createConfigWithType(c *gin.Context, config *models.Config) {
-	// 如果没有提供config_id，自动生成一个
+	// If config_id not provided, auto-generate one
 	if config.ConfigID == "" {
-		// 使用类型_名称_时间戳的格式生成唯一ID
+		// Use type_name_timestamp format to generate unique ID
 		timestamp := time.Now().Unix()
 		safeName := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(config.Name, " ", "_"), "-", "_"))
 		config.ConfigID = fmt.Sprintf("%s_%s_%d", config.Type, safeName, timestamp)
 	}
 
-	// 如果设置为默认配置，先取消其他同类型的默认配置
+	// If set as default config, first unset other same type's default config
 	if config.IsDefault {
 		ac.DB.Model(&models.Config{}).Where("type = ? AND is_default = ?", config.Type, true).Update("is_default", false)
 	}
 
 	if err := ac.DB.Create(config).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建配置失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "createconfigfailed"})
 		return
 	}
 
@@ -3892,7 +3892,7 @@ func (ac *AdminController) createConfigWithType(c *gin.Context, config *models.C
 	c.JSON(http.StatusCreated, gin.H{"data": *config})
 }
 
-// configUpdateBody 用于 updateConfigWithType，json_data 兼容前端传 string 或 object
+// configUpdateBody is used for updateConfigWithType, json_data compatible with frontend sending string or object
 type configUpdateBody struct {
 	Name      string      `json:"name"`
 	ConfigID  string      `json:"config_id"`
@@ -3907,7 +3907,7 @@ func (ac *AdminController) updateConfigWithType(c *gin.Context, configType strin
 	var config models.Config
 
 	if err := ac.DB.Where("id = ? AND type = ?", id, configType).First(&config).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "配置不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "config does not exist"})
 		return
 	}
 
@@ -3917,39 +3917,39 @@ func (ac *AdminController) updateConfigWithType(c *gin.Context, configType strin
 		return
 	}
 
-	// 如果设置为默认配置，先取消其他同类型的默认配置
+	// If set as default config, first unset other same type's default config
 	if updateData.IsDefault {
 		ac.DB.Model(&models.Config{}).Where("type = ? AND is_default = ? AND id != ?", configType, true, id).Update("is_default", false)
 	}
 
-	// 更新配置
+	// updateconfig
 	config.Name = updateData.Name
 	config.Provider = updateData.Provider
 	config.Enabled = updateData.Enabled
 	config.IsDefault = updateData.IsDefault
 
-	// json_data：兼容 string 或 object，避免前端传对象时绑定失败
+	// json_data: compatible with string or object, avoid binding failure when frontend sends object
 	switch v := updateData.JsonData.(type) {
 	case string:
 		config.JsonData = v
 	case nil:
-		// 未传则保持原值
+		// If not sent, keep original value
 	default:
 		bytes, err := json.Marshal(v)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "json_data 格式无效"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "json_data format invalid"})
 			return
 		}
 		config.JsonData = string(bytes)
 	}
 
-	// 如果提供了新的config_id，则更新它
+	// 如果提供了新的config_id，则update它
 	if updateData.ConfigID != "" {
 		config.ConfigID = updateData.ConfigID
 	}
 
 	if err := ac.DB.Save(&config).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新配置失败: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "updateconfigfailed: " + err.Error()})
 		return
 	}
 
@@ -3960,17 +3960,17 @@ func (ac *AdminController) updateConfigWithType(c *gin.Context, configType strin
 func (ac *AdminController) deleteConfigWithType(c *gin.Context, configType string) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	if err := ac.DB.Where("id = ? AND type = ?", id, configType).Delete(&models.Config{}).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除配置失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "deleteconfigfailed"})
 		return
 	}
 	ac.notifySystemConfigChanged()
-	c.JSON(http.StatusOK, gin.H{"message": "删除成功"})
+	c.JSON(http.StatusOK, gin.H{"message": "delete successful"})
 }
 
-// 导入导出配置相关方法
-// ExportConfigs 导出所有配置为YAML格式
+// Import/export config related methods
+// ExportConfigs exports all configs as YAML format
 func (ac *AdminController) ExportConfigs(c *gin.Context) {
-	// 构建导出配置结构 - 只包含实际存在的模块
+	// Build export config structure - only include actually existing modules
 	type ExportConfig struct {
 		VAD           map[string]interface{} `yaml:"vad,omitempty"`
 		ASR           map[string]interface{} `yaml:"asr,omitempty"`
@@ -4007,21 +4007,21 @@ func (ac *AdminController) ExportConfigs(c *gin.Context) {
 		LocalMCP:      make(map[string]interface{}),
 	}
 
-	// 获取所有配置
+	// Get all configs
 	var configs []models.Config
 	if err := ac.DB.Find(&configs).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get configs"})
 		return
 	}
 
-	// 获取全局角色
+	// getglobalrole
 	var globalRoles []models.GlobalRole
 	if err := ac.DB.Find(&globalRoles).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get global roles"})
 		return
 	}
 
-	// 处理配置数据 - provider字段与is_default对应，key与ConfigID对应
+	// Process config data - provider field corresponds to is_default, key corresponds to ConfigID
 	for _, config := range configs {
 		var jsonData map[string]interface{}
 		if err := json.Unmarshal([]byte(config.JsonData), &jsonData); err != nil {
@@ -4029,31 +4029,31 @@ func (ac *AdminController) ExportConfigs(c *gin.Context) {
 			continue
 		}
 
-		// 根据配置类型组织数据
+		// Organize data by config type
 		switch config.Type {
 		case "vad":
-			// 兼容旧格式：如果只有一个key，说明是旧格式（带key），提取出内部配置
+			// Compatible with old format: if only one key, it's old format (with key), extract inner config
 			var actualConfigData map[string]interface{}
 			if len(jsonData) == 1 {
-				// 旧格式：只有一个key，提取其值
+				// Old format: only one key, extract its value
 				for _, value := range jsonData {
 					if innerConfig, ok := value.(map[string]interface{}); ok {
 						actualConfigData = innerConfig
 					} else {
-						// 如果不是map类型，直接使用原数据
+						// If not map type, use original data directly
 						actualConfigData = jsonData
 					}
 					break
 				}
 			} else {
-				// 新格式：不带key，直接使用jsonData
+				// New format: without key, use jsonData directly
 				actualConfigData = jsonData
 			}
-			// 如果是默认配置，设置provider字段
+			// If default config, set provider field
 			if config.IsDefault {
 				exportConfig.VAD["provider"] = config.ConfigID
 			}
-			// 使用ConfigID作为key
+			// Use ConfigID as key
 			exportConfig.VAD[config.ConfigID] = actualConfigData
 		case "asr":
 			if config.IsDefault {
@@ -4071,14 +4071,14 @@ func (ac *AdminController) ExportConfigs(c *gin.Context) {
 			}
 			exportConfig.TTS[config.ConfigID] = jsonData
 		case "vision":
-			// 特殊处理vision配置
+			// specialprocessvisionconfig
 			if config.ConfigID == "vision_base" {
-				// 处理基础配置（enable_auth, vision_url等）
+				// Process base config (enable_auth, vision_url, etc.)
 				for key, value := range jsonData {
 					exportConfig.Vision[key] = value
 				}
 			} else {
-				// 处理vllm配置
+				// processvllmconfig
 				if exportConfig.Vision["vllm"] == nil {
 					exportConfig.Vision["vllm"] = make(map[string]interface{})
 				}
@@ -4090,22 +4090,22 @@ func (ac *AdminController) ExportConfigs(c *gin.Context) {
 				}
 			}
 		case "ota":
-			// ota、mqtt、mqtt_server、udp不需要provider字段，直接合并配置
+			// ota、mqtt、mqtt_server、udpnot neededproviderfield，merge directlyconfig
 			for key, value := range jsonData {
 				exportConfig.OTA[key] = value
 			}
 		case "mqtt":
-			// ota、mqtt、mqtt_server、udp不需要provider字段，直接合并配置
+			// ota、mqtt、mqtt_server、udpnot neededproviderfield，merge directlyconfig
 			for key, value := range jsonData {
 				exportConfig.MQTT[key] = value
 			}
 		case "mqtt_server":
-			// ota、mqtt、mqtt_server、udp不需要provider字段，直接合并配置
+			// ota、mqtt、mqtt_server、udpnot neededproviderfield，merge directlyconfig
 			for key, value := range jsonData {
 				exportConfig.MQTTServer[key] = value
 			}
 		case "udp":
-			// ota、mqtt、mqtt_server、udp不需要provider字段，直接合并配置
+			// ota、mqtt、mqtt_server、udpnot neededproviderfield，merge directlyconfig
 			for key, value := range jsonData {
 				exportConfig.UDP[key] = value
 			}
@@ -4128,7 +4128,7 @@ func (ac *AdminController) ExportConfigs(c *gin.Context) {
 				exportConfig.Chat[key] = value
 			}
 		case "mcp":
-			// 处理MCP配置，将mcp和local_mcp分开
+			// Process MCP config, separate mcp and local_mcp
 			if mcpData, exists := jsonData["mcp"]; exists {
 				if mcpMap, ok := mcpData.(map[string]interface{}); ok {
 					for key, value := range mcpMap {
@@ -4136,56 +4136,56 @@ func (ac *AdminController) ExportConfigs(c *gin.Context) {
 					}
 				}
 			}
-			// 兼容旧格式：如果直接有global字段
+			// Compatible with old format: if global field exists directly
 			if globalData, exists := jsonData["global"]; exists {
 				exportConfig.MCP["global"] = globalData
 			}
 		case "local_mcp":
-			// 处理local_mcp配置
+			// processlocal_mcpconfig
 			for key, value := range jsonData {
 				exportConfig.LocalMCP[key] = value
 			}
 		}
 	}
 
-	// 只处理数据库中的实际配置，不设置默认值
+	// Only process actual configs in database, don't set default values
 
-	// 转换为YAML
+	// Convert to YAML
 	yamlData, err := yaml.Marshal(exportConfig)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal YAML"})
 		return
 	}
 
-	// 设置响应头
+	// Set response headers
 	c.Header("Content-Type", "application/x-yaml")
 	c.Header("Content-Disposition", "attachment; filename=config.yaml")
 	c.Data(http.StatusOK, "application/x-yaml", yamlData)
 }
 
-// ImportConfigs 从YAML文件导入配置
+// ImportConfigs imports configs from YAML file
 func (ac *AdminController) ImportConfigs(c *gin.Context) {
-	log.Printf("开始导入配置")
+	log.Printf("startimportconfig")
 
 	file, err := c.FormFile("file")
 	if err != nil {
-		log.Printf("获取上传文件失败: %v", err)
+		log.Printf("Get uploaded file failed: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No file uploaded"})
 		return
 	}
 
-	log.Printf("文件信息: filename=%s, size=%d", file.Filename, file.Size)
+	log.Printf("File info: filename=%s, size=%d", file.Filename, file.Size)
 
 	if file.Size == 0 {
-		log.Printf("文件为空")
+		log.Printf("File is empty")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "File is empty"})
 		return
 	}
 
-	// 读取文件内容
+	// read file content
 	src, err := file.Open()
 	if err != nil {
-		log.Printf("打开文件失败: %v", err)
+		log.Printf("Open file failed: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open file"})
 		return
 	}
@@ -4193,81 +4193,81 @@ func (ac *AdminController) ImportConfigs(c *gin.Context) {
 
 	content, err := io.ReadAll(src)
 	if err != nil {
-		log.Printf("读取文件内容失败: %v", err)
+		log.Printf("read file contentfailed: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file"})
 		return
 	}
 
-	log.Printf("文件内容长度: %d", len(content))
+	log.Printf("File content length: %d", len(content))
 
-	// 解析YAML
+	// parseYAML
 	var importConfig map[string]interface{}
 	if err := yaml.Unmarshal(content, &importConfig); err != nil {
-		log.Printf("解析YAML失败: %v", err)
+		log.Printf("parseYAMLfailed: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid YAML format"})
 		return
 	}
 
-	log.Printf("YAML解析成功，配置键: %v", getMapKeys(importConfig))
+	log.Printf("YAML parse success, config keys: %v", getMapKeys(importConfig))
 
-	// 开始事务
-	log.Printf("开始数据库事务")
+	// Start transaction
+	log.Printf("Start database transaction")
 	tx := ac.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("发生panic，回滚事务: %v", r)
+			log.Printf("Panic occurred, rollback transaction: %v", r)
 			tx.Rollback()
 		}
 	}()
 
-	// 清空现有配置
-	log.Printf("清空现有配置")
+	// clearexistingconfig
+	log.Printf("clearexistingconfig")
 	result := tx.Exec("DELETE FROM configs")
 	if result.Error != nil {
-		log.Printf("清空配置失败: %v", result.Error)
+		log.Printf("clearconfigfailed: %v", result.Error)
 		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to clear existing configs"})
 		return
 	}
-	log.Printf("配置清空成功，删除了 %d 条记录", result.RowsAffected)
+	log.Printf("Config clear success, deleted %d records", result.RowsAffected)
 
-	// 清空全局角色
-	log.Printf("清空全局角色")
+	// clearglobalrole
+	log.Printf("clearglobalrole")
 	result2 := tx.Exec("DELETE FROM global_roles")
 	if result2.Error != nil {
-		log.Printf("清空全局角色失败: %v", result2.Error)
+		log.Printf("clearglobalrolefailed: %v", result2.Error)
 		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to clear existing global roles"})
 		return
 	}
-	log.Printf("全局角色清空成功，删除了 %d 条记录", result2.RowsAffected)
+	log.Printf("Global role clear success, deleted %d records", result2.RowsAffected)
 
-	// 导入配置 - 只处理实际存在的模块
+	// Import config - only process actually existing modules
 	configTypes := []string{"vad", "asr", "llm", "tts", "memory", "auth", "chat", "ota", "mqtt", "mqtt_server", "udp", "mcp", "local_mcp"}
-	log.Printf("开始导入配置，配置类型: %v", configTypes)
+	log.Printf("startimportconfig，configtype: %v", configTypes)
 
-	// 处理 voice_identify 配置（映射到 speaker 类型）
+	// Process voice_identify config (map to speaker type)
 	if voiceIdentifyData, exists := importConfig["voice_identify"]; exists {
-		log.Printf("找到 voice_identify 配置数据")
+		log.Printf("found voice_identify configdata")
 		if voiceIdentifyMap, ok := voiceIdentifyData.(map[string]interface{}); ok {
-			log.Printf("voice_identify 配置 map keys: %v", getMapKeys(voiceIdentifyMap))
+			log.Printf("voice_identify config map keys: %v", getMapKeys(voiceIdentifyMap))
 
-			// 获取provider字段
+			// getproviderfield
 			var defaultProvider string
 			if provider, exists := voiceIdentifyMap["provider"]; exists {
 				if providerStr, ok := provider.(string); ok {
 					defaultProvider = providerStr
-					log.Printf("voice_identify 默认provider: %s", defaultProvider)
+					log.Printf("voice_identify defaultprovider: %s", defaultProvider)
 				}
 			}
 
-			log.Printf("voice_identify 配置项keys: %v", getMapKeys(voiceIdentifyMap))
-			// 声纹配置只有一个，优先使用provider指定的配置，否则使用第一个配置项
+			log.Printf("voice_identify config item keys: %v", getMapKeys(voiceIdentifyMap))
+			// Voiceprint config only one, prioritize using provider specified config, otherwise use first config item
 			var targetConfigID string
 			if defaultProvider != "" {
 				targetConfigID = defaultProvider
 			} else {
-				// 如果没有provider，使用第一个非provider的配置项
+				// If no provider, use first non-provider config item
 				for key := range voiceIdentifyMap {
 					if key != "provider" {
 						targetConfigID = key
@@ -4277,24 +4277,24 @@ func (ac *AdminController) ImportConfigs(c *gin.Context) {
 			}
 
 			if targetConfigID == "" {
-				log.Printf("voice_identify 配置中没有找到有效配置项")
+				log.Printf("voice_identify config has no valid config items")
 			} else {
-				// 只处理目标配置项
+				// Only process target config item
 				if configValue, exists := voiceIdentifyMap[targetConfigID]; exists {
 					if configMap, ok := configValue.(map[string]interface{}); ok {
-						log.Printf("处理voice_identify配置项: %s", targetConfigID)
+						log.Printf("Process voice_identify config item: %s", targetConfigID)
 						jsonData, err := json.Marshal(configMap)
 						if err != nil {
-							log.Printf("序列化voice_identify配置数据失败: %v", err)
+							log.Printf("serializationvoice_identifyconfigdatafailed: %v", err)
 							tx.Rollback()
 							c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal voice_identify config data"})
 							return
 						}
 
-						// 声纹配置只有一个，始终设为默认
+						// Voiceprint config only one, always set as default
 						config := models.Config{
 							Type:      "voice_identify",
-							Name:      "声纹识别配置",
+							Name:      "voiceprint recognition config",
 							ConfigID:  "asr_server",
 							Provider:  "asr_server",
 							JsonData:  string(jsonData),
@@ -4302,19 +4302,19 @@ func (ac *AdminController) ImportConfigs(c *gin.Context) {
 							IsDefault: true,
 						}
 
-						log.Printf("准备保存voice_identify配置: Type=%s, Name=%s, ConfigID=%s", config.Type, config.Name, config.ConfigID)
+						log.Printf("prepare to savevoice_identifyconfig: Type=%s, Name=%s, ConfigID=%s", config.Type, config.Name, config.ConfigID)
 
-						// 声纹配置只有一个，先删除所有旧的配置
+						// Voiceprint config only one, delete all old configs first
 						tx.Where("type = ?", "voice_identify").Delete(&models.Config{})
 
-						// 创建新配置
+						// Create new config
 						if err := tx.Create(&config).Error; err != nil {
-							log.Printf("创建voice_identify配置失败: %v", err)
+							log.Printf("createvoice_identifyconfigfailed: %v", err)
 							tx.Rollback()
 							c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create voice_identify config"})
 							return
 						}
-						log.Printf("voice_identify配置创建成功: %s", targetConfigID)
+						log.Printf("voice_identifyconfigcreatesuccess: %s", targetConfigID)
 					}
 				}
 			}
@@ -4322,44 +4322,44 @@ func (ac *AdminController) ImportConfigs(c *gin.Context) {
 	}
 
 	for _, configType := range configTypes {
-		log.Printf("处理配置类型: %s", configType)
+		log.Printf("processconfigtype: %s", configType)
 		if configData, exists := importConfig[configType]; exists {
-			log.Printf("找到配置类型 %s 的数据", configType)
+			log.Printf("found config type %s  data", configType)
 			if configMap, ok := configData.(map[string]interface{}); ok {
-				// 对于需要provider的模块（vad, asr, llm, tts, memory），处理provider字段
+				// For modules requiring providermodule（vad, asr, llm, tts, memory），process provider field
 				if configType == "vad" || configType == "asr" || configType == "llm" || configType == "tts" || configType == "memory" || configType == "voice_identify" {
-					log.Printf("处理需要provider的配置类型: %s", configType)
-					// 获取provider字段
+					log.Printf("Process requiring providerconfig type: %s", configType)
+					// getproviderfield
 					var defaultProvider string
 					if provider, exists := configMap["provider"]; exists {
 						if providerStr, ok := provider.(string); ok {
 							defaultProvider = providerStr
-							log.Printf("默认provider: %s", defaultProvider)
+							log.Printf("defaultprovider: %s", defaultProvider)
 						}
 					}
 
-					log.Printf("配置项keys: %v", getMapKeys(configMap))
-					// 遍历所有配置项
+					log.Printf("config item keys: %v", getMapKeys(configMap))
+					// iterate all config items
 					for configID, configValue := range configMap {
-						// 跳过provider字段
+						// skipproviderfield
 						if configID == "provider" {
-							log.Printf("跳过provider字段")
+							log.Printf("skipproviderfield")
 							continue
 						}
 
 						if configMap, ok := configValue.(map[string]interface{}); ok {
-							log.Printf("处理配置项: %s", configID)
+							log.Printf("Process config item: %s", configID)
 							jsonData, err := json.Marshal(configMap)
 							if err != nil {
-								log.Printf("序列化配置数据失败: %v", err)
+								log.Printf("serializationconfigdatafailed: %v", err)
 								tx.Rollback()
 								c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal config data"})
 								return
 							}
 
-							// 判断是否为默认配置
+							// Determine if default config
 							isDefault := (configID == defaultProvider)
-							log.Printf("配置项 %s, 是否默认: %v", configID, isDefault)
+							log.Printf("config item %s, is default: %v", configID, isDefault)
 
 							config := models.Config{
 								Type:      configType,
@@ -4371,37 +4371,37 @@ func (ac *AdminController) ImportConfigs(c *gin.Context) {
 								IsDefault: isDefault,
 							}
 
-							log.Printf("准备保存配置: Type=%s, Name=%s, ConfigID=%s", config.Type, config.Name, config.ConfigID)
+							log.Printf("prepare to saveconfig: Type=%s, Name=%s, ConfigID=%s", config.Type, config.Name, config.ConfigID)
 
-							// 先检查是否已存在相同配置
+							// first check ifalready existssameconfig
 							var existingConfig models.Config
 							if err := tx.Where("type = ? AND config_id = ?", config.Type, config.ConfigID).First(&existingConfig).Error; err == nil {
-								log.Printf("配置已存在，将更新: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
-								// 更新现有配置
+								log.Printf("config already exists，will update: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
+								// updateexistingconfig
 								existingConfig.Name = config.Name
 								existingConfig.Provider = config.Provider
 								existingConfig.JsonData = config.JsonData
 								existingConfig.Enabled = config.Enabled
 								existingConfig.IsDefault = config.IsDefault
 								if err := tx.Save(&existingConfig).Error; err != nil {
-									log.Printf("更新配置失败: %v", err)
+									log.Printf("updateconfigfailed: %v", err)
 									tx.Rollback()
 									c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update config"})
 									return
 								}
-								log.Printf("配置更新成功: %s", configID)
+								log.Printf("configupdatesuccess: %s", configID)
 							} else if err == gorm.ErrRecordNotFound {
-								log.Printf("配置不存在，将创建新配置: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
-								// 创建新配置
+								log.Printf("config does not exist，will create new config: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
+								// Create new config
 								if err := tx.Create(&config).Error; err != nil {
-									log.Printf("创建配置失败: %v", err)
+									log.Printf("createconfigfailed: %v", err)
 									tx.Rollback()
 									c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create config"})
 									return
 								}
-								log.Printf("配置创建成功: %s", configID)
+								log.Printf("configcreatesuccess: %s", configID)
 							} else {
-								log.Printf("查询配置时发生错误: %v", err)
+								log.Printf("queryconfigerror occurred when: %v", err)
 								tx.Rollback()
 								c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query existing config"})
 								return
@@ -4409,11 +4409,11 @@ func (ac *AdminController) ImportConfigs(c *gin.Context) {
 						}
 					}
 				} else {
-					// 对于不需要provider的模块（ota, mqtt, mqtt_server, udp, mcp, local_mcp），直接创建配置
-					log.Printf("处理不需要provider的配置类型: %s", configType)
+					// For modules not requiring providermodule（ota, mqtt, mqtt_server, udp, mcp, local_mcp），directly create config
+					log.Printf("processnot neededproviderconfig type: %s", configType)
 					jsonData, err := json.Marshal(configMap)
 					if err != nil {
-						log.Printf("序列化配置数据失败: %v", err)
+						log.Printf("serializationconfigdatafailed: %v", err)
 						tx.Rollback()
 						c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal config data"})
 						return
@@ -4429,37 +4429,37 @@ func (ac *AdminController) ImportConfigs(c *gin.Context) {
 						IsDefault: true,
 					}
 
-					log.Printf("准备保存配置: Type=%s, Name=%s, ConfigID=%s", config.Type, config.Name, config.ConfigID)
+					log.Printf("prepare to saveconfig: Type=%s, Name=%s, ConfigID=%s", config.Type, config.Name, config.ConfigID)
 
-					// 先检查是否已存在相同配置
+					// first check ifalready existssameconfig
 					var existingConfig models.Config
 					if err := tx.Where("type = ? AND config_id = ?", config.Type, config.ConfigID).First(&existingConfig).Error; err == nil {
-						log.Printf("配置已存在，将更新: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
-						// 更新现有配置
+						log.Printf("config already exists，will update: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
+						// updateexistingconfig
 						existingConfig.Name = config.Name
 						existingConfig.Provider = config.Provider
 						existingConfig.JsonData = config.JsonData
 						existingConfig.Enabled = config.Enabled
 						existingConfig.IsDefault = config.IsDefault
 						if err := tx.Save(&existingConfig).Error; err != nil {
-							log.Printf("更新配置失败: %v", err)
+							log.Printf("updateconfigfailed: %v", err)
 							tx.Rollback()
 							c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update config"})
 							return
 						}
-						log.Printf("配置更新成功: %s", configType)
+						log.Printf("configupdatesuccess: %s", configType)
 					} else if err == gorm.ErrRecordNotFound {
-						log.Printf("配置不存在，将创建新配置: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
-						// 创建新配置
+						log.Printf("config does not exist，will create new config: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
+						// Create new config
 						if err := tx.Create(&config).Error; err != nil {
-							log.Printf("创建配置失败: %v", err)
+							log.Printf("createconfigfailed: %v", err)
 							tx.Rollback()
 							c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create config"})
 							return
 						}
-						log.Printf("配置创建成功: %s", configType)
+						log.Printf("configcreatesuccess: %s", configType)
 					} else {
-						log.Printf("查询配置时发生错误: %v", err)
+						log.Printf("queryconfigerror occurred when: %v", err)
 						tx.Rollback()
 						c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query existing config"})
 						return
@@ -4469,14 +4469,14 @@ func (ac *AdminController) ImportConfigs(c *gin.Context) {
 		}
 	}
 
-	// 特殊处理vision配置
-	log.Printf("开始处理vision配置")
+	// specialprocessvisionconfig
+	log.Printf("startprocessvisionconfig")
 	if visionData, exists := importConfig["vision"]; exists {
-		log.Printf("找到vision配置数据")
+		log.Printf("foundvisionconfigdata")
 		if visionMap, ok := visionData.(map[string]interface{}); ok {
-			log.Printf("vision配置map keys: %v", getMapKeys(visionMap))
+			log.Printf("visionconfigmap keys: %v", getMapKeys(visionMap))
 
-			// 处理vision的基础配置（enable_auth, vision_url等）
+			// processvision base config（enable_auth, vision_url等）
 			baseVisionConfig := make(map[string]interface{})
 			for key, value := range visionMap {
 				if key != "vllm" {
@@ -4484,11 +4484,11 @@ func (ac *AdminController) ImportConfigs(c *gin.Context) {
 				}
 			}
 
-			// 保存vision基础配置
+			// savevisionbaseconfig
 			if len(baseVisionConfig) > 0 {
 				jsonData, err := json.Marshal(baseVisionConfig)
 				if err != nil {
-					log.Printf("序列化vision基础配置数据失败: %v", err)
+					log.Printf("serializationvisionbaseconfigdatafailed: %v", err)
 					tx.Rollback()
 					c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal vision base config data"})
 					return
@@ -4504,80 +4504,80 @@ func (ac *AdminController) ImportConfigs(c *gin.Context) {
 					IsDefault: false,
 				}
 
-				log.Printf("准备保存vision基础配置: Type=%s, Name=%s, ConfigID=%s", config.Type, config.Name, config.ConfigID)
+				log.Printf("prepare to savevisionbaseconfig: Type=%s, Name=%s, ConfigID=%s", config.Type, config.Name, config.ConfigID)
 
-				// 先检查是否已存在相同配置
+				// first check ifalready existssameconfig
 				var existingConfig models.Config
 				if err := tx.Where("type = ? AND config_id = ?", config.Type, config.ConfigID).First(&existingConfig).Error; err == nil {
-					log.Printf("vision基础配置已存在，将更新: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
-					// 更新现有配置
+					log.Printf("visionbaseconfig already exists，will update: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
+					// updateexistingconfig
 					existingConfig.Name = config.Name
 					existingConfig.Provider = config.Provider
 					existingConfig.JsonData = config.JsonData
 					existingConfig.Enabled = config.Enabled
 					existingConfig.IsDefault = config.IsDefault
 					if err := tx.Save(&existingConfig).Error; err != nil {
-						log.Printf("更新vision基础配置失败: %v", err)
+						log.Printf("updatevisionbaseconfigfailed: %v", err)
 						tx.Rollback()
 						c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update vision base config"})
 						return
 					}
-					log.Printf("vision基础配置更新成功")
+					log.Printf("visionbaseconfigupdatesuccess")
 				} else if err == gorm.ErrRecordNotFound {
-					log.Printf("vision基础配置不存在，将创建新配置: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
-					// 创建新配置
+					log.Printf("visionbaseconfig does not exist，will create new config: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
+					// Create new config
 					if err := tx.Create(&config).Error; err != nil {
-						log.Printf("创建vision基础配置失败: %v", err)
+						log.Printf("createvisionbaseconfigfailed: %v", err)
 						tx.Rollback()
 						c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create vision base config"})
 						return
 					}
-					log.Printf("vision基础配置创建成功")
+					log.Printf("visionbaseconfigcreatesuccess")
 				} else {
-					log.Printf("查询vision基础配置时发生错误: %v", err)
+					log.Printf("queryvisionbaseconfigerror occurred when: %v", err)
 					tx.Rollback()
 					c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query existing vision base config"})
 					return
 				}
 			}
 
-			// 处理vllm配置
+			// processvllmconfig
 			if vllmData, exists := visionMap["vllm"]; exists {
-				log.Printf("找到vllm配置数据")
+				log.Printf("foundvllmconfigdata")
 				if vllmMap, ok := vllmData.(map[string]interface{}); ok {
-					log.Printf("vllm配置map keys: %v", getMapKeys(vllmMap))
+					log.Printf("vllmconfigmap keys: %v", getMapKeys(vllmMap))
 
-					// 获取vllm的provider字段
+					// get vllm provider field
 					var defaultProvider string
 					if provider, exists := vllmMap["provider"]; exists {
 						if providerStr, ok := provider.(string); ok {
 							defaultProvider = providerStr
-							log.Printf("vllm默认provider: %s", defaultProvider)
+							log.Printf("vllmdefaultprovider: %s", defaultProvider)
 						}
 					}
 
-					log.Printf("vllm配置项keys: %v", getMapKeys(vllmMap))
-					// 遍历所有vllm配置项
+					log.Printf("vllmconfig item keys: %v", getMapKeys(vllmMap))
+					// iterate allvllmconfig item
 					for configID, configValue := range vllmMap {
-						// 跳过provider字段
+						// skipproviderfield
 						if configID == "provider" {
-							log.Printf("跳过vllm provider字段")
+							log.Printf("skipvllm providerfield")
 							continue
 						}
 
 						if configMap, ok := configValue.(map[string]interface{}); ok {
-							log.Printf("处理vllm配置项: %s", configID)
+							log.Printf("processvllmconfig item: %s", configID)
 							jsonData, err := json.Marshal(configMap)
 							if err != nil {
-								log.Printf("序列化vllm配置数据失败: %v", err)
+								log.Printf("serializationvllmconfigdatafailed: %v", err)
 								tx.Rollback()
 								c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal vllm config data"})
 								return
 							}
 
-							// 判断是否为默认配置
+							// Determine if default config
 							isDefault := (configID == defaultProvider)
-							log.Printf("vllm配置项 %s, 是否默认: %v", configID, isDefault)
+							log.Printf("vllmconfig item %s, is default: %v", configID, isDefault)
 
 							config := models.Config{
 								Type:      "vision",
@@ -4589,37 +4589,37 @@ func (ac *AdminController) ImportConfigs(c *gin.Context) {
 								IsDefault: isDefault,
 							}
 
-							log.Printf("准备保存vllm配置: Type=%s, Name=%s, ConfigID=%s", config.Type, config.Name, config.ConfigID)
+							log.Printf("prepare to savevllmconfig: Type=%s, Name=%s, ConfigID=%s", config.Type, config.Name, config.ConfigID)
 
-							// 先检查是否已存在相同配置
+							// first check ifalready existssameconfig
 							var existingConfig models.Config
 							if err := tx.Where("type = ? AND config_id = ?", config.Type, config.ConfigID).First(&existingConfig).Error; err == nil {
-								log.Printf("vllm配置已存在，将更新: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
-								// 更新现有配置
+								log.Printf("vllmconfig already exists，will update: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
+								// updateexistingconfig
 								existingConfig.Name = config.Name
 								existingConfig.Provider = config.Provider
 								existingConfig.JsonData = config.JsonData
 								existingConfig.Enabled = config.Enabled
 								existingConfig.IsDefault = config.IsDefault
 								if err := tx.Save(&existingConfig).Error; err != nil {
-									log.Printf("更新vllm配置失败: %v", err)
+									log.Printf("updatevllmconfigfailed: %v", err)
 									tx.Rollback()
 									c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update vllm config"})
 									return
 								}
-								log.Printf("vllm配置更新成功: %s", configID)
+								log.Printf("vllmconfigupdatesuccess: %s", configID)
 							} else if err == gorm.ErrRecordNotFound {
-								log.Printf("vllm配置不存在，将创建新配置: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
-								// 创建新配置
+								log.Printf("vllmconfig does not exist，will create new config: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
+								// Create new config
 								if err := tx.Create(&config).Error; err != nil {
-									log.Printf("创建vllm配置失败: %v", err)
+									log.Printf("createvllmconfigfailed: %v", err)
 									tx.Rollback()
 									c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create vllm config"})
 									return
 								}
-								log.Printf("vllm配置创建成功: %s", configID)
+								log.Printf("vllmconfigcreatesuccess: %s", configID)
 							} else {
-								log.Printf("查询vllm配置时发生错误: %v", err)
+								log.Printf("queryvllmconfigerror occurred when: %v", err)
 								tx.Rollback()
 								c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query existing vllm config"})
 								return
@@ -4631,16 +4631,16 @@ func (ac *AdminController) ImportConfigs(c *gin.Context) {
 		}
 	}
 
-	// 特殊处理local_mcp配置
-	log.Printf("开始处理local_mcp配置")
+	// specialprocesslocal_mcpconfig
+	log.Printf("startprocesslocal_mcpconfig")
 	if localMcpData, exists := importConfig["local_mcp"]; exists {
-		log.Printf("找到local_mcp配置数据")
+		log.Printf("foundlocal_mcpconfigdata")
 		if localMcpMap, ok := localMcpData.(map[string]interface{}); ok {
-			log.Printf("local_mcp配置map keys: %v", getMapKeys(localMcpMap))
+			log.Printf("local_mcpconfigmap keys: %v", getMapKeys(localMcpMap))
 
 			jsonData, err := json.Marshal(localMcpMap)
 			if err != nil {
-				log.Printf("序列化local_mcp配置数据失败: %v", err)
+				log.Printf("serializationlocal_mcpconfigdatafailed: %v", err)
 				tx.Rollback()
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal local_mcp config data"})
 				return
@@ -4656,37 +4656,37 @@ func (ac *AdminController) ImportConfigs(c *gin.Context) {
 				IsDefault: true,
 			}
 
-			log.Printf("准备保存local_mcp配置: Type=%s, Name=%s, ConfigID=%s", config.Type, config.Name, config.ConfigID)
+			log.Printf("prepare to savelocal_mcpconfig: Type=%s, Name=%s, ConfigID=%s", config.Type, config.Name, config.ConfigID)
 
-			// 先检查是否已存在相同配置
+			// first check ifalready existssameconfig
 			var existingConfig models.Config
 			if err := tx.Where("type = ? AND config_id = ?", config.Type, config.ConfigID).First(&existingConfig).Error; err == nil {
-				log.Printf("local_mcp配置已存在，将更新: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
-				// 更新现有配置
+				log.Printf("local_mcpconfig already exists，will update: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
+				// updateexistingconfig
 				existingConfig.Name = config.Name
 				existingConfig.Provider = config.Provider
 				existingConfig.JsonData = config.JsonData
 				existingConfig.Enabled = config.Enabled
 				existingConfig.IsDefault = config.IsDefault
 				if err := tx.Save(&existingConfig).Error; err != nil {
-					log.Printf("更新local_mcp配置失败: %v", err)
+					log.Printf("updatelocal_mcpconfigfailed: %v", err)
 					tx.Rollback()
 					c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update local_mcp config"})
 					return
 				}
-				log.Printf("local_mcp配置更新成功")
+				log.Printf("local_mcpconfigupdatesuccess")
 			} else if err == gorm.ErrRecordNotFound {
-				log.Printf("local_mcp配置不存在，将创建新配置: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
-				// 创建新配置
+				log.Printf("local_mcpconfig does not exist，will create new config: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
+				// Create new config
 				if err := tx.Create(&config).Error; err != nil {
-					log.Printf("创建local_mcp配置失败: %v", err)
+					log.Printf("createlocal_mcpconfigfailed: %v", err)
 					tx.Rollback()
 					c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create local_mcp config"})
 					return
 				}
-				log.Printf("local_mcp配置创建成功")
+				log.Printf("local_mcpconfigcreatesuccess")
 			} else {
-				log.Printf("查询local_mcp配置时发生错误: %v", err)
+				log.Printf("querylocal_mcpconfigerror occurred when: %v", err)
 				tx.Rollback()
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query existing local_mcp config"})
 				return
@@ -4694,23 +4694,23 @@ func (ac *AdminController) ImportConfigs(c *gin.Context) {
 		}
 	}
 
-	// 提交事务
-	log.Printf("提交事务")
+	// commit transaction
+	log.Printf("commit transaction")
 	if err := tx.Commit().Error; err != nil {
-		log.Printf("提交事务失败: %v", err)
+		log.Printf("commit transactionfailed: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
 		return
 	}
 
-	log.Printf("配置导入成功")
+	log.Printf("configimportsuccess")
 	c.JSON(http.StatusOK, gin.H{"message": "Configuration imported successfully"})
 }
 
-// MCP配置相关方法
+// MCPconfigrelated methods
 func (ac *AdminController) GetMCPConfigs(c *gin.Context) {
 	var configs []models.Config
 	if err := ac.DB.Where("type = ?", "mcp").Find(&configs).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取MCP配置列表失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "getMCPconfiglistfailed"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": configs})
@@ -4725,13 +4725,13 @@ func (ac *AdminController) CreateMCPConfig(c *gin.Context) {
 
 	config.Type = "mcp"
 
-	// 如果设置为默认配置，先取消其他同类型的默认配置
+	// If set as default config, first unset other same type's default config
 	if config.IsDefault {
 		ac.DB.Model(&models.Config{}).Where("type = ? AND is_default = ?", config.Type, true).Update("is_default", false)
 	}
 
 	if err := ac.DB.Create(&config).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建MCP配置失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "createMCPconfigfailed"})
 		return
 	}
 	ac.notifySystemConfigChanged()
@@ -4743,7 +4743,7 @@ func (ac *AdminController) UpdateMCPConfig(c *gin.Context) {
 	var config models.Config
 
 	if err := ac.DB.First(&config, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "MCP配置不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "MCPconfig does not exist"})
 		return
 	}
 
@@ -4753,14 +4753,14 @@ func (ac *AdminController) UpdateMCPConfig(c *gin.Context) {
 		return
 	}
 
-	// 如果设置为默认配置，先取消其他同类型的默认配置
+	// If set as default config, first unset other same type's default config
 	if updateData.IsDefault {
 		ac.DB.Model(&models.Config{}).Where("type = ? AND is_default = ? AND id != ?", config.Type, true, id).Update("is_default", false)
 	}
 
 	updateData.Type = "mcp"
 	if err := ac.DB.Model(&config).Updates(updateData).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新MCP配置失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "updateMCPconfigfailed"})
 		return
 	}
 	ac.notifySystemConfigChanged()
@@ -4772,21 +4772,21 @@ func (ac *AdminController) DeleteMCPConfig(c *gin.Context) {
 	var config models.Config
 
 	if err := ac.DB.First(&config, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "MCP配置不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "MCPconfig does not exist"})
 		return
 	}
 
 	if err := ac.DB.Delete(&config).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除MCP配置失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "deleteMCPconfigfailed"})
 		return
 	}
 	ac.notifySystemConfigChanged()
-	c.JSON(http.StatusOK, gin.H{"message": "MCP配置删除成功"})
+	c.JSON(http.StatusOK, gin.H{"message": "MCPconfigdelete successful"})
 }
 
-// GenerateAgentMCPEndpoint 公共的MCP接入点生成函数
+// GenerateAgentMCPEndpoint common MCP endpoint generation function
 func GenerateAgentMCPEndpoint(db *gorm.DB, agentID string, userID uint, endpointAuthToken string) (string, error) {
-	// 获取OTA配置中的外网WebSocket URL
+	// Get external WebSocket URL from OTA config
 	var otaConfig models.Config
 	if err := db.Where("type = ? AND is_default = ?", "ota", true).First(&otaConfig).Error; err != nil {
 		return "", fmt.Errorf("failed to get OTA config: %v", err)
@@ -4797,7 +4797,7 @@ func GenerateAgentMCPEndpoint(db *gorm.DB, agentID string, userID uint, endpoint
 		return "", fmt.Errorf("failed to parse OTA config: %v", err)
 	}
 
-	// 获取外网WebSocket URL
+	// Get external WebSocket URL
 	externalURL, ok := otaData["external"].(map[string]interface{})
 	if !ok {
 		return "", fmt.Errorf("external config not found in OTA config")
@@ -4813,28 +4813,28 @@ func GenerateAgentMCPEndpoint(db *gorm.DB, agentID string, userID uint, endpoint
 		return "", fmt.Errorf("websocket URL not found in external config")
 	}
 
-	// 解析OTA URL，只取域名部分，保持ws或wss协议不变
+	// Parse OTA URL, only take domain part, keep ws or wss protocol unchanged
 	parsedURL, err := url.Parse(wsURL)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse WebSocket URL: %v", err)
 	}
 
-	// 构建基础URL（只包含协议和域名）
+	// Build baseURL (only include protocol and domain)
 	baseURL := fmt.Sprintf("%s://%s", parsedURL.Scheme, parsedURL.Host)
 
-	// 生成MCP JWT token
+	// Generate MCP JWT token
 	token, err := generateMCPToken(agentID, userID, endpointAuthToken)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate MCP token: %v", err)
 	}
 
-	// 构建带token的完整endpoint URL，直接使用/mcp路径
+	// Build complete endpoint URL with token, directly use /mcp path
 	endpointWithToken := fmt.Sprintf("%s/mcp?token=%s", baseURL, token)
 
 	return endpointWithToken, nil
 }
 
-// GenerateAgentOpenClawEndpoint 公共的OpenClaw接入点生成函数
+// GenerateAgentOpenClawEndpoint common OpenClaw endpoint generation function
 func GenerateAgentOpenClawEndpoint(db *gorm.DB, agentID string, userID uint, endpointAuthToken string) (string, error) {
 	var otaConfig models.Config
 	if err := db.Where("type = ? AND is_default = ?", "ota", true).First(&otaConfig).Error; err != nil {
@@ -4877,11 +4877,11 @@ func GenerateAgentOpenClawEndpoint(db *gorm.DB, agentID string, userID uint, end
 	return endpointWithToken, nil
 }
 
-// Memory配置管理
+// Memoryconfigmanagement
 func (ac *AdminController) GetMemoryConfigs(c *gin.Context) {
 	var configs []models.Config
 	if err := ac.DB.Where("type = ?", "memory").Find(&configs).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取Memory配置列表失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "getMemoryconfiglistfailed"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": configs})
@@ -4894,22 +4894,22 @@ func (ac *AdminController) CreateMemoryConfig(c *gin.Context) {
 		return
 	}
 
-	// 设置配置类型为memory
+	// Set config type to memory
 	config.Type = "memory"
 
-	// 验证provider字段
+	// verifyproviderfield
 	if config.Provider != "memobase" && config.Provider != "mem0" && config.Provider != "memos" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Provider必须是memobase、mem0或memos"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Provider must be memobase, mem0 or memos"})
 		return
 	}
 
-	// 如果设置为默认配置，先取消其他同类型的默认配置
+	// If set as default config, first unset other same type's default config
 	if config.IsDefault {
 		ac.DB.Model(&models.Config{}).Where("type = ? AND is_default = ?", config.Type, true).Update("is_default", false)
 	}
 
 	if err := ac.DB.Create(&config).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建Memory配置失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "createMemoryconfigfailed"})
 		return
 	}
 
@@ -4921,7 +4921,7 @@ func (ac *AdminController) UpdateMemoryConfig(c *gin.Context) {
 	var config models.Config
 
 	if err := ac.DB.Where("id = ? AND type = ?", id, "memory").First(&config).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Memory配置不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Memoryconfig does not exist"})
 		return
 	}
 
@@ -4931,18 +4931,18 @@ func (ac *AdminController) UpdateMemoryConfig(c *gin.Context) {
 		return
 	}
 
-	// 验证provider字段
+	// verifyproviderfield
 	if updateData.Provider != "memobase" && updateData.Provider != "mem0" && updateData.Provider != "memos" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Provider必须是memobase、mem0或memos"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Provider must be memobase, mem0 or memos"})
 		return
 	}
 
-	// 如果设置为默认配置，先取消其他同类型的默认配置
+	// If set as default config, first unset other same type's default config
 	if updateData.IsDefault {
 		ac.DB.Model(&models.Config{}).Where("type = ? AND is_default = ? AND id != ?", config.Type, true, id).Update("is_default", false)
 	}
 
-	// 更新配置
+	// updateconfig
 	config.Name = updateData.Name
 	config.Provider = updateData.Provider
 	config.JsonData = updateData.JsonData
@@ -4950,7 +4950,7 @@ func (ac *AdminController) UpdateMemoryConfig(c *gin.Context) {
 	config.IsDefault = updateData.IsDefault
 
 	if err := ac.DB.Save(&config).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新Memory配置失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "updateMemoryconfigfailed"})
 		return
 	}
 
@@ -4960,38 +4960,38 @@ func (ac *AdminController) UpdateMemoryConfig(c *gin.Context) {
 func (ac *AdminController) DeleteMemoryConfig(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	if err := ac.DB.Where("id = ? AND type = ?", id, "memory").Delete(&models.Config{}).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除Memory配置失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "deleteMemoryconfigfailed"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "删除成功"})
+	c.JSON(http.StatusOK, gin.H{"message": "delete successful"})
 }
 
-// 设置默认Memory配置
+// setdefaultMemoryconfig
 func (ac *AdminController) SetDefaultMemoryConfig(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	var config models.Config
 
 	if err := ac.DB.Where("id = ? AND type = ?", id, "memory").First(&config).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Memory配置不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Memoryconfig does not exist"})
 		return
 	}
 
-	// 先取消其他同类型的默认配置
+	// first unset other same type default config
 	ac.DB.Model(&models.Config{}).Where("type = ? AND is_default = ?", config.Type, true).Update("is_default", false)
 
-	// 设置当前配置为默认
+	// set current config as default
 	config.IsDefault = true
 	if err := ac.DB.Save(&config).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "设置默认Memory配置失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "setdefaultMemoryconfigfailed"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "设置默认Memory配置成功", "data": config})
+	c.JSON(http.StatusOK, gin.H{"message": "setdefaultMemoryconfigsuccess", "data": config})
 }
 
-// generateMCPToken 生成稳定的MCP JWT Token（同一agentID+userID下保持不变）
+// generateMCPToken generate stableMCP JWT Token（remain unchanged under same agentID+userID）
 func generateMCPToken(agentID string, userID uint, endpointAuthToken string) (string, error) {
-	// 创建自定义的JWT Claims
+	// create custom JWT Claims
 	type MCPClaims struct {
 		UserID     uint   `json:"userId"`
 		AgentID    string `json:"agentId"`
@@ -5000,11 +5000,11 @@ func generateMCPToken(agentID string, userID uint, endpointAuthToken string) (st
 		jwt.RegisteredClaims
 	}
 
-	// 构建endpointId
+	// Build endpointId
 	endpointID := fmt.Sprintf("agent_%s", agentID)
 
-	// 创建JWT claims。
-	// 不设置iat/exp，保证token长期有效且同一agentID+userID生成结果稳定一致。
+	// createJWT claims。
+	// Do not set iat/exp, ensure token remains valid long-term and same agentID+userID generates consistent results。
 	claims := MCPClaims{
 		UserID:           userID,
 		AgentID:          agentID,
@@ -5013,10 +5013,10 @@ func generateMCPToken(agentID string, userID uint, endpointAuthToken string) (st
 		RegisteredClaims: jwt.RegisteredClaims{},
 	}
 
-	// 使用HS256算法生成JWT token
+	// use HS256 algorithm to generate JWT token
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-	// 使用与middleware相同的密钥
+	// use same key as middleware
 	jwtSecret := []byte(strings.TrimSpace(endpointAuthToken))
 	tokenString, err := token.SignedString(jwtSecret)
 	if err != nil {
@@ -5026,7 +5026,7 @@ func generateMCPToken(agentID string, userID uint, endpointAuthToken string) (st
 	return tokenString, nil
 }
 
-// generateOpenClawToken 生成稳定的OpenClaw JWT Token（同一agentID+userID下保持不变）
+// generateOpenClawToken generate stableOpenClaw JWT Token（remain unchanged under same agentID+userID）
 func generateOpenClawToken(agentID string, userID uint, endpointAuthToken string) (string, error) {
 	type OpenClawClaims struct {
 		UserID     uint   `json:"user_id"`
@@ -5055,53 +5055,53 @@ func generateOpenClawToken(agentID string, userID uint, endpointAuthToken string
 	return tokenString, nil
 }
 
-// ==================== 新角色管理 API ====================
+// ==================== New role management API ====================
 
-// GetGlobalRolesNew 获取全局角色列表（仅 roles 表中的全局角色）
+// GetGlobalRolesNew Get global role list（Only global roles in roles table）
 func (ac *AdminController) GetGlobalRolesNew(c *gin.Context) {
 	var globalRoles []models.Role
 	if err := ac.DB.Where("user_id IS NULL AND role_type = ?", "global").
 		Order("sort_order ASC, id ASC").
 		Find(&globalRoles).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取全局角色失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get global roles"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": globalRoles})
 }
 
-// GetRolesNew 获取角色列表（全局角色 + 用户角色）
-// 管理员可以查看所有角色，普通用户只能查看全局角色和自己的角色
+// GetRolesNew getrolelist（globalrole + userrole）
+// Admin can view all roles，Regular user can only view global roles and own roles
 func (ac *AdminController) GetRolesNew(c *gin.Context) {
-	// 从JWT中获取用户ID和角色
+	// Get userID and role from JWT
 	userID, exists := c.Get("user_id")
 	userRole, roleExists := c.Get("role")
 
-	// 查询全局角色
+	// queryglobalrole
 	var globalRoles []models.Role
 	if err := ac.DB.Where("user_id IS NULL AND role_type = ?", "global").
 		Order("sort_order ASC, id ASC").
 		Find(&globalRoles).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取全局角色失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get global roles"})
 		return
 	}
 
-	// 查询用户角色
+	// queryuserrole
 	var userRoles []models.Role
 	if roleExists && userRole.(string) == "admin" {
-		// 管理员查看所有用户角色
+		// Admin views all user roles
 		if err := ac.DB.Where("role_type = ?", "user").
 			Order("created_at DESC").
 			Find(&userRoles).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "获取用户角色失败"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "getuserrolefailed"})
 			return
 		}
 	} else if exists {
-		// 普通用户只查看自己的角色
+		// Regular user only views own roles
 		if err := ac.DB.Where("user_id = ? AND role_type = ?", userID, "user").
 			Order("created_at DESC").
 			Find(&userRoles).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "获取用户角色失败"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "getuserrolefailed"})
 			return
 		}
 	}
@@ -5114,21 +5114,21 @@ func (ac *AdminController) GetRolesNew(c *gin.Context) {
 	})
 }
 
-// GetRoleNew 获取单个角色详情
+// GetRoleNew Get single role details
 func (ac *AdminController) GetRoleNew(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	var role models.Role
 
 	if err := ac.DB.First(&role, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "角色不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Role does not exist"})
 		return
 	}
 	if strings.Contains(c.FullPath(), "/admin/roles/global/") && role.RoleType != "global" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "该接口仅允许操作全局角色"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "This interface only allows operating global role"})
 		return
 	}
 
-	// 权限检查：用户角色只能查看自己的角色
+	// Permission check: user role can only view own role
 	if role.UserID != nil {
 		userID, exists := c.Get("user_id")
 		userRole, roleExists := c.Get("role")
@@ -5137,7 +5137,7 @@ func (ac *AdminController) GetRoleNew(c *gin.Context) {
 			if exists && userID != nil {
 				uid := userID.(uint)
 				if uid != *role.UserID {
-					c.JSON(http.StatusForbidden, gin.H{"error": "无权访问此角色"})
+					c.JSON(http.StatusForbidden, gin.H{"error": "No permission to access this role"})
 					return
 				}
 			}
@@ -5155,7 +5155,7 @@ func normalizeRoleStatus(status string) string {
 	return trimmed
 }
 
-// CreateRoleNew 创建角色（管理员创建全局角色，用户创建自己的角色）
+// CreateRoleNew Create role (admin creates global role，user creates own role）
 func (ac *AdminController) CreateRoleNew(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	userRole, roleExists := c.Get("role")
@@ -5166,40 +5166,40 @@ func (ac *AdminController) CreateRoleNew(c *gin.Context) {
 		return
 	}
 
-	// 设置角色类型和所属用户
+	// Set role type and owner user
 	if roleExists && userRole.(string) == "admin" {
-		// 管理员创建全局角色
+		// Admin creates global role
 		role.RoleType = "global"
 		role.UserID = nil
 	} else if exists {
-		// 普通用户创建自己的角色
+		// regularuser creates own role
 		role.RoleType = "user"
 		uid := userID.(uint)
 		role.UserID = &uid
-		// 用户角色不能设为默认
+		// userrole不能设为default
 		role.IsDefault = false
 	} else {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "未授权"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
 
-	// 验证必填字段
+	// Verify required fields
 	if role.Name == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "角色名称不能为空"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Role name cannot be empty"})
 		return
 	}
 	if role.Prompt == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "系统提示词不能为空"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "System prompt cannot be empty"})
 		return
 	}
 
 	role.Status = normalizeRoleStatus(role.Status)
 	if role.Status != "active" && role.Status != "inactive" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "角色状态无效"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Role status invalid"})
 		return
 	}
 
-	// 如果设置为默认角色，先取消其他默认角色
+	// If set as default role，first unset other default role
 	if role.IsDefault && role.RoleType == "global" {
 		ac.DB.Model(&models.Role{}).
 			Where("role_type = ? AND is_default = ?", "global", true).
@@ -5207,33 +5207,33 @@ func (ac *AdminController) CreateRoleNew(c *gin.Context) {
 	}
 
 	if err := ac.DB.Create(&role).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建角色失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Create role failed"})
 		return
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"data": role})
 }
 
-// UpdateRoleNew 更新角色
+// UpdateRoleNew Update role
 func (ac *AdminController) UpdateRoleNew(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	var role models.Role
 
 	if err := ac.DB.First(&role, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "角色不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Role does not exist"})
 		return
 	}
 	if strings.Contains(c.FullPath(), "/admin/roles/global/") && role.RoleType != "global" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "该接口仅允许操作全局角色"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "This interface only allows operating global role"})
 		return
 	}
 
-	// 权限检查
+	// Permission check
 	userID, exists := c.Get("user_id")
 	userRole, roleExists := c.Get("role")
 
 	isAdmin := roleExists && userRole.(string) == "admin"
-	isOwner := false
+	IsOwner := false
 	if exists && role.UserID != nil {
 		if uid, ok := userID.(uint); ok {
 			isOwner = uid == *role.UserID
@@ -5241,7 +5241,7 @@ func (ac *AdminController) UpdateRoleNew(c *gin.Context) {
 	}
 
 	if !isAdmin && !isOwner {
-		c.JSON(http.StatusForbidden, gin.H{"error": "无权修改此角色"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "No permission to modify this role"})
 		return
 	}
 
@@ -5251,14 +5251,14 @@ func (ac *AdminController) UpdateRoleNew(c *gin.Context) {
 		return
 	}
 
-	// 如果设置为默认角色，先取消其他默认角色
+	// If set as default role，first unset other default role
 	if updateData.IsDefault && role.RoleType == "global" {
 		ac.DB.Model(&models.Role{}).
 			Where("role_type = ? AND is_default = ? AND id != ?", "global", true, id).
 			Update("is_default", false)
 	}
 
-	// 更新字段
+	// Update field
 	role.Name = updateData.Name
 	role.Description = updateData.Description
 	role.Prompt = updateData.Prompt
@@ -5273,44 +5273,44 @@ func (ac *AdminController) UpdateRoleNew(c *gin.Context) {
 	}
 	normalizedStatus = normalizeRoleStatus(normalizedStatus)
 	if normalizedStatus != "active" && normalizedStatus != "inactive" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "角色状态无效"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Role status invalid"})
 		return
 	}
 	role.Status = normalizedStatus
 
-	// 只有管理员可以修改默认标志和角色类型
+	// Only admin can modify default flag and role type
 	if isAdmin {
 		role.IsDefault = updateData.IsDefault
 	}
 
 	if err := ac.DB.Save(&role).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新角色失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Update rolefailed"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": role})
 }
 
-// DeleteRoleNew 删除角色
+// DeleteRoleNew Delete role
 func (ac *AdminController) DeleteRoleNew(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	var role models.Role
 
 	if err := ac.DB.First(&role, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "角色不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Role does not exist"})
 		return
 	}
 	if strings.Contains(c.FullPath(), "/admin/roles/global/") && role.RoleType != "global" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "该接口仅允许操作全局角色"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "This interface only allows operating global role"})
 		return
 	}
 
-	// 权限检查
+	// Permission check
 	userID, exists := c.Get("user_id")
 	userRole, roleExists := c.Get("role")
 
 	isAdmin := roleExists && userRole.(string) == "admin"
-	isOwner := false
+	IsOwner := false
 	if exists && role.UserID != nil {
 		if uid, ok := userID.(uint); ok {
 			isOwner = uid == *role.UserID
@@ -5318,48 +5318,48 @@ func (ac *AdminController) DeleteRoleNew(c *gin.Context) {
 	}
 
 	if !isAdmin && !isOwner {
-		c.JSON(http.StatusForbidden, gin.H{"error": "无权删除此角色"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "No permission to delete this role"})
 		return
 	}
 
-	// 检查是否有设备正在使用此角色
+	// Check if any device is using this role
 	var deviceCount int64
 	ac.DB.Model(&models.Device{}).Where("role_id = ?", id).Count(&deviceCount)
 	if deviceCount > 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": fmt.Sprintf("有 %d 个设备正在使用此角色，请先解除关联", deviceCount),
+			"error": fmt.Sprintf("有 %d devices are using this role，Please remove association first", deviceCount),
 		})
 		return
 	}
 
 	if err := ac.DB.Delete(&role).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除角色失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Delete rolefailed"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "删除成功"})
+	c.JSON(http.StatusOK, gin.H{"message": "delete successful"})
 }
 
-// ToggleRoleStatus 切换角色状态（启用/禁用）
+// ToggleRoleStatus Switch role status（enable/disable）
 func (ac *AdminController) ToggleRoleStatus(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	var role models.Role
 
 	if err := ac.DB.First(&role, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "角色不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Role does not exist"})
 		return
 	}
 	if strings.Contains(c.FullPath(), "/admin/roles/global/") && role.RoleType != "global" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "该接口仅允许操作全局角色"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "This interface only allows operating global role"})
 		return
 	}
 
-	// 权限检查
+	// Permission check
 	userID, exists := c.Get("user_id")
 	userRole, roleExists := c.Get("role")
 
 	isAdmin := roleExists && userRole.(string) == "admin"
-	isOwner := false
+	IsOwner := false
 	if exists && role.UserID != nil {
 		if uid, ok := userID.(uint); ok {
 			isOwner = uid == *role.UserID
@@ -5367,11 +5367,11 @@ func (ac *AdminController) ToggleRoleStatus(c *gin.Context) {
 	}
 
 	if !isAdmin && !isOwner {
-		c.JSON(http.StatusForbidden, gin.H{"error": "无权修改此角色"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "No permission to modify this role"})
 		return
 	}
 
-	// 切换状态
+	// switchstatus
 	currentStatus := normalizeRoleStatus(role.Status)
 	if currentStatus == "active" {
 		role.Status = "inactive"
@@ -5380,49 +5380,49 @@ func (ac *AdminController) ToggleRoleStatus(c *gin.Context) {
 	}
 
 	if err := ac.DB.Save(&role).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新状态失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Update status failed"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": role})
 }
 
-// SetDefaultRole 设置默认角色（仅全局角色）
+// SetDefaultRole Set default role（仅globalrole）
 func (ac *AdminController) SetDefaultRole(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	var role models.Role
 
 	if err := ac.DB.First(&role, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "角色不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Role does not exist"})
 		return
 	}
 
-	// 只有全局角色可以设为默认
+	// Only global role can be set as default
 	if role.RoleType != "global" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "只有全局角色可以设为默认"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Only global role can be set as default"})
 		return
 	}
 
-	// 权限检查：只有管理员可以设置默认角色
+	// Permission check：onlymanagement员可以Set default role
 	userRole, roleExists := c.Get("role")
 	if !roleExists || userRole.(string) != "admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "只有管理员可以设置默认角色"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "onlymanagement员可以Set default role"})
 		return
 	}
 
-	// 先取消其他默认角色
+	// first unset other default role
 	ac.DB.Model(&models.Role{}).
 		Where("role_type = ? AND is_default = ?", "global", true).
 		Update("is_default", false)
 
-	// 设置当前角色为默认
+	// setcurrentrole为default
 	role.IsDefault = true
 	if err := ac.DB.Save(&role).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "设置默认角色失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Set default rolefailed"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": role, "message": "已设为默认角色"})
+	c.JSON(http.StatusOK, gin.H{"data": role, "message": "Set as default role"})
 }
 
 type applyDeviceRoleRequest struct {
@@ -5514,11 +5514,11 @@ func getRequestUserInfo(c *gin.Context) (uint, bool, bool) {
 	return uid, hasUserID, isAdmin
 }
 
-// ApplyRoleToDevice 应用角色到设备（普通用户可操作自己的设备）
+// ApplyRoleToDevice Apply role to device（Regular user can operate own device）
 func (ac *AdminController) ApplyRoleToDevice(c *gin.Context) {
 	deviceID, err := strconv.Atoi(c.Param("id"))
 	if err != nil || deviceID <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的设备ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid device ID"})
 		return
 	}
 
@@ -5530,14 +5530,14 @@ func (ac *AdminController) ApplyRoleToDevice(c *gin.Context) {
 
 	var device models.Device
 	if err := ac.DB.First(&device, deviceID).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "设备不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Device does not exist"})
 		return
 	}
 
 	uid, hasUserID, isAdmin := getRequestUserInfo(c)
 	if !isAdmin {
 		if !hasUserID || device.UserID != uid {
-			c.JSON(http.StatusForbidden, gin.H{"error": "无权操作该设备"})
+			c.JSON(http.StatusForbidden, gin.H{"error": "No permission to operate this device"})
 			return
 		}
 	}
@@ -5545,26 +5545,26 @@ func (ac *AdminController) ApplyRoleToDevice(c *gin.Context) {
 	if req.RoleID != nil {
 		var role models.Role
 		if err := ac.DB.First(&role, *req.RoleID).Error; err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "角色不存在"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Role does not exist"})
 			return
 		}
 
 		roleStatus := normalizeRoleStatus(role.Status)
 		if roleStatus != "active" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "角色未启用"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Role not enabled"})
 			return
 		}
 		if role.Status == "" {
 			if err := ac.DB.Model(&role).Update("status", roleStatus).Error; err != nil {
-				log.Printf("更新角色默认状态失败: role_id=%d err=%v", role.ID, err)
+				log.Printf("Update roledefaultstatusfailed: role_id=%d err=%v", role.ID, err)
 			}
 		}
 
-		// 普通用户只允许使用全局角色或自己的用户角色
+		// Regular user only allowed to use global roleor own user role
 		if !isAdmin {
 			if role.RoleType != "global" {
 				if role.UserID == nil || *role.UserID != uid {
-					c.JSON(http.StatusForbidden, gin.H{"error": "无权使用该角色"})
+					c.JSON(http.StatusForbidden, gin.H{"error": "No permission to use this role"})
 					return
 				}
 			}
@@ -5573,7 +5573,7 @@ func (ac *AdminController) ApplyRoleToDevice(c *gin.Context) {
 
 	device.RoleID = req.RoleID
 	if err := ac.DB.Save(&device).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "应用角色失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Apply role failed"})
 		return
 	}
 
@@ -5585,11 +5585,11 @@ func (ac *AdminController) ApplyRoleToDevice(c *gin.Context) {
 	})
 }
 
-// SwitchDeviceRoleByNameInternal 内部接口：按角色名称（模糊匹配）切换设备角色
+// SwitchDeviceRoleByNameInternal Internal interface: switch device role by role name (fuzzy match)
 func (ac *AdminController) SwitchDeviceRoleByNameInternal(c *gin.Context) {
 	deviceName := strings.TrimSpace(c.Param("device_name"))
 	if deviceName == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "设备名称不能为空"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Device name cannot be empty"})
 		return
 	}
 
@@ -5600,13 +5600,13 @@ func (ac *AdminController) SwitchDeviceRoleByNameInternal(c *gin.Context) {
 	}
 	req.RoleName = strings.TrimSpace(req.RoleName)
 	if req.RoleName == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "role_name 不能为空"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Role name cannot be empty"})
 		return
 	}
 
 	var device models.Device
 	if err := ac.DB.Where("device_name = ?", deviceName).First(&device).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "设备不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Device does not exist"})
 		return
 	}
 
@@ -5615,14 +5615,14 @@ func (ac *AdminController) SwitchDeviceRoleByNameInternal(c *gin.Context) {
 		Where("(role_type = ? OR (role_type = ? AND user_id = ?))", "global", "user", device.UserID).
 		Order("sort_order ASC, id ASC").
 		Find(&roles).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询角色失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Query role failed"})
 		return
 	}
 
 	matchedRole, matchType := matchDeviceRoleByName(req.RoleName, roles)
 	if matchedRole == nil {
 		c.JSON(http.StatusNotFound, gin.H{
-			"error":               "未找到匹配的角色",
+			"error":               "No matching role found",
 			"requested_role_name": req.RoleName,
 		})
 		return
@@ -5631,7 +5631,7 @@ func (ac *AdminController) SwitchDeviceRoleByNameInternal(c *gin.Context) {
 	roleID := matchedRole.ID
 	device.RoleID = &roleID
 	if err := ac.DB.Save(&device).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "切换设备角色失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Switch device role failed"})
 		return
 	}
 
@@ -5648,23 +5648,23 @@ func (ac *AdminController) SwitchDeviceRoleByNameInternal(c *gin.Context) {
 	})
 }
 
-// RestoreDeviceDefaultRoleInternal 内部接口：恢复设备默认角色（清空设备绑定角色）
+// RestoreDeviceDefaultRoleInternal 内部接口：Restore device default role（Clear device bound role）
 func (ac *AdminController) RestoreDeviceDefaultRoleInternal(c *gin.Context) {
 	deviceName := strings.TrimSpace(c.Param("device_name"))
 	if deviceName == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "设备名称不能为空"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Device name cannot be empty"})
 		return
 	}
 
 	var device models.Device
 	if err := ac.DB.Where("device_name = ?", deviceName).First(&device).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "设备不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Device does not exist"})
 		return
 	}
 
 	device.RoleID = nil
 	if err := ac.DB.Save(&device).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "恢复默认角色失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Restore default role failed"})
 		return
 	}
 

@@ -21,38 +21,38 @@ func Init(cfg config.DatabaseConfig) *gorm.DB {
 
 	if storageType == "sqlite" {
 		if cfg.SQLite == nil {
-			log.Println("SQLite配置为空，将使用fallback模式运行（硬编码用户验证）")
+			log.Println("SQLite config is empty, will run in fallback mode (hardcoded user validation)")
 			return nil
 		}
-		// 确保数据库文件所在目录存在，避免 SQLite 报 unable to open database file
+		// Ensure database file directory exists to avoid SQLite "unable to open database file" error
 		dir := filepath.Dir(cfg.SQLite.FilePath)
 		if err := os.MkdirAll(dir, 0755); err != nil {
-			log.Printf("创建数据库目录失败 %s: %v", dir, err)
+			log.Printf("Failed to create database directory %s: %v", dir, err)
 			return nil
 		}
-		log.Println("使用SQLite数据库:", cfg.SQLite.FilePath)
+		log.Println("Using SQLite database:", cfg.SQLite.FilePath)
 		db, err = gorm.Open(sqlite.Open(cfg.SQLite.FilePath), &gorm.Config{})
 	} else {
 		if cfg.MySQL == nil {
-			log.Println("MySQL配置为空，将使用fallback模式运行（硬编码用户验证）")
+			log.Println("MySQL config is empty, will run in fallback mode (hardcoded user validation)")
 			return nil
 		}
-		// MySQL 数据库连接
+		// MySQL database connection
 		dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 			cfg.MySQL.Username, cfg.MySQL.Password, cfg.MySQL.Host, cfg.MySQL.Port, cfg.MySQL.Database)
 		db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	}
 
 	if err != nil {
-		log.Println("数据库连接失败:", err)
-		log.Println("将使用fallback模式运行（硬编码用户验证）")
+		log.Println("Database connection failed:", err)
+		log.Println("Will run in fallback mode (hardcoded user validation)")
 		return nil
 	}
 
-	log.Println("数据库连接成功")
+	log.Println("Database connection successful")
 
-	// 自动迁移数据库表结构
-	log.Println("开始自动迁移数据库表结构...")
+	// Auto migrate database table structure
+	log.Println("Starting auto migration of database table structure...")
 	err = db.AutoMigrate(
 		&models.User{},
 		&models.APIToken{},
@@ -64,7 +64,7 @@ func Init(cfg config.DatabaseConfig) *gorm.DB {
 		&models.Config{},
 		&models.MCPMarketService{},
 		&models.GlobalRole{},
-		&models.Role{}, // 新增：统一角色表
+		&models.Role{}, // New: unified role table
 		&models.ChatMessage{},
 		&models.SpeakerGroup{},
 		&models.SpeakerSample{},
@@ -74,17 +74,17 @@ func Init(cfg config.DatabaseConfig) *gorm.DB {
 		&models.UserVoiceCloneQuota{},
 	)
 	if err != nil {
-		log.Printf("数据库表结构迁移失败: %v", err)
-		log.Println("将使用fallback模式运行（硬编码用户验证）")
+		log.Printf("Database table structure migration failed: %v", err)
+		log.Println("Will run in fallback mode (hardcoded user validation)")
 		return nil
 	}
-	log.Println("数据库表结构迁移成功")
+	log.Println("Database table structure migration successful")
 
-	// 迁移现有全局角色数据到新的 roles 表
-	log.Println("检查是否需要迁移全局角色数据...")
+	// Migrate existing global role data to new roles table
+	log.Println("Checking if global role data migration is needed...")
 	if err := migrateGlobalRolesToRoles(db); err != nil {
-		log.Printf("迁移全局角色数据失败: %v", err)
-		// 迁移失败不影响启动，只是数据没有迁移
+		log.Printf("Global role data migration failed: %v", err)
+		// Migration failure doesn't affect startup, just means data wasn't migrated
 	}
 
 	return db
@@ -93,51 +93,51 @@ func Init(cfg config.DatabaseConfig) *gorm.DB {
 func Close(db *gorm.DB) {
 	sqlDB, err := db.DB()
 	if err != nil {
-		log.Println("获取数据库连接失败:", err)
+		log.Println("Failed to get database connection:", err)
 		return
 	}
 	sqlDB.Close()
 }
 
-// migrateGlobalRolesToRoles 将现有全局角色数据迁移到新的 roles 表
+// migrateGlobalRolesToRoles migrates existing global role data to new roles table
 func migrateGlobalRolesToRoles(db *gorm.DB) error {
-	// 检查 roles 表是否已有数据
+	// Check if roles table already has data
 	var count int64
 	if err := db.Table("roles").Count(&count).Error; err != nil {
-		return fmt.Errorf("检查 roles 表失败: %w", err)
+		return fmt.Errorf("failed to check roles table: %w", err)
 	}
 
-	// 如果 roles 表已有数据，跳过迁移
+	// If roles table already has data, skip migration
 	if count > 0 {
-		log.Println("roles 表已有数据，跳过迁移")
+		log.Println("roles table already has data, skipping migration")
 		return nil
 	}
 
-	// 检查 global_roles 表是否有数据
+	// Check if global_roles table has data
 	var globalRoleCount int64
 	if err := db.Table("global_roles").Count(&globalRoleCount).Error; err != nil {
-		// global_roles 表可能不存在，不是错误
-		log.Println("global_roles 表不存在，跳过迁移")
+		// global_roles table may not exist, not an error
+		log.Println("global_roles table does not exist, skipping migration")
 		return nil
 	}
 
 	if globalRoleCount == 0 {
-		log.Println("global_roles 表无数据，跳过迁移")
+		log.Println("global_roles table has no data, skipping migration")
 		return nil
 	}
 
-	log.Printf("开始迁移 %d 条全局角色数据到 roles 表...", globalRoleCount)
+	log.Printf("Starting migration of %d global role records to roles table...", globalRoleCount)
 
-	// 查询所有全局角色
+	// Query all global roles
 	var globalRoles []models.GlobalRole
 	if err := db.Table("global_roles").Find(&globalRoles).Error; err != nil {
-		return fmt.Errorf("查询 global_roles 失败: %w", err)
+		return fmt.Errorf("failed to query global_roles: %w", err)
 	}
 
-	// 转换并插入到 roles 表
+	// Convert and insert into roles table
 	for _, gr := range globalRoles {
 		role := models.Role{
-			UserID:      nil, // 全局角色 user_id 为 NULL
+			UserID:      nil, // Global roles have user_id as NULL
 			Name:        gr.Name,
 			Description: gr.Description,
 			Prompt:      gr.Prompt,
@@ -149,12 +149,12 @@ func migrateGlobalRolesToRoles(db *gorm.DB) error {
 			UpdatedAt:   gr.UpdatedAt,
 		}
 		if err := db.Create(&role).Error; err != nil {
-			log.Printf("插入角色 %s 失败: %v", gr.Name, err)
+			log.Printf("Failed to insert role %s: %v", gr.Name, err)
 			continue
 		}
-		log.Printf("已迁移全局角色: %s", gr.Name)
+		log.Printf("Migrated global role: %s", gr.Name)
 	}
 
-	log.Println("全局角色数据迁移完成")
+	log.Println("Global role data migration completed")
 	return nil
 }

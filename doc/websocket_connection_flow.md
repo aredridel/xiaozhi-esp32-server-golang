@@ -2,18 +2,18 @@
 
 ## Overview
 
-This document describes the WebSocket connection and communication flow between `internal/domain/config/manager/websocket_client.go` and `websocket.go`.
+This document describes the WebSocket connection and communication flow between internal/domain/config/manager/websocket_client.go and websocket.go.
 
 ## Architecture Design
 
 ### Role Definitions
 
-1. **`internal/domain/config/manager/websocket_client.go`** - Main Server WebSocket Client
+1. **internal/domain/config/manager/websocket_client.go** - Main Server WebSocket Client
    - Acts as a client connecting to Manager Backend
    - Can send requests and receive responses
    - Supports bidirectional communication
 
-2. **`websocket.go`** - Manager Backend WebSocket Server
+2. **websocket.go** - Manager Backend WebSocket Server
    - Acts as a server receiving WebSocket connections from the main server
    - Handles requests sent by the main server
    - **Only keeps the last valid connection** (new connections will disconnect old ones)
@@ -46,8 +46,8 @@ err := client.Connect(ctx)
 ```
 
 Connection URL format:
-- If configured as `http://localhost:8080`
-- Actually connects to `ws://localhost:8080/ws`
+- If configured as http://localhost:8080
+- Actually connects to ws://localhost:8080/ws
 
 **Important**: If there is a new connection request, Manager Backend will automatically disconnect the existing connection, keeping only the latest connection.
 
@@ -66,108 +66,16 @@ response, err := client.SendRequest(ctx, "GET", "/api/mcp/tools", map[string]int
 // In websocket.go
 func (client *WebSocketClient) handleMcpToolListRequest(request *WebSocketRequest) {
     agentID := request.Body["agent_id"].(string)
-    
+
     // Get tool list logic
     response := map[string]interface{}{
         "agent_id": agentID,
         "tools":    []string{"tool1", "tool2", "tool3"},
         "count":    3,
     }
-    
+
     client.sendResponse(request.ID, 200, response, "")
 }
-```
-
-### 3. Bidirectional Communication Support
-
-### Client → Server (Original Function)
-#### Main Server Requests MCP Tool List
-```go
-// In internal/domain/config/manager/websocket_client.go
-response, err := client.SendRequest(ctx, "GET", "/api/mcp/tools", map[string]interface{}{
-    "agent_id": "some_agent_id",
-})
-```
-
-#### Manager Backend Processes Request
-```go
-// In websocket.go
-func (client *WebSocketClient) handleMcpToolListRequest(request *WebSocketRequest) {
-    agentID := request.Body["agent_id"].(string)
-    
-    // Get tool list logic
-    response := map[string]interface{}{
-        "agent_id": agentID,
-        "tools":    []string{"tool1", "tool2", "tool3"},
-        "count":    3,
-    }
-    
-    client.sendResponse(request.ID, 200, response, "")
-}
-```
-
-### Server → Client (New Function)
-#### Manager Backend Actively Requests Client
-```go
-// In websocket.go
-func (ctrl *WebSocketController) RequestMcpToolsFromClient(ctx context.Context, agentID string) (*WebSocketResponse, error) {
-    body := map[string]interface{}{
-        "agent_id": agentID,
-    }
-    return ctrl.SendRequestToClient(ctx, "GET", "/api/mcp/tools", body)
-}
-
-// Request client server info
-func (ctrl *WebSocketController) RequestServerInfoFromClient(ctx context.Context) (*WebSocketResponse, error) {
-    return ctrl.SendRequestToClient(ctx, "GET", "/api/server/info", nil)
-}
-
-// Request client ping
-func (ctrl *WebSocketController) RequestPingFromClient(ctx context.Context) (*WebSocketResponse, error) {
-    return ctrl.SendRequestToClient(ctx, "GET", "/api/server/ping", nil)
-}
-```
-
-#### Client Processes Server Request
-```go
-// In internal/domain/config/manager/websocket_client.go
-client.SetRequestHandler(func(request *WebSocketRequest) {
-    // Process received request
-    switch request.Path {
-    case "/api/mcp/tools":
-        // Process MCP tool list request
-        c.handleMcpToolListRequest(request)
-    case "/api/server/info":
-        // Process server info request
-        c.handleServerInfoRequest(request)
-    case "/api/server/ping":
-        // Process ping request
-        c.handlePingRequest(request)
-    }
-})
-```
-
-### Complete Bidirectional Communication Example
-```go
-// 1. Client connects to server
-client := manager.NewWebSocketClient()
-err := client.Connect(ctx)
-
-// 2. Client sets request handler
-client.SetRequestHandler(func(request *WebSocketRequest) {
-    // Process requests from server
-    // And send response
-})
-
-// 3. Client actively requests server
-response, err := client.SendRequest(ctx, "GET", "/api/mcp/tools", map[string]interface{}{
-    "agent_id": "agent_123",
-})
-
-// 4. Server actively requests client
-serverResponse, err := websocketController.RequestMcpToolsFromClient(ctx, "agent_456")
-
-// 5. Bidirectional communication complete
 ```
 
 ## Message Format

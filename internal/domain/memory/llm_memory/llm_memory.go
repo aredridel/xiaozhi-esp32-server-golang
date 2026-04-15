@@ -22,14 +22,14 @@ var (
 	configOnce     sync.Once
 )
 
-// Memory 表示对话记忆体
+// Memory indicatetoconversation记忆body
 type Memory struct {
 	redisClient *redis.Client
 	keyPrefix   string
 	sync.RWMutex
 }
 
-// Get 获取记忆体实例
+// Get get记忆bodyinstance
 func Get() *Memory {
 	if memoryInstance == nil {
 		once.Do(func() {
@@ -44,51 +44,51 @@ func Get() *Memory {
 	return memoryInstance
 }
 
-// GetWithConfig 使用配置获取记忆体实例（单例模式）
+// GetWithConfig useconfigget记忆bodyinstance（singletonpattern）
 func GetWithConfig(config map[string]interface{}) (*Memory, error) {
 	var initErr error
 	configOnce.Do(func() {
-		// 从配置中读取 redis 相关配置
+		// fromconfiginread redis relevantconfig
 		redisConfig, ok := config["redis"]
 		if !ok {
-			initErr = fmt.Errorf("redis 配置不存在")
+			initErr = fmt.Errorf("redis configno存at")
 			return
 		}
 
 		redisConfigMap, ok := redisConfig.(map[string]interface{})
 		if !ok {
-			initErr = fmt.Errorf("redis 配置格式错误")
+			initErr = fmt.Errorf("redis configformaterror")
 			return
 		}
 
-		// 读取 key_prefix 配置
+		// read key_prefix config
 		var keyPrefix string
 		if keyPrefixInterface, exists := redisConfigMap["key_prefix"]; exists {
 			if kp, ok := keyPrefixInterface.(string); ok {
 				keyPrefix = kp
 			} else {
-				initErr = fmt.Errorf("redis.key_prefix 必须是字符串")
+				initErr = fmt.Errorf("redis.key_prefix 必须yescharstring")
 				return
 			}
 		} else {
-			keyPrefix = "xiaozhi:" // 默认值
+			keyPrefix = "xiaozhi:" // default values
 		}
 
-		// 获取 Redis 客户端（这里仍然使用现有的 Redis 客户端获取方式）
-		// 因为 Redis 客户端的初始化比较复杂，暂时保持现有方式
+		// get Redis client-side（这instill然use现haveof Redis client-sideget方式）
+		// becauseis Redis client-sideofinitializecompare复杂，暂whenkeep现have方式
 		redisClient := i_redis.GetClient()
 		if redisClient == nil {
-			initErr = fmt.Errorf("无法获取 Redis 客户端")
+			initErr = fmt.Errorf("no法get Redis client-side")
 			return
 		}
 
-		// 创建 LLM 记忆实例
+		// createLLM 记忆instance
 		memoryInstance = &Memory{
 			redisClient: redisClient,
 			keyPrefix:   keyPrefix,
 		}
 
-		log.Log().Infof("LLM 记忆初始化成功, key_prefix: %s", keyPrefix)
+		log.Log().Infof("LLM 记忆initializesuccessful, key_prefix: %s", keyPrefix)
 	})
 
 	if initErr != nil {
@@ -97,66 +97,66 @@ func GetWithConfig(config map[string]interface{}) (*Memory, error) {
 	return memoryInstance, nil
 }
 
-// NewWithConfig 使用配置创建新的LLM记忆实例
+// NewWithConfig useconfigcreate newLLM记忆instance
 func NewWithConfig(config map[string]interface{}) (*Memory, error) {
-	// 从配置中读取 redis 相关配置
+	// fromconfiginread redis relevantconfig
 	redisConfig, ok := config["redis"]
 	if !ok {
-		return nil, fmt.Errorf("redis 配置不存在")
+		return nil, fmt.Errorf("redis configno存at")
 	}
 
 	redisConfigMap, ok := redisConfig.(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("redis 配置格式错误")
+		return nil, fmt.Errorf("redis configformaterror")
 	}
 
-	// 读取 key_prefix 配置
+	// read key_prefix config
 	var keyPrefix string
 	if keyPrefixInterface, exists := redisConfigMap["key_prefix"]; exists {
 		if kp, ok := keyPrefixInterface.(string); ok {
 			keyPrefix = kp
 		} else {
-			return nil, fmt.Errorf("redis.key_prefix 必须是字符串")
+			return nil, fmt.Errorf("redis.key_prefix 必须yescharstring")
 		}
 	} else {
-		keyPrefix = "xiaozhi:" // 默认值
+		keyPrefix = "xiaozhi:" // default values
 	}
 
-	// 获取 Redis 客户端（这里仍然使用现有的 Redis 客户端获取方式）
-	// 因为 Redis 客户端的初始化比较复杂，暂时保持现有方式
+	// get Redis client-side（这instill然use现haveof Redis client-sideget方式）
+	// becauseis Redis client-sideofinitializecompare复杂，暂whenkeep现have方式
 	redisClient := i_redis.GetClient()
 	if redisClient == nil {
-		return nil, fmt.Errorf("无法获取 Redis 客户端")
+		return nil, fmt.Errorf("no法get Redis client-side")
 	}
 
-	// 创建 LLM 记忆实例
+	// createLLM 记忆instance
 	llmMemory := &Memory{
 		redisClient: redisClient,
 		keyPrefix:   keyPrefix,
 	}
 
-	log.Log().Infof("LLM 记忆初始化成功, key_prefix: %s", keyPrefix)
+	log.Log().Infof("LLM 记忆initializesuccessful, key_prefix: %s", keyPrefix)
 	return llmMemory, nil
 }
 
-// NewMemory 创建新的记忆体实例（仅用于测试）
+// NewMemory create new记忆bodyinstance（onlyused fortest）
 func NewMemory(redisClient *redis.Client) *Memory {
 	return &Memory{
 		redisClient: redisClient,
 	}
 }
 
-// getMemoryKey 生成设备对应的 Redis key
+// getMemoryKey generatedevicecorresponding Redis key
 func (m *Memory) getMemoryKey(deviceID string) string {
 	return fmt.Sprintf("%s:llm:%s", m.keyPrefix, deviceID)
 }
 
-// getSystemPromptKey 生成设备对应的系统 prompt 的 Redis key
+// getSystemPromptKey generatedevicecorrespondingsystem prompt of Redis key
 func (m *Memory) getSystemPromptKey(deviceID string) string {
 	return fmt.Sprintf("%s:llm:system:%s", m.keyPrefix, deviceID)
 }
 
-// AddMessage 添加一条新的对话消息到记忆体
+// AddMessage adda条newtoconversationmessageto记忆body
 func (m *Memory) AddMessage(ctx context.Context, deviceID string, agentID string, msg schema.Message) error {
 	if m.redisClient == nil {
 		log.Log().Warn("redis client is nil")
@@ -169,11 +169,11 @@ func (m *Memory) AddMessage(ctx context.Context, deviceID string, agentID string
 	}
 
 	key := m.getMemoryKey(deviceID)
-	// 使用纳秒时间戳作为分数
-	// ZREVRANGE 会返回分数从大到小的结果
+	// use纳secondtimestampasisscore
+	// ZREVRANGE willreturnscorefromlargetosmallofresult
 	score := float64(time.Now().UnixNano())
 
-	log.Debugf("添加消息到记忆体: %s, %s", key, string(msgBytes))
+	log.Debugf("addmessageto记忆body: %s, %s", key, string(msgBytes))
 
 	return m.redisClient.ZAdd(ctx, key, redis.Z{
 		Score:  score,
@@ -181,7 +181,7 @@ func (m *Memory) AddMessage(ctx context.Context, deviceID string, agentID string
 	}).Err()
 }
 
-// GetMessages 获取设备的所有对话记忆
+// GetMessages getdeviceofalltoconversation记忆
 func (m *Memory) GetMessages(ctx context.Context, deviceID string, agentID string, count int) ([]*schema.Message, error) {
 	if m.redisClient == nil {
 		log.Log().Warn("redis client is nil")
@@ -194,15 +194,15 @@ func (m *Memory) GetMessages(ctx context.Context, deviceID string, agentID strin
 		count = 10
 	}
 
-	// 使用 ZREVRANGE 获取最新的 N 条消息
-	// 分数（时间戳）大的在前，所以需要反转顺序以保证旧消息在前
+	// use ZREVRANGE get最new N 条message
+	// score（timestamp）largeofatbefore，soneed反转sequential以保证旧messageatbefore
 	startIndex := int64(-(count))
 	results, err := m.redisClient.ZRange(ctx, key, startIndex, -1).Result()
 	if err != nil {
 		return nil, fmt.Errorf("get messages failed: %w", err)
 	}
 
-	// 预分配切片
+	// 预dispatchslice
 	messages := make([]*schema.Message, 0)
 
 	for i := 0; i < len(results); i++ {
@@ -217,14 +217,14 @@ func (m *Memory) GetMessages(ctx context.Context, deviceID string, agentID strin
 	return messages, nil
 }
 
-// GetMessagesForLLM 获取适用于 LLM 的消息格式
+// GetMessagesForLLM get适used forLLM ofmessageformat
 func (m *Memory) GetMessagesForLLM(ctx context.Context, deviceID string, count int) ([]*schema.Message, error) {
 	if m.redisClient == nil {
 		log.Log().Warn("redis client is nil")
 		return []*schema.Message{}, nil
 	}
 
-	// 获取历史消息（已经是按时间顺序：旧->新）
+	// gethistorymessage（alreadyyes按timesequential：旧->新）
 	memoryMessages, err := m.GetMessages(ctx, deviceID, "", count)
 	if err != nil {
 		return nil, err
@@ -233,7 +233,7 @@ func (m *Memory) GetMessagesForLLM(ctx context.Context, deviceID string, count i
 	return memoryMessages, nil
 }
 
-// SetSystemPrompt 设置或更新设备的系统 prompt
+// SetSystemPrompt setorupdatedeviceofsystem prompt
 func (m *Memory) SetSystemPrompt(ctx context.Context, deviceID string, prompt string) error {
 	if m.redisClient == nil {
 		log.Log().Warn("redis client is nil")
@@ -244,7 +244,7 @@ func (m *Memory) SetSystemPrompt(ctx context.Context, deviceID string, prompt st
 	return m.redisClient.Set(ctx, key, prompt, 0).Err()
 }
 
-// GetSystemPrompt 获取设备的系统 prompt
+// GetSystemPrompt getdeviceofsystem prompt
 func (m *Memory) GetSystemPrompt(ctx context.Context, deviceID string) (schema.Message, error) {
 	if m.redisClient == nil {
 		log.Log().Warn("redis client is nil")
@@ -255,7 +255,7 @@ func (m *Memory) GetSystemPrompt(ctx context.Context, deviceID string) (schema.M
 
 	result, err := m.redisClient.Get(ctx, key).Result()
 	if err == redis.Nil {
-		return schema.Message{}, nil // 返回空消息结构
+		return schema.Message{}, nil // returnemptymessagestructure
 	}
 	if err != nil {
 		return schema.Message{}, fmt.Errorf("get system prompt failed: %w", err)
@@ -267,14 +267,14 @@ func (m *Memory) GetSystemPrompt(ctx context.Context, deviceID string) (schema.M
 	}, nil
 }
 
-// ResetMemory 重置设备的对话记忆（包括系统 prompt）
+// ResetMemory resetdeviceoftoconversation记忆（package括system prompt）
 func (m *Memory) ResetMemory(ctx context.Context, deviceID string) error {
 	if m.redisClient == nil {
 		log.Log().Warn("redis client is nil")
 		return nil
 	}
 
-	// 删除对话历史
+	// deletetoconversationhistory
 	historyKey := m.getMemoryKey(deviceID)
 	if err := m.redisClient.Del(ctx, historyKey).Err(); err != nil {
 		return fmt.Errorf("delete history failed: %w", err)
@@ -283,7 +283,7 @@ func (m *Memory) ResetMemory(ctx context.Context, deviceID string) error {
 	return nil
 }
 
-// GetLastNMessages 获取最近的 N 条消息
+// GetLastNMessages get最近of N 条message
 func (m *Memory) GetLastNMessages(ctx context.Context, deviceID string, n int64) ([]schema.Message, error) {
 	if m.redisClient == nil {
 		log.Log().Warn("redis client is nil")
@@ -292,14 +292,14 @@ func (m *Memory) GetLastNMessages(ctx context.Context, deviceID string, n int64)
 
 	key := m.getMemoryKey(deviceID)
 
-	// 获取最后 N 条消息
+	// get最after N 条message
 	results, err := m.redisClient.ZRevRange(ctx, key, 0, n-1).Result()
 	if err != nil {
 		return nil, fmt.Errorf("get last messages failed: %w", err)
 	}
 
 	messages := make([]schema.Message, 0, len(results))
-	for i := len(results) - 1; i >= 0; i-- { // 反转顺序以保持时间顺序
+	for i := len(results) - 1; i >= 0; i-- { // 反转sequential以keeptimesequential
 		var msg schema.Message
 		if err := json.Unmarshal([]byte(results[i]), &msg); err != nil {
 			return nil, fmt.Errorf("unmarshal message failed: %w", err)
@@ -310,7 +310,7 @@ func (m *Memory) GetLastNMessages(ctx context.Context, deviceID string, n int64)
 	return messages, nil
 }
 
-// RemoveOldMessages 删除指定时间之前的消息
+// RemoveOldMessages deletespecifytime之beforeofmessage
 func (m *Memory) RemoveOldMessages(ctx context.Context, deviceID string, before time.Time) error {
 	if m.redisClient == nil {
 		log.Log().Warn("redis client is nil")
@@ -323,17 +323,17 @@ func (m *Memory) RemoveOldMessages(ctx context.Context, deviceID string, before 
 	return m.redisClient.ZRemRangeByScore(ctx, key, "-inf", fmt.Sprintf("%f", score)).Err()
 }
 
-// Summary 获取对话的摘要
+// Summary gettoconversationofsketch
 func (m *Memory) GetSummary(ctx context.Context, deviceID string) (string, error) {
 	return "", nil
 }
 
-// SetSummary 设置对话的摘要
+// SetSummary settoconversationofsketch
 func (m *Memory) SetSummary(ctx context.Context, deviceID string, summary string) error {
 	return nil
 }
 
-// 进行总结
+// perform总结
 func (m *Memory) Summary(ctx context.Context, deviceID string, msgList []schema.Message) (string, error) {
 	return "", nil
 }

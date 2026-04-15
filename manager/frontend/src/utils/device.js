@@ -1,26 +1,26 @@
 /**
- * 设备检测工具
- * 用于判断当前访问设备类型，实现响应式布局
+ * Device detection utility
+ * Used to determine current device type for responsive layout
  */
 
 /**
- * 判断是否为移动设备
+ * Check if current device is mobile
  * @returns {boolean}
  */
 export const isMobile = () => {
-  // 通过User-Agent判断
+  // Detect via User-Agent
   const userAgent = navigator.userAgent || navigator.vendor || window.opera
   const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i
   const isMobileUA = mobileRegex.test(userAgent)
   
-  // 通过屏幕宽度判断（备用方案）
+  // Detect via screen width (fallback)
   const isMobileWidth = window.innerWidth < 768
   
   return isMobileUA || isMobileWidth
 }
 
 /**
- * 判断是否为平板设备
+ * Check if current device is tablet
  * @returns {boolean}
  */
 export const isTablet = () => {
@@ -29,7 +29,7 @@ export const isTablet = () => {
 }
 
 /**
- * 判断是否为桌面设备
+ * Check if current device is desktop
  * @returns {boolean}
  */
 export const isDesktop = () => {
@@ -37,7 +37,7 @@ export const isDesktop = () => {
 }
 
 /**
- * 判断是否为微信浏览器
+ * Check if current browser is WeChat
  * @returns {boolean}
  */
 export const isWeChat = () => {
@@ -46,7 +46,7 @@ export const isWeChat = () => {
 }
 
 /**
- * 获取设备类型
+ * Get device type
  * @returns {'mobile' | 'tablet' | 'desktop'}
  */
 export const getDeviceType = () => {
@@ -60,9 +60,9 @@ export const getDeviceType = () => {
 }
 
 /**
- * 监听窗口大小变化
- * @param {Function} callback 回调函数
- * @returns {Function} 取消监听的函数
+ * Listen for window resize events
+ * @param {Function} callback Callback function
+ * @returns {Function} Function to remove listener
  */
 export const onResize = (callback) => {
   let ticking = false
@@ -79,7 +79,7 @@ export const onResize = (callback) => {
   
   window.addEventListener('resize', handler)
   
-  // 返回取消监听的函数
+  // Return function to remove listener
   return () => {
     window.removeEventListener('resize', handler)
   }

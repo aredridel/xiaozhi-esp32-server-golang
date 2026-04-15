@@ -19,13 +19,13 @@ import (
 	log "xiaozhi-esp32-server-golang/logger"
 )
 
-// 全局HTTP客户端，实现连接池
+// globalHTTPclient-side，implementjoinpool
 var (
 	httpClient     *http.Client
 	httpClientOnce sync.Once
 )
 
-// 获取配置了连接池的HTTP客户端
+// getconfigjoinpoolofHTTPclient-side
 func getHTTPClient() *http.Client {
 	httpClientOnce.Do(func() {
 		transport := &http.Transport{
@@ -42,13 +42,13 @@ func getHTTPClient() *http.Client {
 		}
 		httpClient = &http.Client{
 			Transport: transport,
-			Timeout:   60 * time.Second, // OpenAI TTS 可能需要更长时间
+			Timeout:   60 * time.Second, // OpenAI TTS mayneed更longtime
 		}
 	})
 	return httpClient
 }
 
-// OpenAITTSProvider OpenAI TTS提供者
+// OpenAITTSProvider OpenAI TTSprovide者
 type OpenAITTSProvider struct {
 	APIKey         string
 	APIURL         string
@@ -60,7 +60,7 @@ type OpenAITTSProvider struct {
 	FrameDuration  int
 }
 
-// 请求结构体
+// requeststructurebody
 type openAIRequest struct {
 	Model          string  `json:"model"`
 	Input          string  `json:"input"`
@@ -70,7 +70,7 @@ type openAIRequest struct {
 	Stream         bool    `json:"stream,omitempty"`
 }
 
-// NewOpenAITTSProvider 创建新的OpenAI TTS提供者
+// NewOpenAITTSProvider create newOpenAI TTSprovide者
 func NewOpenAITTSProvider(config map[string]interface{}) *OpenAITTSProvider {
 	apiKey, _ := config["api_key"].(string)
 	apiURL, _ := config["api_url"].(string)
@@ -81,12 +81,12 @@ func NewOpenAITTSProvider(config map[string]interface{}) *OpenAITTSProvider {
 	stream, _ := config["stream"].(bool)
 	frameDuration, _ := config["frame_duration"].(float64)
 
-	// 设置默认值
+	// setdefault values
 	if apiURL == "" {
 		apiURL = "https://api.openai.com/v1/audio/speech"
 	}
 	if model == "" {
-		model = "tts-1" // tts-1 或 tts-1-hd
+		model = "tts-1" // tts-1 or tts-1-hd
 	}
 	if voice == "" {
 		voice = "alloy" // alloy, echo, fable, onyx, nova, shimmer
@@ -95,7 +95,7 @@ func NewOpenAITTSProvider(config map[string]interface{}) *OpenAITTSProvider {
 		responseFormat = "mp3" // mp3, opus, aac, flac, wav, pcm
 	}
 	if speed == 0 {
-		speed = 1.0 // 0.25 到 4.0
+		speed = 1.0 // 0.25 to 4.0
 	}
 	if frameDuration == 0 {
 		frameDuration = audio.FrameDuration
@@ -113,7 +113,7 @@ func NewOpenAITTSProvider(config map[string]interface{}) *OpenAITTSProvider {
 	}
 }
 
-// TextToSpeech 将文本转换为语音，返回音频帧数据和错误
+// TextToSpeech willtextconvertisvoice，returnaudio framedataanderror
 func (p *OpenAITTSProvider) TextToSpeech(ctx context.Context, text string, sampleRate int, channels int, frameDuration int) ([][]byte, error) {
 	streamChan, err := p.TextToSpeechStream(ctx, text, sampleRate, channels, frameDuration)
 	if err != nil {
@@ -125,16 +125,16 @@ func (p *OpenAITTSProvider) TextToSpeech(ctx context.Context, text string, sampl
 		audioFrames = append(audioFrames, frame)
 	}
 	if len(audioFrames) == 0 {
-		return nil, fmt.Errorf("OpenAI TTS 返回音频为空")
+		return nil, fmt.Errorf("OpenAI TTS returnaudioisempty")
 	}
 	return audioFrames, nil
 }
 
-// TextToSpeechStream 流式语音合成实现
+// TextToSpeechStream streamingvoice合成implement
 func (p *OpenAITTSProvider) TextToSpeechStream(ctx context.Context, text string, sampleRate int, channels int, frameDuration int) (outputChan chan []byte, err error) {
 	startTs := time.Now().UnixMilli()
 
-	// 创建请求体
+	// createrequestbody
 	reqBody := openAIRequest{
 		Model:          p.Model,
 		Input:          text,
@@ -146,55 +146,55 @@ func (p *OpenAITTSProvider) TextToSpeechStream(ctx context.Context, text string,
 
 	jsonData, err := json.Marshal(reqBody)
 	if err != nil {
-		return nil, fmt.Errorf("序列化请求失败: %v", err)
+		return nil, fmt.Errorf("serializerequestfailed: %v", err)
 	}
 
-	//log.Debugf("OpenAI TTS请求: %s", string(jsonData))
+	//log.Debugf("OpenAI TTSrequest: %s", string(jsonData))
 
-	// 创建HTTP请求
+	// createHTTPrequest
 	req, err := http.NewRequestWithContext(ctx, "POST", p.APIURL, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return nil, fmt.Errorf("创建请求失败: %v", err)
+		return nil, fmt.Errorf("failed to create request: %v", err)
 	}
 
-	// 设置请求头
+	// setrequest header
 	req.Header.Set("Content-Type", "application/json")
 	if p.APIKey != "" {
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", p.APIKey))
 	}
 
-	// 使用连接池创建客户端
+	// usejoinpoolcreateclient-side
 	client := getHTTPClient()
 
-	// 创建输出通道
+	// createoutputchannel
 	outputChan = make(chan []byte, 100)
 
-	// 启动goroutine处理流式响应
+	// startgoroutineprocessstreamingrespond
 	go func() {
-		// 发送请求
+		// sendrequest
 		resp, err := client.Do(req)
 		if err != nil {
-			log.Errorf("发送OpenAI请求失败: %v", err)
+			log.Errorf("sendOpenAIrequestfailed: %v", err)
 			close(outputChan)
 			return
 		}
 		defer resp.Body.Close()
 
-		// 检查响应状态码
+		// inspectrespondstate码
 		if resp.StatusCode != http.StatusOK {
 			body, _ := io.ReadAll(resp.Body)
-			log.Errorf("OpenAI API请求失败，状态码: %d, 响应: %s", resp.StatusCode, string(body))
+			log.Errorf("OpenAI API request failed，state码: %d, respond: %s", resp.StatusCode, string(body))
 			close(outputChan)
 			return
 		}
 
-		// 检查响应内容长度
+		// inspectrespondinside容length
 		contentLength := resp.ContentLength
-		log.Debugf("收到OpenAI TTS响应，Content-Length: %d", contentLength)
+		log.Debugf("receiveOpenAI TTSrespond，Content-Length: %d", contentLength)
 
-		// 判断Content-Length是否合理
+		// judgeContent-Lengthwhether合理
 		if contentLength == 0 {
-			log.Errorf("OpenAI API返回空响应，Content-Length为0")
+			log.Errorf("OpenAI APIreturnemptyrespond，Content-Lengthis0")
 			close(outputChan)
 			return
 		}
@@ -210,14 +210,14 @@ func (p *OpenAITTSProvider) TextToSpeechStream(ctx context.Context, text string,
 		}
 
 		if decoderFormat != "mp3" && decoderFormat != "wav" && decoderFormat != "pcm" && decoderFormat != "opus" && decoderFormat != "ogg_opus" {
-			log.Errorf("当前仅支持 mp3/wav/pcm/opus/ogg_opus 格式的流式合成")
+			log.Errorf("currentonlysupport mp3/wav/pcm/opus/ogg_opus formatofstreaming合成")
 			close(outputChan)
 			return
 		}
 
 		decoder, err := util.CreateAudioDecoderWithSampleRate(ctx, resp.Body, outputChan, frameDuration, decoderFormat, sampleRate)
 		if err != nil {
-			log.Errorf("创建OpenAI音频解码器失败: %v", err)
+			log.Errorf("createOpenAIaudiodecode器failed: %v", err)
 			close(outputChan)
 			return
 		}
@@ -233,37 +233,37 @@ func (p *OpenAITTSProvider) TextToSpeechStream(ctx context.Context, text string,
 		}
 
 		if err := decoder.Run(startTs); err != nil {
-			log.Errorf("OpenAI音频解码失败: %v", err)
+			log.Errorf("OpenAIaudiodecodefailed: %v", err)
 			return
 		}
 
 		select {
 		case <-ctx.Done():
-			log.Debugf("OpenAI TTS流式合成取消, 文本: %s", text)
+			log.Debugf("OpenAI TTSstreaming合成cancel, text: %s", text)
 			return
 		default:
-			log.Infof("OpenAI TTS耗时: 从输入至获取音频数据结束耗时: %d ms", time.Now().UnixMilli()-startTs)
+			log.Infof("OpenAI TTStime consumption: frominput至getaudio dataendtime consumption: %d ms", time.Now().UnixMilli()-startTs)
 		}
 	}()
 
 	return outputChan, nil
 }
 
-// SetVoice 设置音色参数
+// SetVoice setvoiceparameter
 func (p *OpenAITTSProvider) SetVoice(voiceConfig map[string]interface{}) error {
 	if voice, ok := voiceConfig["voice"].(string); ok && voice != "" {
 		p.Voice = voice
 		return nil
 	}
-	return fmt.Errorf("无效的音色配置: 缺少 voice")
+	return fmt.Errorf("invalidofvoiceconfig: Missing voice")
 }
 
-// Close 关闭资源（无状态 Provider，无需关闭）
+// Close closeresource（nostate Provider，noneedclose）
 func (p *OpenAITTSProvider) Close() error {
 	return nil
 }
 
-// IsValid 检查资源是否有效
+// IsValid inspectresourcewhethervalid
 func (p *OpenAITTSProvider) IsValid() bool {
 	return p != nil
 }

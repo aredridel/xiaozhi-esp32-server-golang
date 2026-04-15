@@ -1,6 +1,6 @@
 # Xiaozhi Service macOS Usage Instructions
 
-Welcome to use Xiaozhi Service macOS aio package. This document contains dependency installation, startup and configuration instructions.
+Welcome to use Xiaozhi Service macOS AIO package. This document contains dependency installation, startup and configuration instructions.
 
 ## Directory Structure
 

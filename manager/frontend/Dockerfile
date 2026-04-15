@@ -2,23 +2,23 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# 复制package文件
+# Copy package files
 COPY package*.json ./
 RUN npm ci
 
-# 复制源代码
+# Copy source code
 COPY . .
 
-# 构建应用
+# Build application
 RUN npm run build
 
 # 运行阶段
 FROM nginx:alpine
 
-# 复制构建结果
+# Copy build results
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# 复制nginx配置
+# Copy nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80

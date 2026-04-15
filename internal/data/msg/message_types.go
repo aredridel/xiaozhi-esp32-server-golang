@@ -15,36 +15,36 @@ const (
 	MServerPubTopicPrefix     = MDeviceSubTopicPrefix
 )
 
-// 消息类型常量
+// message type constants
 const (
-	MessageTypeHello   = "hello"   // 握手消息
-	MessageTypeAbort   = "abort"   // 中止消息
-	MessageTypeListen  = "listen"  // 监听消息
-	MessageTypeIot     = "iot"     // 物联网消息
-	MessageTypeMcp     = "mcp"     // MCP消息
-	MessageTypeGoodBye = "goodbye" // 再见消息
+	MessageTypeHello   = "hello"   // handshake message
+	MessageTypeAbort   = "abort"   // abort message
+	MessageTypeListen  = "listen"  // listen message
+	MessageTypeIot     = "iot"     // IoT message
+	MessageTypeMcp     = "mcp"     // MCP message
+	MessageTypeGoodBye = "goodbye" // goodbye message
 )
 
-// 服务器消息类型常量
+// server message type constants
 const (
-	ServerMessageTypeHello   = "hello"   // 握手消息
-	ServerMessageTypeStt     = "stt"     // 语音转文本
-	ServerMessageTypeTts     = "tts"     // 文本转语音
-	ServerMessageTypeIot     = "iot"     // 物联网消息
-	ServerMessageTypeLlm     = "llm"     // 大语言模型
-	ServerMessageTypeText    = "text"    // 文本消息
-	ServerMessageTypeGoodBye = "goodbye" // 再见消息
+	ServerMessageTypeHello   = "hello"   // handshake message
+	ServerMessageTypeStt     = "stt"     // voice to text
+	ServerMessageTypeTts     = "tts"     // text to voice
+	ServerMessageTypeIot     = "iot"     // IoT message
+	ServerMessageTypeLlm     = "llm"     // large language model
+	ServerMessageTypeText    = "text"    // text message
+	ServerMessageTypeGoodBye = "goodbye" // goodbye message
 )
 
-// 消息状态常量
+// message state constants
 const (
-	MessageStateStart         = "start"          // 开始状态
-	MessageStateSentenceStart = "sentence_start" // 句子开始状态
-	MessageStateSentenceEnd   = "sentence_end"   // 句子结束状态
-	MessageStateStop          = "stop"           // 停止状态
-	MessageStateDetect        = "detect"         // 检测状态
-	MessageStateAbort         = "abort"          // 中止状态
-	MessageStateSuccess       = "success"        // 成功状态
+	MessageStateStart         = "start"          // start state
+	MessageStateSentenceStart = "sentence_start" // sentence start state
+	MessageStateSentenceEnd   = "sentence_end"   // sentence end state
+	MessageStateStop          = "stop"           // stop state
+	MessageStateDetect        = "detect"         // detect state
+	MessageStateAbort         = "abort"          // abort state
+	MessageStateSuccess       = "success"        // success state
 )
 
 type UdpConfig struct {
@@ -54,7 +54,7 @@ type UdpConfig struct {
 	Nonce  string `json:"nonce"`
 }
 
-// ServerMessage 表示服务器消息
+// ServerMessage indicates server message
 type ServerMessage struct {
 	Type        string                   `json:"type"`
 	Text        string                   `json:"text,omitempty"`

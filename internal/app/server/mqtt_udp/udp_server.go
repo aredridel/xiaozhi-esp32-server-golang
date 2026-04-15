@@ -83,7 +83,7 @@ func (s *UdpServer) Close() error {
 
 // handlePackets Process received packets
 func (s *UdpServer) handlePackets() {
-	buffer := make([]byte, 4096) // 使用默认的缓冲区大小
+	buffer := make([]byte, 4096) // usedefaultofbuffer区size
 	for {
 		s.RLock()
 		conn := s.conn
@@ -129,7 +129,7 @@ func (s *UdpServer) processPacket(addr *net.UDPAddr, data []byte) {
 	}
 
 	fullNonce := data[:16]
-	connID := fullNonce[4:8] // 取5-8字节作为连接id
+	connID := fullNonce[4:8] // 取5-8byteasisjoinid
 	strConnID := hex.EncodeToString(connID)
 	udpSession := s.getSessionByNonce(strConnID)
 	if udpSession == nil {

@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// StatsReporter 资源池统计上报器
+// StatsReporter resource pool stats reporter
 type StatsReporter struct {
 	client  *http.ManagerClient
 	enabled bool
@@ -22,23 +22,23 @@ var (
 	reporterOnce   sync.Once
 )
 
-// GetStatsReporter 获取全局统计上报器（单例）
+// GetStatsReporter gets global stats reporter (singleton)
 func GetStatsReporter() *StatsReporter {
 	reporterOnce.Do(func() {
-		// 获取 manager backend URL，优先从环境变量获取，如果环境变量不存在则从配置获取
+		// get manager backend URL, priority from environment variable, if env var not exist then from config
 		baseURL := util.GetBackendURL()
 		if baseURL == "" {
-			baseURL = "http://localhost:8080" // 默认值
+			baseURL = "http://localhost:8080" // default values
 		}
 
-		// 检查是否启用上报
+		// check if enable reporting
 		enabled := viper.GetBool("pool_stats.report_enabled")
 		if !enabled {
-			// 默认启用
+			// default enable
 			enabled = true
 		}
 
-		// 创建 HTTP 客户端
+		// create HTTP client
 		managerClient := http.NewManagerClient(http.ManagerClientConfig{
 			BaseURL:    baseURL,
 			AuthToken:  util.GetManagerAuthToken(),
@@ -51,19 +51,19 @@ func GetStatsReporter() *StatsReporter {
 			enabled: enabled,
 		}
 
-		log.Infof("资源池统计上报器已初始化，backend_url=%s, enabled=%v", baseURL, enabled)
+		log.Infof("resource pool stats reporter already initialized, backend_url=%s, enabled=%v", baseURL, enabled)
 	})
 	return globalReporter
 }
 
-// StartReporting 启动统计上报（每5秒上报一次）
+// StartReporting starts stats reporting (every 5 seconds report once)
 func (r *StatsReporter) StartReporting(ctx context.Context) {
 	if !r.enabled {
-		log.Info("资源池统计上报已禁用")
+		log.Info("resource pool stats reporting already disabled")
 		return
 	}
 
-	// 上报间隔（5秒）
+	// report interval (5 seconds)
 	interval := viper.GetDuration("pool_stats.report_interval")
 	if interval == 0 {
 		interval = 5 * time.Second
@@ -73,12 +73,12 @@ func (r *StatsReporter) StartReporting(ctx context.Context) {
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
 
-		//log.Infof("资源池统计上报已启动，每 %v 上报一次", interval)
+		//log.Infof("resource pool stats reporting already started, reports every %v", interval)
 
 		for {
 			select {
 			case <-ctx.Done():
-				log.Debugf("资源池统计上报已停止")
+				log.Debugf("resource pool stats reporting already stopped")
 				return
 			case <-ticker.C:
 				r.reportStats(ctx)
@@ -87,23 +87,23 @@ func (r *StatsReporter) StartReporting(ctx context.Context) {
 	}()
 }
 
-// reportStats 上报统计数据
+// reportStats reports stats data
 func (r *StatsReporter) reportStats(ctx context.Context) {
-	// 获取统计数据
+	// get stats data
 	stats := GetStats()
 
-	// 如果没有数据，跳过上报
+	// if no data, skip reporting
 	if len(stats) == 0 {
-		//log.Debugf("当前没有活跃的资源池，跳过上报")
+		//log.Debugf("currently no active resource pool, skip reporting")
 		return
 	}
 
-	// 构建请求体
+	// build request body
 	requestBody := map[string]interface{}{
 		"stats": stats,
 	}
 
-	// 发送上报请求
+	// send report request
 	err := r.client.DoRequest(ctx, http.RequestOptions{
 		Method: "POST",
 		Path:   "/api/internal/pool/stats",
@@ -111,13 +111,13 @@ func (r *StatsReporter) reportStats(ctx context.Context) {
 	})
 
 	if err != nil {
-		log.Warnf("资源池统计上报失败: %v", err)
+		log.Warnf("resource pool stats reporting failed: %v", err)
 	} else {
-		//log.Debugf("资源池统计上报成功，资源池数量: %d", len(stats))
+		//log.Debugf("resource pool stats reporting successful, resource pool count: %d", len(stats))
 	}
 }
 
-// StartStatsReporter 启动全局统计上报器（便捷函数）
+// StartStatsReporter starts global stats reporter (convenience function)
 func StartStatsReporter(ctx context.Context) {
 	reporter := GetStatsReporter()
 	reporter.StartReporting(ctx)

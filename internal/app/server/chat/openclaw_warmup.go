@@ -36,29 +36,29 @@ const (
 	openClawWarmupPlanSize    = 11
 )
 
-const openClawWarmupSystemPrompt = `你是实时语音对话里的暖场助手，不是主回答者。
+const openClawWarmupSystemPrompt = `You are a warm-up assistant in voice conversations, not the main responder.
 
-你的任务是：在主回复返回前，生成 11 条很短的中文接话，让等待过程听起来一直有人在回应。
+Your task is: before the main reply returns, generate 11 very short Chinese conversational fillers, making the waiting process sound like someone is always responding.
 
-硬性要求：
-1. 只负责暖场，不能直接回答问题，不能给出事实、结论、建议、步骤、分析、解释或推测。
-2. 语气要像真人在通话里轻声接话：简短、自然、口语化、有耐心。
-3. 不要像客服，不要像系统提示，不要像通知播报，不要像写文案。
-4. 禁止复述用户原话，尤其不要把“帮我查一下”“帮我看看”“帮我查询一下”“告诉我”这类用户指令原样拼进回复。
-5. 如果需要提到主题，只能提炼成助手视角的名词短语，例如“北京后天的天气”“这个安排”；不要用命令句。
-6. 前 1 到 2 条尽量更轻，不一定带主题词，例如“我看一下”“等我一下”；不要一上来就说很重的安慰话。
-7. 后面的句子再逐步表达“我还在看”“我还在确认”，但要自然，不要机械重复。
-8. 避免使用“正在为您处理”“请稍候”“持续跟进”“调取数据”“连接服务中”这类生硬说法。
-9. 每条都必须是单句短中文，适合语音播报，长度控制在 4 到 16 个汉字。
-10. 你会拿到实际播报时间点。11 条话术必须严格按这些时间点依次设计：
-   - 第 1 秒：像刚接到问题，轻轻接一句。
-   - 第 10 秒：自然补一句，语气仍然轻。
-   - 第 20、30 秒：开始表达“我还在看”，但不要机械。
-   - 第 40、50、60 秒：继续安抚，允许更明确地说“还在确认”。
-   - 第 70、80、90、100 秒：承认时间有点久，但仍然自然、平静，不抱怨。
-11. 只输出严格 JSON 数组，长度必须为 11。
-12. JSON 每项格式必须为：{"text":"暖场语"}。
-13. 禁止输出编号、Markdown、解释、代码块或 JSON 之外的任何内容。`
+Hard requirements:
+1. Only responsible for warm-up, cannot directly answer questions, cannot give facts, conclusions, suggestions, steps, analysis, explanations or speculations.
+2. Tone should be like a real person softly responding in conversation: brief, natural, colloquial, patient.
+3. Don't be like customer service, don't be like system prompts, don't be like notification broadcasts, don't be like copywriting.
+4. Forbidden to repeat user's original words, especially don't splice user instructions like "help me check", "help me look", "help me query", "tell me" into the reply.
+5. If need to mention topic, can only extract into assistant perspective noun short phrase, e.g. "Beijing weather tomorrow", "this arrangement"; don't use imperative sentences.
+6. First 1-2 sentences should be as light as possible, not necessarily with topic words, e.g. "let me see", "wait a moment"; don't start with heavy comforting words.
+7. After a few sentences gradually express "I'm looking" or "I acknowledge", but naturally, don't mechanically repeat.
+8. Avoid using stiff expressions like "it's being processed", "please wait", "continuing to follow up", "retrieving data", "accessing service".
+9. Each must be a single short Chinese sentence, suitable for voice broadcast, length controlled at 4-16 Chinese characters.
+10. You will get actual broadcast time points. 11 conversational phrases must be strictly designed according to these time points in sequence:
+    - 1st second: like just received the question, softly respond.
+    - 10th second: naturally add a sentence, tone still light.
+    - 20th, 30th second: start expressing "I'm looking", but not mechanically.
+    - 40th, 50th, 60th second: continue comforting, allow more explicit "acknowledging".
+    - 70th, 80th, 90th, 100th second: admit time is a bit long, but still natural, calm, no complaints.
+11. Only output strict JSON array, length must be 11.
+12. Each JSON item format must be: {"text":"warm-up phrase"}.
+13. Forbidden to output numbering, Markdown, explanations, code blocks or any content outside JSON.`
 
 type openClawWarmupTask struct {
 	correlationID string
@@ -369,8 +369,8 @@ func (s *ChatSession) runOpenClawWarmupTask(task *openClawWarmupTask, userText s
 		task.spokeAny.Store(true)
 	}
 
-	// 不在这里清理 active task：最后一条暖场音频可能仍在发送/播放中，
-	// 需要继续允许 OpenClaw 首句到达时执行抢占打断。
+	// don't cleanup active task here: the last warm-up audio may still be sending/playing,
+	// need to continue allowing OpenClaw first sentence to arrive when executing preemptive interrupt.
 }
 
 func waitOpenClawWarmupUntil(ctx context.Context, deadline time.Time) bool {
@@ -444,7 +444,7 @@ func (s *ChatSession) speakOpenClawWarmupLine(task *openClawWarmupTask, text str
 		IsStart: task.takeWarmupSegmentStartFlag(),
 		IsEnd:   true,
 	}
-	// 暖场句需要确保已经进入发送链路，避免被后续正式回复“看起来像没生效”。
+	// 暖场句needensurealreadyentersendchain路，avoidbeaftercontinuepositive式回复“看起来像没effective”。
 	return s.ttsManager.handleTextResponse(task.sessionCtx, resp, true)
 }
 
@@ -485,12 +485,12 @@ func (s *ChatSession) generateOpenClawWarmupPlan(ctx context.Context, correlatio
 func buildOpenClawWarmupUserPrompt(userText string) string {
 	trimmed := strings.TrimSpace(userText)
 	topic := formatOpenClawWarmupTopic(buildOpenClawWarmupHint(userText))
-	topicLine := "不要复述“帮我查一下”这类用户指令。"
+	topicLine := "Don't repeat user instructions like 'help me check'."
 	if topic != "" {
-		topicLine = fmt.Sprintf("如果需要提到主题，只能提炼成名词短语“%s”，不要复述“帮我查一下”这类用户指令。", topic)
+		topicLine = fmt.Sprintf("If need to mention topic, can only extract into noun short phrase \"%s\", don't repeat user instructions like 'help me check'.", topic)
 	}
 	return fmt.Sprintf(
-		"用户本轮任务：\n%s\n\n%s\n\n实际播报时间点依次为：第1秒、第10秒、第20秒、第30秒、第40秒、第50秒、第60秒、第70秒、第80秒、第90秒、第100秒。\n请输出 11 条暖场语，并按上述 11 个时间点一一对应。",
+		"User's current task:\n%s\n\n%s\n\nActual broadcast time points in sequence are: 1st second, 10th second, 20th second, 30th second, 40th second, 50th second, 60th second, 70th second, 80th second, 90th second, 100th second.\nPlease output 11 warm-up phrases, corresponding to the above 11 time points.",
 		trimmed,
 		topicLine,
 	)
@@ -621,10 +621,10 @@ func isInvalidOpenClawWarmupText(text string) bool {
 		"帮我",
 		"给我",
 		"告诉我",
-		"请帮",
+		"please帮",
 		"麻烦帮",
 		"能帮我",
-		"可以帮我",
+		"can帮我",
 		"帮忙查",
 		"帮忙看",
 		"帮忙问",
@@ -652,7 +652,7 @@ func buildOpenClawWarmupHint(userText string) string {
 		return ""
 	}
 
-	for _, keyword := range []string{"天气", "气温", "温度", "预报"} {
+	for _, keyword := range []string{"天气", "气温", "温degree", "预报"} {
 		if idx := strings.Index(normalized, keyword); idx >= 0 {
 			limit := idx + len([]rune(keyword))
 			runes := []rune(normalized)
@@ -670,7 +670,7 @@ func buildOpenClawWarmupHint(userText string) string {
 	}
 	for len(runes) > 0 {
 		last := runes[len(runes)-1]
-		if last == '的' || last == '了' || last == '呢' {
+		if last == '的' || last == '吗' || last == '呢' {
 			runes = runes[:len(runes)-1]
 			continue
 		}
@@ -684,40 +684,40 @@ func trimOpenClawWarmupCommandPrefix(text string) string {
 	for {
 		changed := false
 		for _, prefix := range []string{
-			"麻烦帮我查询一下",
-			"麻烦帮我查一下",
-			"麻烦帮我看一下",
-			"请帮我查询一下",
-			"请帮我查一下",
-			"请帮我看一下",
-			"帮我查询一下",
-			"帮我查一下",
-			"帮我看一下",
-			"帮我问一下",
-			"给我查询一下",
-			"给我查一下",
-			"给我看一下",
-			"可以帮我查一下",
-			"可以帮我看一下",
-			"能帮我查一下",
-			"能帮我看一下",
-			"我想知道",
-			"我想问一下",
-			"我想问",
-			"请问一下",
-			"请问",
-			"查询一下",
-			"查一下",
-			"看一下",
-			"问一下",
-			"帮我查询",
+			"麻烦帮我queryadown",
+			"麻烦帮我查adown",
+			"麻烦帮我看adown",
+			"please帮我queryadown",
+			"please帮我查adown",
+			"please帮我看adown",
+			"帮我queryadown",
+			"帮我查adown",
+			"帮我看adown",
+			"帮我问adown",
+			"给我queryadown",
+			"给我查adown",
+			"给我看adown",
+			"can帮我查adown",
+			"can帮我看adown",
+			"能帮我查adown",
+			"能帮我看adown",
+			"我want知道",
+			"我want问adown",
+			"我want问",
+			"please问adown",
+			"please问",
+			"queryadown",
+			"查adown",
+			"看adown",
+			"问adown",
+			"帮我query",
 			"帮我查",
 			"帮我看",
 			"帮我问",
-			"给我查询",
+			"给我query",
 			"给我查",
 			"给我看",
-			"查询",
+			"query",
 			"查",
 			"看",
 			"问",
@@ -741,8 +741,8 @@ func trimOpenClawWarmupQuestionSuffix(text string) string {
 		"怎么样",
 		"如何",
 		"多少",
-		"是什么",
-		"是啥",
+		"yes什么",
+		"yes啥",
 		"吗",
 		"呢",
 		"呀",
@@ -758,13 +758,13 @@ func formatOpenClawWarmupTopic(hint string) string {
 	if hint == "" {
 		return ""
 	}
-	for _, keyword := range []string{"天气", "气温", "温度", "预报"} {
+	for _, keyword := range []string{"天气", "气温", "温degree", "预报"} {
 		if idx := strings.Index(hint, keyword); idx > 0 {
 			prefix := strings.TrimSpace(hint[:idx])
-			if prefix == "" || strings.HasSuffix(prefix, "的") {
+			if prefix == "" || strings.HasSuffix(prefix, "of") {
 				return hint
 			}
-			return prefix + "的" + hint[idx:]
+			return prefix + "of" + hint[idx:]
 		}
 	}
 	return hint

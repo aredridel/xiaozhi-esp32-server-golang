@@ -29,19 +29,19 @@ export function buildOpenClawCommands(endpoint) {
 
     const steps = [
       {
-        title: '启用渠道',
+        title: 'Enable Channel',
         command: `openclaw config set ${OPENCLAW_CHANNEL_CONFIG_PREFIX}.enabled true --strict-json`
       },
       {
-        title: '配置地址',
+        title: 'Configure URL',
         command: `openclaw config set ${OPENCLAW_CHANNEL_CONFIG_PREFIX}.url "${url}"`
       },
       {
-        title: '配置令牌',
+        title: 'Configure Token',
         command: `openclaw config set ${OPENCLAW_CHANNEL_CONFIG_PREFIX}.token "${token}"`
       },
       {
-        title: '重启网关',
+        title: 'Restart Gateway',
         command: 'openclaw gateway restart'
       }
     ]
@@ -56,7 +56,7 @@ export function buildOpenClawCommands(endpoint) {
       copyText: commands.join('\n')
     }
   } catch (error) {
-    console.error('解析 OpenClaw endpoint 失败:', error)
+    console.error('Failed to parse OpenClaw endpoint:', error)
     return EMPTY_COMMAND_DATA
   }
 }

@@ -1,43 +1,43 @@
-# WebRTC VAD 资源池实现
+# WebRTC VAD resource池实现
 
-这个实现为 WebRTC VAD (Voice Activity Detection) 提供了资源池管理功能，用于提高并发场景下的性能和资源利用率。
+这个实现is WebRTC VAD (Voice Activity Detection) provideresource池管理功能，used for提高并发场景下of性能和resource利用率。
 
 ## 主要组件
 
 ### 1. WebRTCVAD
-基础的 VAD 实现，现在实现了 `Resource` 接口：
-- `IsValid()`: 检查资源是否有效
-- `Close()`: 关闭并释放资源
-- 线程安全的操作
+基础of VAD 实现，现at实现 `Resource` 接口：
+- `IsValid()`: checkresourcewhether有效
+- `Close()`: 关闭并释放resource
+- 线程安全of操作
 
 ### 2. WebRTCVADFactory
-资源工厂，实现了 `ResourceFactory` 接口：
-- `Create()`: 创建新的 VAD 实例
-- `Validate()`: 验证资源有效性
-- `Reset()`: 重置资源状态
+resource工厂，实现 `ResourceFactory` 接口：
+- `Create()`: 创建new VAD 实例
+- `Validate()`: 验证resource有效性
+- `Reset()`: resetresource状态
 
 ### 3. WebRTCVADPool
-VAD 资源池管理器：
-- `AcquireVAD()`: 获取 VAD 实例
+VAD resource池管理器：
+- `AcquireVAD()`: get VAD 实例
 - `ReleaseVAD()`: 释放 VAD 实例
-- `Stats()`: 获取统计信息
-- `Close()`: 关闭资源池
+- `Stats()`: get统计信息
+- `Close()`: 关闭resource池
 
 ### 4. VADManager
-高级封装，提供便捷的使用接口：
-- `ProcessAudio()`: 处理单个音频数据
-- `ProcessAudioBatch()`: 批量处理音频数据
-- `WithVAD()`: 使用回调函数处理 VAD
+高级封装，provide便捷ofuse接口：
+- `ProcessAudio()`: process单个audiodata
+- `ProcessAudioBatch()`: 批量processaudiodata
+- `WithVAD()`: use回调函数process VAD
 
-## 使用方法
+## use方法
 
-### 基本使用
+### 基本use
 
 ```go
-// 创建 VAD 配置
+// 创建 VAD config
 config := WebRTCVADConfig{
     SampleRate: 16000,
-    Mode:       2, // 中等敏感度
+    Mode:       2, // inetc敏感度
 }
 
 // 创建 VAD 管理器
@@ -47,7 +47,7 @@ if err != nil {
 }
 defer manager.Close()
 
-// 处理音频数据
+// processaudiodata
 audioData := make([]float32, 320) // 16kHz, 20ms
 isActive, err := manager.ProcessAudio(audioData)
 if err != nil {
@@ -60,10 +60,10 @@ if isActive {
 }
 ```
 
-### 高级使用 - 直接使用资源池
+### 高级use - 直接useresource池
 
 ```go
-// 创建资源池
+// 创建resource池
 vadConfig := WebRTCVADConfig{
     SampleRate: 16000,
     Mode:       2,
@@ -73,9 +73,9 @@ poolConfig := &util.PoolConfig{
     MaxSize:          5,               // 最大实例数
     MinSize:          1,               // 预创建实例数
     MaxIdle:          3,               // 最大空闲实例数
-    AcquireTimeout:   5 * time.Second, // 获取超时
-    IdleTimeout:      2 * time.Minute, // 空闲超时
-    ValidateOnBorrow: true,            // 获取时验证
+    AcquireTimeout:   5 * time.Second, // get超when
+    IdleTimeout:      2 * time.Minute, // 空闲超when
+    ValidateOnBorrow: true,            // getwhen验证
 }
 
 pool, err := NewWebRTCVADPool(vadConfig, poolConfig)
@@ -84,20 +84,20 @@ if err != nil {
 }
 defer pool.Close()
 
-// 获取 VAD 实例
+// get VAD 实例
 vad, err := pool.AcquireVAD()
 if err != nil {
     log.Fatal(err)
 }
 
-// 使用 VAD
+// use VAD
 isActive, err := vad.IsVAD(audioData)
 
 // 释放 VAD 实例
 pool.ReleaseVAD(vad)
 ```
 
-### 并发使用
+### 并发use
 
 ```go
 manager, err := NewVADManager(config)
@@ -106,10 +106,10 @@ if err != nil {
 }
 defer manager.Close()
 
-// 多个 goroutine 并发处理
+// 多个 goroutine 并发process
 for i := 0; i < numWorkers; i++ {
     go func(workerID int) {
-        audioData := generateAudioData() // 生成音频数据
+        audioData := generateAudioData() // generateaudiodata
         
         active, err := manager.ProcessAudio(audioData)
         if err != nil {
@@ -122,37 +122,37 @@ for i := 0; i < numWorkers; i++ {
 }
 ```
 
-## 配置参数
+## config参数
 
 ### WebRTCVADConfig
 - `SampleRate`: 采样率 (8000, 16000, 32000, 48000)
 - `Mode`: VAD 敏感度模式 (0: 最不敏感, 3: 最敏感)
 
 ### PoolConfig
-- `MaxSize`: 最大资源数量
-- `MinSize`: 最小资源数量（预创建）
-- `MaxIdle`: 最大空闲资源数量
-- `AcquireTimeout`: 获取资源超时时间
-- `IdleTimeout`: 资源空闲超时时间
-- `ValidateOnBorrow`: 获取时是否验证资源
-- `ValidateOnReturn`: 归还时是否验证资源
+- `MaxSize`: 最大resourcecount
+- `MinSize`: 最小resourcecount（预创建）
+- `MaxIdle`: 最大空闲resourcecount
+- `AcquireTimeout`: getresource超whentime
+- `IdleTimeout`: resource空闲超whentime
+- `ValidateOnBorrow`: getwhenwhether验证resource
+- `ValidateOnReturn`: 归还whenwhether验证resource
 
 ## 优势
 
-1. **资源复用**: 避免频繁创建和销毁 VAD 实例
-2. **并发安全**: 支持多个 goroutine 并发使用
-3. **自动管理**: 自动清理空闲超时的资源
-4. **性能监控**: 提供详细的统计信息
-5. **配置灵活**: 支持自定义池大小和超时参数
+1. **resource复用**: 避免频繁创建和销毁 VAD 实例
+2. **并发安全**: 支持多个 goroutine 并发use
+3. **自动管理**: 自动清理空闲超whenofresource
+4. **性能监控**: provide详细of统计信息
+5. **config灵活**: 支持自定义池size和超when参数
 
 ## 性能统计
 
-使用 `GetStats()` 方法获取资源池统计信息：
+use `GetStats()` 方法getresource池统计信息：
 
 ```go
 stats := manager.GetStats()
 fmt.Printf("Pool stats: %+v\n", stats)
-// 输出示例:
+// output示例:
 // {
 //   "total_resources": 3,
 //   "available_resources": 2,
@@ -164,29 +164,29 @@ fmt.Printf("Pool stats: %+v\n", stats)
 // }
 ```
 
-## 错误处理
+## errorprocess
 
-主要的错误类型：
-- 获取超时：`acquire timeout after 5s`
-- 资源池已关闭：`pool is closed`
-- 无效资源类型：`invalid resource type`
-- VAD 初始化失败：`failed to initialize WebRTC VAD`
+主要oferror类型：
+- get超when：`acquire timeout after 5s`
+- resource池already关闭：`pool is closed`
+- 无效resource类型：`invalid resource type`
+- VAD 初始化failed：`failed to initialize WebRTC VAD`
 
 ## 最佳实践
 
-1. **合理设置池大小**: 根据并发需求设置 `MaxSize`
-2. **及时释放资源**: 使用 `defer` 确保资源被释放
-3. **监控统计信息**: 定期检查池的使用情况
-4. **优雅关闭**: 程序退出时调用 `Close()` 方法
-5. **错误处理**: 处理获取超时等异常情况
+1. **合理设置池size**: according to并发需求设置 `MaxSize`
+2. **andwhen释放resource**: use `defer` 确保resourcebe释放
+3. **监控统计信息**: 定期check池ofuse情况
+4. **优雅关闭**: 程序exitwhen调用 `Close()` 方法
+5. **errorprocess**: processget超whenetc异常情况
 
 ## 示例代码
 
-查看 `example_usage.go` 文件中的完整示例：
-- 基本使用示例
-- 批量处理示例
-- 回调函数使用示例
-- 并发使用示例
+查看 `example_usage.go` 文件inof完整示例：
+- 基本use示例
+- 批量process示例
+- 回调函数use示例
+- 并发use示例
 
 ## 测试
 

@@ -4,13 +4,13 @@ import "context"
 
 type EventHandler func(ctx context.Context, eventType string, eventData map[string]interface{}) (string, error)
 
-// 上行push事件 主程序 => 管理内控
+// up行pushevent mainprogram => manageinside控
 const (
-	EventDeviceOnline  = "/api/device/active"   //设备上线
-	EventDeviceOffline = "/api/device/inactive" //设备下线
+	EventDeviceOnline  = "/api/device/active"   //deviceup线
+	EventDeviceOffline = "/api/device/inactive" //devicedown线
 )
 
-// 下行pull事件 管理内控 => 主程序
+// down行pullevent manageinside控 => mainprogram
 const (
-	EventHandleMessageInject = "/api/device/inject_msg" //处理消息注入
+	EventHandleMessageInject = "/api/device/inject_msg" //processmessage注入
 )

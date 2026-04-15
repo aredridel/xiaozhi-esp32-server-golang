@@ -810,7 +810,7 @@ func (s *ChatSession) HandleWelcome() {
 }
 
 func (a *ChatSession) checkExitWords(text string) bool {
-	exitWords := []string{"再见", "退下吧", "退出", "退出对话"}
+	exitWords := []string{"goodbye", "exitnow", "exit", "exittoconversation"}
 	for _, word := range exitWords {
 		if strings.Contains(text, word) {
 			return true
@@ -866,7 +866,7 @@ func openClawLogSnippet(text string, maxRunes int) string {
 func (s *ChatSession) GetRandomGreeting() string {
 	greetingList := viper.GetStringSlice("greeting_list")
 	if len(greetingList) == 0 {
-		return "你好，有啥好玩的."
+		return "Hello, what fun things do you have?"
 	}
 	rand.Seed(time.Now().UnixNano())
 	return greetingList[rand.Intn(len(greetingList))]
@@ -1332,7 +1332,7 @@ func (s *ChatSession) ClearChatTextQueue() {
 // DoExitChat executes exit chat logic (send goodbye message and close session)
 func (s *ChatSession) DoExitChat() {
 	// Friendly goodbye message
-	goodbyeText := "好的，再见！期待下次与您聊天～"
+	goodbyeText := "Alright, goodbye! Looking forward to chatting with you next time ~"
 
 	// Save an assistant role message
 	goodbyeMsg := schema.AssistantMessage(goodbyeText, nil)
@@ -1457,7 +1457,7 @@ func (s *ChatSession) actionDoChat(ctx context.Context, text string, speakerResu
 			if isExitKeyword {
 				s.finishOpenClawWarmup("", true)
 				exited := openclawManager.ExitMode(agentID, deviceID)
-				_ = s.AddTextToTTSQueue("已退出OpenClaw模式")
+				_ = s.AddTextToTTSQueue("alreadyexitOpenClawpattern")
 				log.Infof("Device %s exited OpenClaw mode: agent=%s exited=%v", deviceID, agentID, exited)
 				return nil
 			}
@@ -1524,7 +1524,7 @@ func (s *ChatSession) actionDoChat(ctx context.Context, text string, speakerResu
 		// Publish exit chat event
 		eventbus.Get().Publish(eventbus.TopicExitChat, &eventbus.ExitChatEvent{
 			ClientState: s.clientState,
-			Reason:      "User主动退出",
+			Reason:      "User actively exited",
 			TriggerType: "exit_words",
 			UserText:    text,
 			Timestamp:   time.Now(),
@@ -1579,13 +1579,13 @@ func (s *ChatSession) actionDoChat(ctx context.Context, text string, speakerResu
 		toolNameList = append(toolNameList, tool.Name)
 	}
 
-	// Send LLM request with tools
-	log.Infof("Sending LLM request with %d MCP tools, tools: %+v", len(einoTools), toolNameList)
+	// SendLLM request with tools
+	log.Infof("SendingLLM request with %d MCP tools, tools: %+v", len(einoTools), toolNameList)
 
 	err = s.llmManager.DoLLmRequest(ctx, userMessage, einoTools, true, speakerResult)
 	if err != nil {
-		log.Errorf("Failed to send LLM request with tools, sessionID: %s, error: %v", sessionID, err)
-		return fmt.Errorf("Failed to send LLM request with tools: %v", err)
+		log.Errorf("Failed to sendLLM request with tools, sessionID: %s, error: %v", sessionID, err)
+		return fmt.Errorf("Failed to sendLLM request with tools: %v", err)
 	}
 	return nil
 }

@@ -13,33 +13,33 @@ import (
 )
 
 func TestGlobalMCPManager_Singleton(t *testing.T) {
-	// 测试单例模式
+	// testsingletonpattern
 	manager1 := GetGlobalMCPManager()
 	manager2 := GetGlobalMCPManager()
 
-	assert.Equal(t, manager1, manager2, "应该返回同一个实例")
+	assert.Equal(t, manager1, manager2, "shouldreturnat the same timeainstance")
 }
 
 func TestDeviceMCPManager_Singleton(t *testing.T) {
 	t.Skip("GetDeviceMCPManager function not implemented yet")
-	// // 测试单例模式
+	// // testsingletonpattern
 	// manager1 := GetDeviceMCPManager()
 	// manager2 := GetDeviceMCPManager()
 	//
-	// assert.Equal(t, manager1, manager2, "应该返回同一个实例")
+	// assert.Equal(t, manager1, manager2, "shouldreturnat the same timeainstance")
 }
 
 func TestGlobalMCPManager_StartStop(t *testing.T) {
-	// 设置测试配置
+	// settestconfig
 	viper.Set("mcp.global.enabled", false)
 
 	manager := GetGlobalMCPManager()
 
-	// 测试启动（禁用状态）
+	// teststart（禁usestate）
 	err := manager.Start()
 	assert.NoError(t, err)
 
-	// 测试停止
+	// teststop
 	err = manager.Stop()
 	assert.NoError(t, err)
 }
@@ -48,41 +48,41 @@ func TestMCPTool_Info(t *testing.T) {
 	tool := &McpTool{
 		info: &schema.ToolInfo{
 			Name: "test_tool",
-			Desc: "测试工具",
+			Desc: "testtool",
 		},
 		serverName: "test_server",
-		client:     nil, // 测试中不需要真实客户端
+		client:     nil, // testinnoneedrealclient-side
 	}
 
 	info, err := tool.Info(context.Background())
 	require.NoError(t, err)
 
 	assert.Equal(t, "test_tool", info.Name)
-	assert.Equal(t, "测试工具", info.Desc)
+	assert.Equal(t, "testtool", info.Desc)
 }
 
 func TestMCPTool_InvokableRun(t *testing.T) {
 	tool := &McpTool{
 		info: &schema.ToolInfo{
 			Name: "test_tool",
-			Desc: "测试工具",
+			Desc: "testtool",
 		},
 		serverName: "test_server",
-		client:     nil, // 测试中不需要真实客户端
+		client:     nil, // testinnoneedrealclient-side
 	}
 
-	// 这个测试会失败，因为客户端为nil
-	// 但可以验证方法签名和基本逻辑
+	// 这个testwillfailed，becauseisclient-sideisnil
+	// butcanvalidatemethodsignand基本logical
 	_, err := tool.InvokableRun(context.Background(), `{"query": "test"}`)
-	assert.Error(t, err)                         // 预期会有错误，因为客户端为nil
-	assert.Contains(t, err.Error(), "调用MCP工具失败") // 验证错误消息包含预期文本
+	assert.Error(t, err)                         // 预期willhaveerror，becauseisclient-sideisnil
+	assert.Contains(t, err.Error(), "callMCPtoolfailed") // validateerrormessageinclude预期text
 }
 
 func TestDeviceMCPManager_GetDeviceTools(t *testing.T) {
 	t.Skip("GetDeviceMCPManager function not implemented yet")
 	// manager := GetDeviceMCPManager()
 	//
-	// // 测试获取不存在设备的工具
+	// // testgetno存atdeviceoftool
 	// tools := manager.GetDeviceTools("non_existent_device")
 	// assert.Empty(t, tools)
 }
@@ -90,7 +90,7 @@ func TestDeviceMCPManager_GetDeviceTools(t *testing.T) {
 func TestGlobalMCPManager_GetAllTools(t *testing.T) {
 	manager := GetGlobalMCPManager()
 
-	// 测试获取所有工具（初始状态应该为空）
+	// testgetalltool（initialstateshouldisempty）
 	tools := manager.GetAllTools()
 	assert.NotNil(t, tools)
 }
@@ -98,7 +98,7 @@ func TestGlobalMCPManager_GetAllTools(t *testing.T) {
 func TestGlobalMCPManager_GetToolByName(t *testing.T) {
 	manager := GetGlobalMCPManager()
 
-	// 测试获取不存在的工具
+	// testgetno存atoftool
 	tool, exists := manager.GetToolByName("non_existent_tool")
 	assert.False(t, exists)
 	assert.Nil(t, tool)
@@ -126,7 +126,7 @@ func TestReconnectConfig_Structure(t *testing.T) {
 	assert.Equal(t, 10, config.MaxAttempts)
 }
 
-// TestMCPGoStructures 测试 mcp-go 库结构体的使用
+// TestMCPGoStructures test mcp-go librarystructurebodyofuse
 func TestMCPGoStructures(t *testing.T) {
 	t.Run("InitializeRequest", func(t *testing.T) {
 		initRequest := mcp.InitializeRequest{
@@ -173,21 +173,21 @@ func TestMCPGoStructures(t *testing.T) {
 	})
 }
 
-// 创建测试工具
+// createtesttool
 func TestMCPTool_InvokableRun_NewTool(t *testing.T) {
 	testTool := &McpTool{
 		info: &schema.ToolInfo{
 			Name: "test_tool",
-			Desc: "测试工具",
+			Desc: "testtool",
 		},
 		serverName: "test_server",
-		client:     nil, // 测试中不需要真实客户端
+		client:     nil, // testinnoneedrealclient-side
 	}
 
-	// 这个测试会失败，因为没有真实的MCP服务器
-	// 但可以验证方法签名和基本逻辑
+	// 这个testwillfailed，becauseisnorealofMCPserver
+	// butcanvalidatemethodsignand基本logical
 	_, err := testTool.InvokableRun(context.Background(), `{"query": "test"}`)
-	assert.Error(t, err) // 预期会有网络错误
+	assert.Error(t, err) // 预期willhavenetworkerror
 }
 
 func TestFilterMCPToolsByAllowList(t *testing.T) {

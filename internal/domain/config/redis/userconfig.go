@@ -14,8 +14,8 @@ import (
 	"github.com/spf13/viper"
 )
 
-// RedisUserConfigProvider Redis用户配置提供者
-// 实现UserConfigProvider接口，支持Redis存储
+// RedisUserConfigProvider Redis user config provider
+// implements UserConfigProvider interface, supports Redis store
 type RedisUserConfigProvider struct {
 	UserConfig
 }
@@ -25,8 +25,8 @@ type UserConfig struct {
 	prefix        string
 }
 
-// NewRedisUserConfigProvider 创建Redis用户配置提供者
-// config: 配置参数map，包含host, port, password, db, prefix等
+// NewRedisUserConfigProvider creates Redis user config provider
+// config: config parameter map, includes host, port, password, db, prefix etc
 func NewRedisUserConfigProvider(config interface{}) (*RedisUserConfigProvider, error) {
 	provider := &RedisUserConfigProvider{
 		UserConfig: UserConfig{
@@ -35,7 +35,7 @@ func NewRedisUserConfigProvider(config interface{}) (*RedisUserConfigProvider, e
 		},
 	}
 
-	log.Log().Info("Redis用户配置提供者初始化成功")
+	log.Log().Info("Redis user config provider initialized successfully")
 	return provider, nil
 }
 
@@ -45,7 +45,7 @@ func (u *UserConfig) GetUserConfig(ctx context.Context, userID string) (types.UC
 	if u.redisInstance != nil {
 		key := u.GetUserConfigKey(userID)
 
-		//hgetall 拿到所有的
+		// hgetall get all
 		var err error
 		redisConfig, err = u.redisInstance.HGetAll(ctx, key).Result()
 		if err != nil {
@@ -58,7 +58,7 @@ func (u *UserConfig) GetUserConfig(ctx context.Context, userID string) (types.UC
 		MemoryMode:      "short",
 		SpeakerChatMode: "off",
 	}
-	//将UserConfig转换成UConfig结构
+	// convert UserConfig to UConfig structure
 	kv := map[string]string{
 		"llm":    "",
 		"asr":    "",
@@ -181,7 +181,7 @@ func (u *UserConfig) GetUserConfigKey(deviceId string) string {
 	return fmt.Sprintf("%s:userconfig:%s", u.prefix, deviceId)
 }
 
-// getSystemPromptKey 生成设备对应的系统 prompt 的 Redis key
+// getSystemPromptKey generatedevicecorrespondingsystem prompt of Redis key
 func (u *UserConfig) getSystemPrompt(ctx context.Context, deviceID string) string {
 	key := fmt.Sprintf("%s:llm:system:%s", u.prefix, deviceID)
 
@@ -197,46 +197,46 @@ func (u *UserConfig) getSystemPrompt(ctx context.Context, deviceID string) strin
 	return configPrompt
 }
 
-// 获取 mqtt, mqtt_server, udp, ota, vision配置
+// get mqtt, mqtt_server, udp, ota, visionconfig
 func (u *UserConfig) GetSystemConfig(ctx context.Context) (string, error) {
-	//默认不覆盖
+	//defaultno覆盖
 	return "", nil
 }
 
-// SwitchDeviceRoleByName Redis 模式不支持设备角色切换
+// SwitchDeviceRoleByName Redis patternunsupporteddeviceroleswitch
 func (u *UserConfig) SwitchDeviceRoleByName(ctx context.Context, deviceID string, roleName string) (string, error) {
-	return "", fmt.Errorf("redis 配置提供者不支持按角色名切换设备角色")
+	return "", fmt.Errorf("redis configprovide者unsupported按rolenameswitchdevicerole")
 }
 
-// RestoreDeviceDefaultRole Redis 模式不支持恢复默认角色
+// RestoreDeviceDefaultRole Redis patternunsupportedrecoverydefaultrole
 func (u *UserConfig) RestoreDeviceDefaultRole(ctx context.Context, deviceID string) error {
-	return fmt.Errorf("redis 配置提供者不支持恢复设备默认角色")
+	return fmt.Errorf("redis configprovide者unsupportedrecoverydevicedefaultrole")
 }
 
 func (u *UserConfig) NotifyDeviceEvent(ctx context.Context, eventType string, eventData map[string]interface{}) {
-	// 实现设备事件通知逻辑
+	// implementdeviceeventnotifylogical
 	return
 }
 
 func (u *UserConfig) RegisterMessageEventHandler(ctx context.Context, deviceID string, handler types.EventHandler) {
-	// 实现消息事件处理逻辑
+	// implementmessageeventprocesslogical
 	return
 }
 
-// Init 初始化Redis配置提供者
+// Init initializeRedisconfigprovide者
 func Init(ctx context.Context) error {
 	log.Log().Info("Redis config provider initialized successfully")
 	return nil
 }
 
-// Close 关闭Redis配置提供者，清理资源
+// Close closeRedisconfigprovide者，cleanupresource
 func Close() error {
 	log.Log().Info("Redis config provider closed")
 	return nil
 }
 
-// IsConnected 检查Redis配置提供者是否已连接
+// IsConnected inspectRedisconfigprovide者whetheralreadyjoin
 func IsConnected() bool {
-	// Redis连接状态由全局Redis客户端管理
+	// RedisjoinstatebyglobalRedisclient-sidemanage
 	return true
 }

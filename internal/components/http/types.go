@@ -2,21 +2,21 @@ package http
 
 import "time"
 
-// ClientConfig HTTP客户端配置
+// ClientConfig HTTPclient-sideconfig
 type ClientConfig struct {
-	BaseURL   string        // 基础URL
-	AuthToken string        // 认证Token（可选）
-	Timeout   time.Duration // 请求超时时间
-	MaxRetries int          // 最大重试次数（默认3次）
+	BaseURL   string        // foundationURL
+	AuthToken string        // authenticateToken（optional）
+	Timeout   time.Duration // requesttimeouttime
+	MaxRetries int          // maximumretrytimescount（default3times）
 }
 
-// RequestOptions 请求选项
+// RequestOptions requestoption
 type RequestOptions struct {
-	Method      string                 // HTTP方法
-	Path        string                 // 请求路径
-	QueryParams map[string]string      // 查询参数
-	Headers     map[string]string      // 自定义请求头
-	Body        interface{}             // 请求体（会自动序列化为JSON）
-	Response    interface{}             // 响应体（会自动反序列化）
+	Method      string                 // HTTPmethod
+	Path        string                 // requestpath
+	QueryParams map[string]string      // queryparameter
+	Headers     map[string]string      // 自定义request header
+	Body        interface{}             // requestbody（willautomaticserializeisJSON）
+	Response    interface{}             // respondbody（willautomaticdeserialize）
 }
 

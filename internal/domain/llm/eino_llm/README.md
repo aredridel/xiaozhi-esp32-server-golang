@@ -1,68 +1,68 @@
-# Eino LLM Provider - 统一多提供者实现
+# Eino LLM Provider - Unified Multi-Provider Implementation
 
-## 概述
+## Overview
 
-EinoLLMProvider 是基于 CloudWeGo Eino 框架的统一 LLM 提供者实现，支持多种大语言模型提供者，包括 OpenAI 和 Ollama。该实现完全使用 Eino 原生类型和接口，提供了一致的 API 体验。
+EinoLLMProvider is a unified LLM provider implementation based on the CloudWeGo Eino framework, supporting multiple large language model providers, including OpenAI and Ollama. This implementation fully uses Eino native types and interfaces, providing a consistent API experience.
 
-## 核心特性
+## Core Features
 
-### ✅ 多提供者支持
-- **OpenAI**: 支持 GPT-3.5、GPT-4 等模型
-- **Ollama**: 支持本地部署的开源模型
-- **统一接口**: 所有提供者使用相同的 API
+### ✅ Multi-Provider Support
+- **OpenAI**: Supports GPT-3.5, GPT-4 and other models
+- **Ollama**: Supports locally deployed open-source models
+- **Unified Interface**: All providers use the same API
 
-### ✅ Eino 原生实现
-- 直接使用 `*schema.Message` 和 `*schema.ToolInfo` 类型
-- 调用 `chatModel.Generate()` 和 `chatModel.Stream()` 方法
-- 支持 `chatModel.BindTools()` 进行工具绑定
+### ✅ Eino Native Implementation
+- Directly uses `*schema.Message` and `*schema.ToolInfo` types
+- Calls `chatModel.Generate()` and `chatModel.Stream()` methods
+- Supports `chatModel.BindTools()` for tool binding
 
-### ✅ 完整功能支持
-- 流式和非流式响应
-- 工具调用和函数绑定
-- 上下文控制和取消
-- 链式配置调用
+### ✅ Complete Feature Support
+- Streaming and non-streaming responses
+- Tool invocation and function binding
+- Context control and cancellation
+- Chain configuration calls
 
-### ✅ 高度兼容
-- 实现标准 `LLMProvider` 接口
-- 支持现有代码无缝迁移
-- 提供向后兼容的类型转换
+### ✅ High Compatibility
+- Implements standard `LLMProvider` interface
+- Supports seamless migration of existing code
+- Provides backward-compatible type conversions
 
-## 架构设计
+## Architecture Design
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    LLMProvider Interface                    │
 │  Response() / ResponseWithFunctions() / ResponseWithContext() │
 └─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
+                               │
+                               ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                   EinoLLMProvider                          │
-│  • 统一配置管理                                              │
-│  • 多提供者支持                                              │
-│  • 链式调用                                                 │
+│  • Unified configuration management                                              │
+│  • Multi-provider support                                              │
+│  • Chained calls                                                 │
 └─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
+                               │
+                               ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                 Eino ChatModel Interface                   │
 │  Generate() / Stream() / BindTools()                       │
 └─────────────────────────────────────────────────────────────┘
-                              │
-                    ┌─────────┴─────────┐
-                    ▼                   ▼
+                               │
+                     ┌─────────┴─────────┐
+                     ▼                   ▼
 ┌─────────────────────────┐  ┌─────────────────────────┐
 │   OpenAI ChatModel      │  │   Ollama ChatModel      │
 │   (eino-ext/openai)     │  │   (eino-ext/ollama)     │
 └─────────────────────────┘  └─────────────────────────┘
 ```
 
-## 快速开始
+## Quick Start
 
-### 1. 基本配置
+### 1. Basic Configuration
 
 ```go
-// OpenAI 配置
+// OpenAI configuration
 openaiConfig := map[string]interface{}{
     "type":       "openai",
     "model_name": "gpt-3.5-turbo",
@@ -72,7 +72,7 @@ openaiConfig := map[string]interface{}{
     "streamable": true,
 }
 
-// Ollama 配置
+// Ollama configuration
 ollamaConfig := map[string]interface{}{
     "type":       "ollama",
     "model_name": "llama2",
@@ -82,55 +82,55 @@ ollamaConfig := map[string]interface{}{
 }
 ```
 
-### 2. 创建提供者
+### 2. Create Provider
 
 ```go
-// 创建 OpenAI 提供者
+// Create OpenAI provider
 openaiProvider, err := NewEinoLLMProvider(openaiConfig)
 if err != nil {
-    log.Fatalf("创建 OpenAI 提供者失败: %v", err)
+    log.Fatalf("Failed to create OpenAI provider: %v", err)
 }
 
-// 创建 Ollama 提供者
+// Create Ollama provider
 ollamaProvider, err := NewEinoLLMProvider(ollamaConfig)
 if err != nil {
-    log.Fatalf("创建 Ollama 提供者失败: %v", err)
+    log.Fatalf("Failed to create Ollama provider: %v", err)
 }
 ```
 
-### 3. 使用 Eino 原生消息类型
+### 3. Use Eino Native Message Types
 
 ```go
 messages := []*schema.Message{
     {
         Role:    schema.System,
-        Content: "你是一个有用的助手",
+        Content: "You are a helpful assistant",
     },
     {
         Role:    schema.User,
-        Content: "请介绍一下 Eino 框架",
+        Content: "Please introduce the Eino framework",
     },
 }
 ```
 
-### 4. 基本对话
+### 4. Basic Conversation
 
 ```go
-// 流式响应
+// Streaming response
 responseChan := provider.Response("session_id", messages)
 for content := range responseChan {
     fmt.Print(content)
 }
 ```
 
-### 5. 工具调用
+### 5. Tool Invocation
 
 ```go
 tools := []*schema.ToolInfo{
     {
         Name: "get_weather",
         ParamsOneOf: &schema.ParamsOneOf{
-            // 工具参数定义
+            // Tool parameter definitions
         },
     },
 }
@@ -144,93 +144,93 @@ for response := range toolResponseChan {
         }
     case map[string]interface{}:
         if resp["type"] == "tool_calls" {
-            fmt.Printf("工具调用: %+v\n", resp["tool_calls"])
+            fmt.Printf("Tool invocation: %+v\n", resp["tool_calls"])
         }
     }
 }
 ```
 
-### 6. 链式调用
+### 6. Chained Calls
 
 ```go
 enhancedProvider := provider.
     WithMaxTokens(1000).
     WithStreamable(false)
 
-fmt.Printf("提供者类型: %s\n", enhancedProvider.GetProviderType())
-fmt.Printf("模型信息: %+v\n", enhancedProvider.GetModelInfo())
+fmt.Printf("Provider type: %s\n", enhancedProvider.GetProviderType())
+fmt.Printf("Model info: %+v\n", enhancedProvider.GetModelInfo())
 ```
 
-## API 文档
+## API Documentation
 
-### 核心接口
+### Core Interfaces
 
 #### `NewEinoLLMProvider(config map[string]interface{}) (*EinoLLMProvider, error)`
-创建新的 Eino LLM 提供者实例。
+Creates a new Eino LLM provider instance.
 
-**参数:**
-- `config`: 配置映射，必须包含 `type` 字段
+**Parameters:**
+- `config`: Configuration map, must contain `type` field
 
-**返回:**
-- `*EinoLLMProvider`: 提供者实例
-- `error`: 错误信息
+**Returns:**
+- `*EinoLLMProvider`: Provider instance
+- `error`: Error information
 
 #### `Response(sessionID string, dialogue []*schema.Message) chan string`
-生成基本文本响应。
+Generates basic text response.
 
 #### `ResponseWithFunctions(sessionID string, dialogue []*schema.Message, functions []*schema.ToolInfo) chan interface{}`
-生成带工具调用的响应。
+Generates response with tool invocation.
 
 #### `ResponseWithContext(ctx context.Context, sessionID string, dialogue []*schema.Message) chan string`
-带上下文控制的响应生成。
+Generates response with context control.
 
-### 配置选项
+### Configuration Options
 
-| 字段 | 类型 | 必需 | 描述 |
+| Field | Type | Required | Description |
 |------|------|------|------|
-| `type` | string | ✅ | 提供者类型: "openai", "ollama" |
-| `model_name` | string | ✅ | 模型名称 |
-| `api_key` | string | ⚠️ | API 密钥 (OpenAI 必需) |
-| `base_url` | string | ❌ | 基础 URL |
-| `max_tokens` | int | ❌ | 最大令牌数 (默认: 500) |
-| `streamable` | bool | ❌ | 是否支持流式 (默认: true) |
+| `type` | string | ✅ | Provider type: "openai", "ollama" |
+| `model_name` | string | ✅ | Model name |
+| `api_key` | string | ⚠️ | API key (Required for OpenAI) |
+| `base_url` | string | ❌ | Base URL |
+| `max_tokens` | int | ❌ | Maximum tokens (default: 500) |
+| `streamable` | bool | ❌ | Whether to support streaming (default: true) |
 
-### 链式方法
+### Chain Methods
 
 #### `WithMaxTokens(maxTokens int) *EinoLLMProvider`
-设置最大令牌数，返回新的提供者实例。
+Sets maximum tokens, returns new provider instance.
 
 #### `WithStreamable(streamable bool) *EinoLLMProvider`
-设置流式支持，返回新的提供者实例。
+Sets streaming support, returns new provider instance.
 
 #### `GetChatModel() model.ChatModel`
-获取底层的 Eino ChatModel 实例。
+Gets the underlying Eino ChatModel instance.
 
 #### `GetProviderType() string`
-获取提供者类型。
+Gets provider type.
 
 #### `GetModelInfo() map[string]interface{}`
-获取模型信息和元数据。
+Gets model information and metadata.
 
-## 高级用法
+## Advanced Usage
 
-### 直接使用 Eino ChatModel
+### Directly Use Eino ChatModel
 
 ```go
 chatModel := provider.GetChatModel()
 
-// 直接调用生成
+// Directly call generate
 result, err := chatModel.Generate(ctx, messages)
 if err != nil {
-    log.Printf("生成失败: %v", err)
+    log.Printf("Generate failed: %v", err)
     return
 }
-fmt.Printf("结果: %s\n", result.Content)
+fmt.Printf("Result: %s\n", result.Content)
 
-// 直接调用流式
+// Directly call streaming
 streamReader, err := chatModel.Stream(ctx, messages)
 if err != nil {
-    log.Printf("流式调用失败: %v", err)
+    log.Printf("Streaming call failed: %v", err)
     return
 }
 defer streamReader.Close()
@@ -241,14 +241,14 @@ for {
         break
     }
     if err != nil {
-        log.Printf("接收失败: %v", err)
+        log.Printf("Receive failed: %v", err)
         break
     }
     fmt.Print(message.Content)
 }
 ```
 
-### 多提供者管理
+### Multi-Provider Management
 
 ```go
 providers := make(map[string]*EinoLLMProvider)
@@ -269,15 +269,15 @@ configs := map[string]map[string]interface{}{
 for name, config := range configs {
     provider, err := NewEinoLLMProvider(config)
     if err != nil {
-        log.Printf("创建 %s 提供者失败: %v", name, err)
+        log.Printf("Failed to create %s provider: %v", name, err)
         continue
     }
     providers[name] = provider
 }
 
-// 使用不同提供者处理相同请求
+// Use different providers to process same request
 for name, provider := range providers {
-    fmt.Printf("=== %s 提供者响应 ===\n", name)
+    fmt.Printf("=== %s Provider Response ===\n", name)
     responseChan := provider.Response("session", messages)
     for content := range responseChan {
         fmt.Print(content)
@@ -286,41 +286,41 @@ for name, provider := range providers {
 }
 ```
 
-## 测试
+## Testing
 
-运行完整测试套件：
+Run the full test suite:
 
 ```bash
 go test ./internal/domain/llm/eino_llm/... -v
 ```
 
-### 测试覆盖
+### Test Coverage
 
-- ✅ 提供者创建和配置
-- ✅ 多种提供者类型支持
-- ✅ 基本对话功能
-- ✅ 工具调用功能
-- ✅ 链式调用
-- ✅ 错误处理
-- ✅ 性能基准测试
+- ✅ Provider creation and configuration
+- ✅ Multiple provider type support
+- ✅ Basic conversation functionality
+- ✅ Tool invocation functionality
+- ✅ Chained calls
+- ✅ Error handling
+- ✅ Performance benchmarks
 
-## 依赖
+## Dependencies
 
 - `github.com/cloudwego/eino` v0.3.40+
 - `github.com/cloudwego/eino-ext` v0.0.1-alpha+
 
-## 最佳实践
+## Best Practices
 
-### 1. 错误处理
+### 1. Error Handling
 ```go
 provider, err := NewEinoLLMProvider(config)
 if err != nil {
-    log.Errorf("创建提供者失败: %v", err)
+    log.Errorf("Failed to create provider: %v", err)
     return
 }
 ```
 
-### 2. 上下文控制
+### 2. Context Control
 ```go
 ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 defer cancel()
@@ -328,17 +328,17 @@ defer cancel()
 responseChan := provider.ResponseWithContext(ctx, sessionID, messages)
 ```
 
-### 3. 资源管理
+### 3. Resource Management
 ```go
-// 对于流式响应，确保消费完所有数据
+// For streaming responses, ensure all data is consumed
 for content := range responseChan {
-    // 处理内容
+    // Process content
 }
 ```
 
-### 4. 配置管理
+### 4. Configuration Management
 ```go
-// 使用环境变量管理敏感信息
+// Use environment variables to manage sensitive information
 config := map[string]interface{}{
     "type":       "openai",
     "model_name": "gpt-3.5-turbo",
@@ -346,52 +346,52 @@ config := map[string]interface{}{
 }
 ```
 
-## 扩展说明
+## Extension Notes
 
-### 添加新提供者
+### Add New Provider
 
-要添加新的提供者支持，需要：
+To add new provider support, you need to:
 
-1. 在 `createXXXChatModel` 函数中添加新的实现
-2. 在 `NewEinoLLMProvider` 的 switch 语句中添加新的 case
-3. 确保新提供者实现 `model.ChatModel` 接口
+1. Add new implementation in the `createXXXChatModel` function
+2. Add new case in the switch statement of `NewEinoLLMProvider`
+3. Ensure the new provider implements the `model.ChatModel` interface
 
-### 自定义配置
+### Custom Configuration
 
-可以通过扩展配置映射来支持提供者特定的选项：
+Can support provider-specific options by extending the configuration map:
 
 ```go
 config := map[string]interface{}{
     "type":        "openai",
     "model_name":  "gpt-4",
     "api_key":     "your-key",
-    "temperature": 0.7,  // 自定义参数
-    "top_p":       0.9,  // 自定义参数
+    "temperature": 0.7,  // Custom parameter
+    "top_p":       0.9,  // Custom parameter
 }
 ```
 
-## 版本历史
+## Version History
 
-### v3.0.0 (当前版本)
-- ✅ 完全基于 Eino 框架重写
-- ✅ 支持多提供者 (OpenAI, Ollama)
-- ✅ 使用 Eino 原生类型
-- ✅ 直接调用 Eino ChatModel 方法
-- ✅ 移除适配器层，提高性能
-- ✅ 完整的测试覆盖
+### v3.0.0 (Current Version)
+- ✅ Completely rewritten based on Eino framework
+- ✅ Supports multiple providers (OpenAI, Ollama)
+- ✅ Uses Eino native types
+- ✅ Directly calls Eino ChatModel methods
+- ✅ Removes adapter layer, improves performance
+- ✅ Complete test coverage
 
-### v2.x.x (已废弃)
-- 混合实现，使用适配器模式
-- 部分 Eino 集成
+### v2.x.x (Already Deprecated)
+- Hybrid implementation, uses adapter pattern
+- Partial Eino integration
 
-### v1.x.x (已废弃)
-- 基于传统 OpenAI 实现
-- 无 Eino 集成
+### v1.x.x (Already Deprecated)
+- Based on traditional OpenAI implementation
+- No Eino integration
 
-## 贡献
+## Contributing
 
-欢迎提交 Issue 和 Pull Request 来改进这个实现。
+Issues and Pull Requests are welcome to improve this implementation.
 
-## 许可证
+## License
 
-本项目遵循项目根目录的许可证。 
+This project follows the license in the project root directory. 

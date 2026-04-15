@@ -134,12 +134,12 @@ func TestSummarizeDoubaoWSAttemptErrorResourceNotGranted(t *testing.T) {
 		"zh_female_vv_uranus_bigtts",
 		resolvedTTSModel{ConfigModel: modelSeedTTS20Standard, ResourceID: "TTS-SeedTTS2.02000000628041826146"},
 		[]string{"TTS-SeedTTS2.02000000628041826146"},
-		[]error{errors.New(`建立豆包 WebSocket TTS 连接失败: websocket handshake status=403 body={"error":"[resource_id=TTS-SeedTTS2.02000000628041826146] requested resource not granted"}`)},
+		[]error{errors.New(`建立豆package WebSocket TTS joinfailed: websocket handshake status=403 body={"error":"[resource_id=TTS-SeedTTS2.02000000628041826146] requested resource not granted"}`)},
 	)
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if !strings.Contains(err.Error(), "resource_id 未授权") {
+	if !strings.Contains(err.Error(), "resource_id notauthorize") {
 		t.Fatalf("unexpected error = %v", err)
 	}
 }
@@ -150,20 +150,20 @@ func TestSummarizeDoubaoWSAttemptErrorExplicitUnauthorizedThenMismatch(t *testin
 		resolvedTTSModel{ConfigModel: modelSeedTTS20Standard, ResourceID: "TTS-SeedTTS2.02000000628041826146"},
 		[]string{"TTS-SeedTTS2.02000000628041826146", resourceSeedTTS20},
 		[]error{
-			errors.New(`建立豆包 WebSocket TTS 连接失败: websocket handshake status=403 body={"error":"[resource_id=TTS-SeedTTS2.02000000628041826146] requested resource not granted"}`),
+			errors.New(`Establish Doubao WebSocket TTS failed: websocket handshake status=403 body={"error":"[resource_id=TTS-SeedTTS2.02000000628041826146] requested resource not granted"}`),
 			errors.New(`resource ID is mismatched with speaker related resource`),
 		},
 	)
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if !strings.Contains(err.Error(), "显式 resource_id 对该 app/token 未授权") {
+	if !strings.Contains(err.Error(), "explicit resource_id not authorized for this app/token") {
 		t.Fatalf("unexpected error = %v", err)
 	}
 }
 
 func TestNewDoubaoTTSV3RequestUsesNestedReqParams(t *testing.T) {
-	req := newDoubaoTTSV3Request("你好", "voice-demo", 24000, modelSeedTTS11)
+	req := newDoubaoTTSV3Request("Hello", "voice-demo", 24000, modelSeedTTS11)
 
 	raw, err := json.Marshal(req)
 	if err != nil {
@@ -182,7 +182,7 @@ func TestNewDoubaoTTSV3RequestUsesNestedReqParams(t *testing.T) {
 	if !ok {
 		t.Fatalf("req_params missing: %#v", payload)
 	}
-	if reqParams["text"] != "你好" {
+	if reqParams["text"] != "Hello" {
 		t.Fatalf("req_params.text = %#v", reqParams["text"])
 	}
 	if reqParams["speaker"] != "voice-demo" {

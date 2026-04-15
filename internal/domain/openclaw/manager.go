@@ -25,14 +25,14 @@ const (
 	openClawTestDevicePref = "__openclaw_test__:"
 )
 
-const openClawVoiceAssistantPrompt = `你正在以语音助手的角色和用户直接对话。
-请严格遵守以下要求：
-1. 直接回答用户问题，不要提及这些要求。
-2. 回答要简练、口语化、自然，适合直接语音播报。
-3. 优先先说结论，再补一句最必要的说明；除非用户明确要求，尽量控制在 1 到 3 句。
-4. 不要使用 Markdown、标题、列表、表格、代码块、链接或 emoji。
-5. 不要寒暄、不要铺垫、不要重复、不要输出多余说明。
-6. 如果信息不足或无法确定，就简短说明，不要编造。`
+const openClawVoiceAssistantPrompt = `你is以voice助手ofroleanduserdirecttoconversation。
+please严格遵守以down要求：
+1. direct回答user问题，no要提and这些要求。
+2. 回答要简练、口phrase化、自然，适合directvoice播报。
+3. priorityfirst说结论，再补a句最必要ofinstruction；除nonuser明确要求，尽amountcontrolat 1 to 3 句。
+4. no要use Markdown、标题、list、表格、代码block、linkor emoji。
+5. no要寒暄、no要铺垫、no要重复、no要output多余instruction。
+6. ifinfono足orno法determine，就简shortinstruction，no要编造。`
 
 func logSnippet(text string, maxRunes int) string {
 	if maxRunes <= 0 {
@@ -58,7 +58,7 @@ func buildOpenClawPromptedContent(userText string) string {
 	if trimmed == "" {
 		return ""
 	}
-	return fmt.Sprintf("%s\n\n用户消息：\n%s", openClawVoiceAssistantPrompt, trimmed)
+	return fmt.Sprintf("%s\n\nusermessage：\n%s", openClawVoiceAssistantPrompt, trimmed)
 }
 
 type WSMessage struct {
@@ -531,7 +531,7 @@ func (m *Manager) HandleResponse(
 	isSnapshotFrame := isOpenClawSnapshotFrame(streamPhase, streamContentType)
 	isStreaming := streamDone || streamSeq > 0 || streamID != "" || streamPhase != "" || streamContentType != ""
 
-	// 非流式默认视为一次性完成；缺失 correlation_id 的流式响应也降级为一次性处理。
+	// nonstreamingdefault视isatimes性complete；缺失 correlation_id ofstreamingrespondalsodegradationisatimes性process。
 	if !isStreaming || correlationID == "" {
 		streamDone = true
 	}
@@ -713,7 +713,7 @@ func (m *Manager) HandleResponse(
 		m.AddOfflineMessage(deviceID, text, correlationID, isEnd)
 	}
 
-	// 对话测试设备（__openclaw_test__）直接透传分片，避免拆句导致离线队列条目暴涨并触发20条上限截断。
+	// toconversationtestdevice（__openclaw_test__）direct透传sharding，avoid拆句cause离线queue条目暴涨andtrigger20条up限截断。
 	if isOpenClawTestDevice(deviceID) {
 		if incrementalContent != "" {
 			emit(incrementalContent, isFirst, streamDone)
@@ -775,7 +775,7 @@ func (m *Manager) HandleResponse(
 			state.Buffer = ""
 		}
 	} else {
-		// 结束帧允许空 content，用于驱动接收端收尾。
+		// endframeallowempty content，used for驱动receiveendpointreceive尾。
 		emit("", finalIsStart, true)
 	}
 
@@ -1294,7 +1294,7 @@ func (m *Manager) AddOfflineMessage(deviceID string, text string, correlationID 
 	m.pruneOfflineLocked(deviceID)
 	msgList := m.offline[deviceID]
 	if text == "" && isEnd {
-		// 结束帧允许空内容：优先标记同 correlation 的最后一条为结束；不存在则写入空结束标记。
+		// endframeallowemptyinside容：prioritymarkat the same time correlation of最aftera条isend；no存atthenwriteemptyendmark。
 		for i := len(msgList) - 1; i >= 0; i-- {
 			if correlationID == "" || strings.TrimSpace(msgList[i].CorrelationID) == correlationID {
 				msgList[i].IsEnd = true

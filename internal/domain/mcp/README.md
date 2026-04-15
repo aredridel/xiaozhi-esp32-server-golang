@@ -1,55 +1,55 @@
-# MCP Host 实现
+# MCP Host Implementation
 
-基于 [Eino 框架](https://github.com/cloudwego/eino) 实现的 MCP (Model Context Protocol) Host，支持全局和设备维度的工具管理。
+MCP (Model Context Protocol) Host implementation based on the [Eino Framework](https://github.com/cloudwego/eino), supporting global and device-level tool management.
 
-## 功能特性
+## Features
 
-### 🌐 全局 MCP 工具管理
-- 通过 SSE 连接到多个 MCP 服务器
-- 自动工具发现和注册
-- 连接状态监控和自动重连
-- 工具调用代理
+### 🌐 Global MCP Tool Management
+- Connect to multiple MCP servers via SSE
+- Automatic tool discovery and registration
+- Connection status monitoring and auto-reconnect
+- Tool invocation proxy
 
-### 📱 设备维度 MCP 管理  
-- 每个设备独立的 MCP 连接
-- WebSocket 协议支持
-- 设备特定工具注册
-- 连接数限制和清理
+### 📱 Device-Level MCP Management  
+- Independent MCP connections for each device
+- WebSocket protocol support
+- Device-specific tool registration
+- Connection limit and cleanup
 
-### 🔧 Eino 框架集成
-- 实现 `tool.InvokableTool` 接口
-- 支持 Eino 原生工具调用
-- 完整的类型安全
-- 流式处理支持
+### 🔧 Eino Framework Integration
+- Implements `tool.InvokableTool` interface
+- Supports Eino native tool invocation
+- Full type safety
+- Streaming processing support
 
-## 架构设计
+## Architecture Design
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    WebSocket Server                        │
-│  /xiaozhi/mcp/{deviceId} - 设备MCP连接                      │
-│  /xiaozhi/api/mcp/tools/{deviceId} - 工具列表API            │
+│  /xiaozhi/mcp/{deviceId} - Device MCP Connection                      │
+│  /xiaozhi/api/mcp/tools/{deviceId} - Tool List API            │
 └─────────────────────────────────────────────────────────────┘
-                              │
-                    ┌─────────┴─────────┐
-                    ▼                   ▼
+                               │
+                     ┌─────────┴─────────┐
+                     ▼                   ▼
 ┌─────────────────────────┐  ┌─────────────────────────┐
 │   GlobalMCPManager      │  │   DeviceMCPManager      │
-│   • SSE 连接管理        │  │   • WebSocket 连接管理   │
-│   • 全局工具注册        │  │   • 设备工具注册         │
-│   • 自动重连           │  │   • 连接清理            │
+│   • SSE Connection Management        │  │   • WebSocket Connection Management   │
+│   • Global Tool Registration        │  │   • Device Tool Registration         │
+│   • Auto Reconnect           │  │   • Connection Cleanup            │
 └─────────────────────────┘  └─────────────────────────┘
-                              │
-                              ▼
+                               │
+                               ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    Eino Tool Interface                     │
-│  tool.InvokableTool - 统一工具调用接口                      │
+│  tool.InvokableTool - Unified Tool Invocation Interface                      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## 配置说明
+## Configuration
 
-### config.json 配置
+### config.json Configuration
 
 ```json
 {
@@ -80,34 +80,34 @@
 }
 ```
 
-### 配置参数说明
+### Configuration Parameter Description
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 |------|------|------|
-| `mcp.global.enabled` | bool | 是否启用全局MCP管理器 |
-| `mcp.global.servers` | array | MCP服务器列表 |
-| `mcp.global.reconnect_interval` | int | 重连间隔（秒） |
-| `mcp.global.max_reconnect_attempts` | int | 最大重连次数 |
-| `mcp.device.enabled` | bool | 是否启用设备MCP管理器 |
-| `mcp.device.websocket_path` | string | WebSocket路径前缀 |
-| `mcp.device.max_connections_per_device` | int | 每设备最大连接数 |
+| `mcp.global.enabled` | bool | Whether to enable global MCP manager |
+| `mcp.global.servers` | array | MCP server list |
+| `mcp.global.reconnect_interval` | int | Reconnect interval (seconds) |
+| `mcp.global.max_reconnect_attempts` | int | Maximum reconnect attempts |
+| `mcp.device.enabled` | bool | Whether to enable device MCP manager |
+| `mcp.device.websocket_path` | string | WebSocket path prefix |
+| `mcp.device.max_connections_per_device` | int | Maximum connections per device |
 
-## API 接口
+## API Interface
 
-### WebSocket 端点
+### WebSocket Endpoint
 
-#### 设备 MCP 连接
+#### Device MCP Connection
 ```
 ws://localhost:8989/xiaozhi/mcp/{deviceId}
 ```
 
-**连接流程：**
-1. 客户端连接到 WebSocket 端点
-2. 服务器发送初始化消息
-3. 客户端响应工具列表
-4. 建立双向通信
+**Connection Flow:**
+1. Client connects to WebSocket endpoint
+2. Server sends initialization message
+3. Client responds with tool list
+4. Establish bidirectional communication
 
-**消息格式：**
+**Message Format:**
 ```json
 {
   "jsonrpc": "2.0",
@@ -119,24 +119,24 @@ ws://localhost:8989/xiaozhi/mcp/{deviceId}
 
 ### REST API
 
-#### 获取设备工具列表
+#### Get Device Tool List
 ```http
 GET /xiaozhi/api/mcp/tools/{deviceId}
 ```
 
-**响应示例：**
+**Response Example:**
 ```json
 {
   "deviceId": "device123",
   "tools": {
     "filesystem_read_file": {
       "name": "read_file",
-      "description": "读取文件内容",
+      "description": "Read file content",
       "type": "global"
     },
     "device_sensor_data": {
       "name": "sensor_data", 
-      "description": "获取传感器数据",
+      "description": "Get sensor data",
       "type": "device"
     }
   },
@@ -147,9 +147,9 @@ GET /xiaozhi/api/mcp/tools/{deviceId}
 }
 ```
 
-## 使用示例
+## Usage Examples
 
-### 1. 启动服务器
+### 1. Start Server
 
 ```go
 package main
@@ -164,27 +164,27 @@ func main() {
 }
 ```
 
-### 2. 连接 MCP 服务器
+### 2. Connect MCP Server
 
-MCP 服务器需要提供 SSE 端点，支持以下事件：
+MCP servers need to provide SSE endpoints, supporting the following events:
 
-- `tools` - 工具列表更新
-- `status` - 连接状态更新
+- `tools` - Tool list update
+- `status` - Connection status update
 
-### 3. 设备连接示例
+### 3. Device Connection Example
 
 ```javascript
-// 设备端 WebSocket 连接
+// Device-side WebSocket connection
 const ws = new WebSocket('ws://localhost:8989/xiaozhi/mcp/device123');
 
 ws.onopen = function() {
-    console.log('MCP连接已建立');
+    console.log('MCP connection already established');
 };
 
 ws.onmessage = function(event) {
     const message = JSON.parse(event.data);
     if (message.method === 'initialize') {
-        // 响应初始化
+        // Respond to initialization
         ws.send(JSON.stringify({
             jsonrpc: "2.0",
             id: message.id,
@@ -200,30 +200,30 @@ ws.onmessage = function(event) {
 };
 ```
 
-### 4. 工具调用示例
+### 4. Tool Invocation Example
 
 ```go
-// 获取全局工具
+// Get global tools
 globalManager := mcp.GetGlobalMCPManager()
 tools := globalManager.GetAllTools()
 
-// 调用工具
+// Invoke tool
 for name, tool := range tools {
     result, err := tool.InvokableRun(
         context.Background(),
         `{"path": "/tmp/test.txt"}`,
     )
     if err != nil {
-        log.Errorf("工具调用失败: %v", err)
+        log.Errorf("Tool invocation failed: %v", err)
         continue
     }
-    log.Infof("工具 %s 结果: %s", name, result)
+    log.Infof("Tool %s result: %s", name, result)
 }
 ```
 
-## 开发指南
+## Development Guide
 
-### 实现自定义 MCP 工具
+### Implement Custom MCP Tool
 
 ```go
 type customTool struct {
@@ -236,70 +236,70 @@ func (t *customTool) Info(ctx context.Context) (*schema.ToolInfo, error) {
         Name: t.name,
         Desc: t.description,
         ParamsOneOf: &schema.ParamsOneOf{
-            // 参数定义
+            // Parameter definitions
         },
     }, nil
 }
 
 func (t *customTool) InvokableRun(ctx context.Context, argumentsInJSON string, opts ...tool.Option) (string, error) {
-    // 工具实现逻辑
+    // Tool implementation logic
     return "result", nil
 }
 ```
 
-### 扩展 MCP 协议
+### Extend MCP Protocol
 
-1. 在 `MCPMessage` 结构体中添加新字段
-2. 在 `handleMessage` 方法中添加新的消息处理
-3. 实现对应的处理函数
+1. Add new fields to the `MCPMessage` struct
+2. Add new message processing in the `handleMessage` method
+3. Implement corresponding processing functions
 
-## 监控和调试
+## Monitoring and Debugging
 
-### 日志级别
+### Log Levels
 
-- `INFO` - 连接建立、工具注册等关键事件
-- `ERROR` - 连接失败、工具调用错误等
-- `DEBUG` - 详细的协议交互信息
+- `INFO` - Key events such as connection establishment, tool registration, etc.
+- `ERROR` - Connection failures, tool invocation errors, etc.
+- `DEBUG` - Detailed protocol interaction information
 
-### 健康检查
+### Health Check
 
 ```bash
-# 检查全局工具
+# Check global tools
 curl http://localhost:8989/xiaozhi/api/mcp/tools/health_check
 
-# 检查特定设备工具  
+# Check specific device tools  
 curl http://localhost:8989/xiaozhi/api/mcp/tools/device123
 ```
 
-## 故障排除
+## Troubleshooting
 
-### 常见问题
+### Common Issues
 
-1. **SSE 连接失败**
-   - 检查 MCP 服务器是否运行
-   - 验证 SSE URL 配置
-   - 查看网络连接
+1. **SSE Connection Failed**
+   - Check if MCP server is running
+   - Verify SSE URL configuration
+   - Check network connection
 
-2. **WebSocket 连接断开**
-   - 检查心跳机制
-   - 验证设备 ID 格式
-   - 查看连接数限制
+2. **WebSocket Connection Disconnected**
+   - Check heartbeat mechanism
+   - Verify device ID format
+   - Check connection limit
 
-3. **工具调用失败**
-   - 验证工具参数格式
-   - 检查工具是否已注册
-   - 查看错误日志
+3. **Tool Invocation Failed**
+   - Verify tool parameter format
+   - Check if tool is already registered
+   - Check error logs
 
-### 性能优化
+### Performance Optimization
 
-- 调整重连间隔和次数
-- 设置合适的连接数限制
-- 启用连接池复用
-- 定期清理过期连接
+- Adjust reconnect interval and count
+- Set appropriate connection limits
+- Enable connection pool reuse
+- Regularly clean up expired connections
 
-## 参考资料
+## References
 
-- [Eino 框架文档](https://www.cloudwego.io/docs/eino/)
-- [MCP 协议规范](https://github.com/mark3labs/mcp-go)
-- [SSE 规范](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events)
-- [WebSocket 协议](https://tools.ietf.org/html/rfc6455) 
+- [Eino Framework Documentation](https://www.cloudwego.io/docs/eino/)
+- [MCP Protocol Specification](https://github.com/mark3labs/mcp-go)
+- [SSE Specification](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events)
+- [WebSocket Protocol](https://tools.ietf.org/html/rfc6455) 

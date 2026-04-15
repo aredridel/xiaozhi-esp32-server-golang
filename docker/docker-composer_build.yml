@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # MySQL数据库服务
+  # MySQL database service
   mysql:
     image: docker.jsdelivr.fyi/mysql:8.0
     container_name: xiaozhi-mysql
@@ -9,7 +9,7 @@ services:
       MYSQL_ROOT_PASSWORD: password
       MYSQL_DATABASE: xiaozhi_admin
     ports:
-      - "23306:3306"        #可以不进行映射
+      - "23306:3306"        # Optional: mapping not required
     volumes:
       - mysql_data:/var/lib/mysql
     command: --default-authentication-plugin=mysql_native_password --skip-ssl
@@ -23,7 +23,7 @@ services:
       interval: 10s
       start_period: 30s
 
-  # 主程序服务
+  # Main program service
   main-server:
     build:
       context: ..
@@ -49,7 +49,7 @@ services:
       - xiaozhi-network
     restart: unless-stopped
 
-  # 后端管理服务
+  # Backend management service
   backend:
     build:
       context: ..
@@ -72,7 +72,7 @@ services:
       - xiaozhi-network
     restart: unless-stopped
 
-  # 前端管理服务
+  # Frontend management service
   frontend:
     build:
       context: ..

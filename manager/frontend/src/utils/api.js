@@ -6,7 +6,7 @@ const api = axios.create({
   timeout: 10000
 })
 
-// 请求拦截器
+// Request interceptor
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token')
@@ -20,7 +20,7 @@ api.interceptors.request.use(
   }
 )
 
-// 响应拦截器
+// Response interceptor
 api.interceptors.response.use(
   (response) => {
     return response
@@ -31,7 +31,7 @@ api.interceptors.response.use(
       localStorage.removeItem('user')
       window.location.href = '/login'
     } else {
-      ElMessage.error(error.response?.data?.error || '请求失败')
+      ElMessage.error(error.response?.data?.error || 'Request failed')
     }
     return Promise.reject(error)
   }

@@ -1,7 +1,7 @@
-# 使用官方 Ubuntu 镜像作为基础镜像
+# Use official Ubuntu image as base image
 FROM golang:1.24.4
 
-# 设置非交互式安装环境变量
+# Set non-interactive installation environment variable
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y libopus-dev libopusfile-dev pkg-config
@@ -30,7 +30,7 @@ ENV CGO_LDFLAGS="-L${ONNXRUNTIME_DIR}/lib -lonnxruntime"
 ENV GOPROXY=https://goproxy.cn,direct
 ENV CGO_ENABLED=1
 
-# 添加环境变量到.bashrc和.profile确保所有shell都能访问
+# Add environment variables to .bashrc and .profile to ensure all shells can access them
 RUN echo 'export PATH=$PATH:/usr/local/go/bin' >> /root/.bashrc && \
     echo 'export GOPATH=/go' >> /root/.bashrc && \
     echo 'export GOROOT=/usr/local/go' >> /root/.bashrc && \
@@ -48,48 +48,48 @@ RUN echo 'export PATH=$PATH:/usr/local/go/bin' >> /root/.bashrc && \
     echo 'export CGO_CFLAGS="-I${ONNXRUNTIME_DIR}/include/onnxruntime"' >> /etc/profile && \
     echo 'export CGO_LDFLAGS="-L${ONNXRUNTIME_DIR}/lib -lonnxruntime"' >> /etc/profile
 
-# 创建Go目录结构
+# Create Go directory structure
 RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" "$GOPATH/pkg" && chmod -R 777 "$GOPATH"
 
-# 验证Go安装
-RUN /usr/local/go/bin/go version || echo "Go未安装成功，请检查日志"
+# Verify Go installation
+RUN /usr/local/go/bin/go version || echo "Go installation failed, please check logs"
 
-# 创建工作目录
+# Create working directory
 RUN mkdir -p /workspace
 WORKDIR /workspace
 
-# 创建 SSH 服务运行目录
+# Create SSH service runtime directory
 RUN mkdir -p /var/run/sshd
 
-# 设置 root 用户密码
+# Set root user password
 ARG PASSWORD=rootpassword
 RUN echo "root:$PASSWORD" | chpasswd
 
-# 配置 SSH 允许 root 登录
+# Configure SSH to allow root login
 RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config || true
 RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd || true
 
-# 设置时区为上海
+# Set timezone to Shanghai
 RUN ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime || true
 
-# 复制启动脚本
+# Copy startup script
 #COPY start-service.sh /usr/local/bin/
 #RUN chmod +x /usr/local/bin/start-service.sh
 
 #COPY . .
 #RUN go build -o /workspace/xiaozhi_server /workspace/xiaozhi/cmd/server/  # 编译生成二进制文件
 
-# 创建启动脚本
+# Create startup script
 RUN echo '#!/bin/bash' > /start.sh && \
     echo 'service ssh start' >> /start.sh && \
     echo 'cd /workspace' >> /start.sh && \
     echo 'exec bash' >> /start.sh && \
     chmod +x /start.sh
 
-# 开放 SSH 端口和应用端口
+# Expose SSH port and application port
 EXPOSE 22 8080
 
-# 启动SSH和保持容器运行
+# Start SSH and keep container running
 CMD ["/start.sh"]
 
 # docker run -it --privileged --name ubt -d -p 9022:22 liuwang68/ubtool:1.0
@@ -108,8 +108,8 @@ CMD ["/start.sh"]
 #   -v /Users/liuwang/CosyVoice:/root/CosyVoice \
 #   liuwang68/ubtool:1.0
 
-# 挂载说明:
-# 使用以下命令运行容器并挂载宿主机目录到工作目录:
+# Mount instructions:
+# Use the following command to run the container and mount host directory to working directory:
 # docker run -it --privileged --name audio-service -d \
 #   -p 9022:22 \
 #   -p 8080:8080 \

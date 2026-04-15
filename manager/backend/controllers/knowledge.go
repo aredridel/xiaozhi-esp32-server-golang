@@ -135,11 +135,11 @@ func isKnowledgeFeatureEnabled(db *gorm.DB) (bool, error) {
 func ensureKnowledgeFeatureEnabled(c *gin.Context, db *gorm.DB) bool {
 	enabled, err := isKnowledgeFeatureEnabled(db)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "检查知识库开关状态失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check knowledge base feature status"})
 		return false
 	}
 	if !enabled {
-		c.JSON(http.StatusForbidden, gin.H{"error": "知识库功能已关闭（未启用默认知识库提供商）"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "Knowledge base feature is disabled (default knowledge base provider not enabled)"})
 		return false
 	}
 	return true
@@ -148,7 +148,7 @@ func ensureKnowledgeFeatureEnabled(c *gin.Context, db *gorm.DB) bool {
 func (ac *AdminController) GetKnowledgeSearchConfigs(c *gin.Context) {
 	var configs []models.Config
 	if err := ac.DB.Where("type = ?", "knowledge_search").Order("id ASC").Find(&configs).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取知识库检索配置失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get knowledge base search config"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": configs})
@@ -185,14 +185,14 @@ func (ac *AdminController) ListWeknoraModels(c *gin.Context) {
 		APIKey  string `json:"api_key" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数错误: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Request parameter error: " + err.Error()})
 		return
 	}
 
 	baseURL := strings.TrimSpace(req.BaseURL)
 	apiKey := strings.TrimSpace(req.APIKey)
 	if baseURL == "" || apiKey == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "base_url 和 api_key 不能为空"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "base_url and api_key cannot be empty"})
 		return
 	}
 
@@ -224,7 +224,7 @@ func (ac *AdminController) ListWeknoraModels(c *gin.Context) {
 	}
 	if lastErr != nil {
 		c.JSON(http.StatusBadGateway, gin.H{
-			"error":       fmt.Sprintf("拉取WeKnora模型列表失败: %v; 尝试路径: %s", lastErr, strings.Join(tryLogs, " | ")),
+			"error":       fmt.Sprintf("Failed to fetch WeKnora model list: %v; tried paths: %s", lastErr, strings.Join(tryLogs, " | ")),
 			"status_code": lastStatus,
 			"endpoint":    lastURL,
 		})
@@ -234,7 +234,7 @@ func (ac *AdminController) ListWeknoraModels(c *gin.Context) {
 	var parsed map[string]interface{}
 	if len(bodyBytes) > 0 {
 		if err := json.Unmarshal(bodyBytes, &parsed); err != nil {
-			c.JSON(http.StatusBadGateway, gin.H{"error": "解析WeKnora模型列表失败: " + err.Error()})
+			c.JSON(http.StatusBadGateway, gin.H{"error": "Failed to parse WeKnora model list: " + err.Error()})
 			return
 		}
 	}
@@ -405,7 +405,7 @@ func isWeknoraLLMModel(model knowledgeProviderModelOption) bool {
 	if strings.Contains(corpus, "gpt") || strings.Contains(corpus, "qwen") || strings.Contains(corpus, "deepseek") || strings.Contains(corpus, "glm") || strings.Contains(corpus, "claude") || strings.Contains(corpus, "gemini") {
 		return true
 	}
-	// 类型为空时做宽松兜底，保留可选择性
+	// When type is empty, use loose fallback, keep selectivity
 	return strings.TrimSpace(model.Type) == ""
 }
 
@@ -457,7 +457,7 @@ func (uc *UserController) GetKnowledgeBases(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	var items []models.KnowledgeBase
 	if err := uc.DB.Where("user_id = ?", userID).Order("id DESC").Find(&items).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取知识库列表失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get knowledge base list"})
 		return
 	}
 
@@ -477,7 +477,7 @@ func (uc *UserController) GetKnowledgeBases(c *gin.Context) {
 			Where("knowledge_base_id IN ?", kbIDs).
 			Group("knowledge_base_id").
 			Scan(&rows).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "统计知识库文档数失败"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count knowledge base documents"})
 			return
 		}
 		for _, row := range rows {
@@ -514,7 +514,7 @@ func (uc *UserController) CreateKnowledgeBase(c *gin.Context) {
 		InheritGlobalThreshold *bool    `json:"inherit_global_threshold"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数错误: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Request parameter error: " + err.Error()})
 		return
 	}
 	if req.Status == "" {
@@ -537,7 +537,7 @@ func (uc *UserController) CreateKnowledgeBase(c *gin.Context) {
 		SyncProvider:       resolveDefaultKnowledgeProviderName(uc.DB),
 	}
 	if err := uc.DB.Create(&item).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建知识库失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create knowledge base"})
 		return
 	}
 	if err := enqueueKnowledgeSyncUpsert(uc.DB, item.ID); err != nil {
@@ -548,12 +548,12 @@ func (uc *UserController) CreateKnowledgeBase(c *gin.Context) {
 		_ = uc.DB.Where("id = ?", item.ID).First(&item).Error
 		c.JSON(http.StatusCreated, gin.H{
 			"data":       item,
-			"warning":    "知识库已保存，但同步任务入队失败",
+			"warning":    "Knowledge base saved, but sync task failed to enqueue",
 			"sync_error": err.Error(),
 		})
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"data": item, "message": "知识库已保存，后台正在同步"})
+	c.JSON(http.StatusCreated, gin.H{"data": item, "message": "Knowledge base saved, syncing in background"})
 }
 
 func (uc *UserController) GetKnowledgeBase(c *gin.Context) {
@@ -561,7 +561,7 @@ func (uc *UserController) GetKnowledgeBase(c *gin.Context) {
 	id := c.Param("id")
 	var item models.KnowledgeBase
 	if err := uc.DB.Where("id = ? AND user_id = ?", id, userID).First(&item).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "知识库不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Knowledge base does not exist"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": item})
@@ -575,7 +575,7 @@ func (uc *UserController) UpdateKnowledgeBase(c *gin.Context) {
 	id := c.Param("id")
 	var item models.KnowledgeBase
 	if err := uc.DB.Where("id = ? AND user_id = ?", id, userID).First(&item).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "知识库不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Knowledge base does not exist"})
 		return
 	}
 	var req struct {
@@ -587,7 +587,7 @@ func (uc *UserController) UpdateKnowledgeBase(c *gin.Context) {
 		InheritGlobalThreshold *bool    `json:"inherit_global_threshold"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数错误: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Request parameter error: " + err.Error()})
 		return
 	}
 	item.Name = req.Name
@@ -607,7 +607,7 @@ func (uc *UserController) UpdateKnowledgeBase(c *gin.Context) {
 	item.SyncStatus = knowledgeSyncStatusPending
 	item.SyncError = ""
 	if err := uc.DB.Save(&item).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新知识库失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update knowledge base"})
 		return
 	}
 	if err := enqueueKnowledgeSyncUpsert(uc.DB, item.ID); err != nil {
@@ -618,30 +618,30 @@ func (uc *UserController) UpdateKnowledgeBase(c *gin.Context) {
 		_ = uc.DB.Where("id = ?", item.ID).First(&item).Error
 		c.JSON(http.StatusOK, gin.H{
 			"data":       item,
-			"warning":    "知识库已更新，但同步任务入队失败",
+			"warning":    "Knowledge base updated, but sync task failed to enqueue",
 			"sync_error": err.Error(),
 		})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": item, "message": "知识库已更新，后台正在同步"})
+	c.JSON(http.StatusOK, gin.H{"data": item, "message": "Knowledge base updated, syncing in background"})
 }
 
 func (uc *UserController) DeleteKnowledgeBase(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	id, _ := strconv.Atoi(c.Param("id"))
 	if id <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的知识库ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid knowledge base ID"})
 		return
 	}
 
 	var item models.KnowledgeBase
 	if err := uc.DB.Where("id = ? AND user_id = ?", id, userID).First(&item).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "知识库不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Knowledge base does not exist"})
 		return
 	}
 	var docs []models.KnowledgeBaseDocument
 	if err := uc.DB.Where("knowledge_base_id = ?", item.ID).Find(&docs).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询知识库文档失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query knowledge base documents"})
 		return
 	}
 
@@ -655,14 +655,14 @@ func (uc *UserController) DeleteKnowledgeBase(c *gin.Context) {
 		return tx.Where("knowledge_base_id = ?", id).Delete(&models.AgentKnowledgeBase{}).Error
 	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除知识库失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete knowledge base"})
 		return
 	}
 	for _, doc := range docs {
 		if err := enqueueKnowledgeDocumentSyncDelete(uc.DB, item, doc); err != nil {
 			c.JSON(http.StatusOK, gin.H{
-				"message":    "删除成功",
-				"warning":    "本地删除成功，但部分知识库文档清理任务入队失败",
+				"message":    "delete successful",
+				"warning":    "local delete successful, but some knowledge base document cleanup tasks failed to enqueue",
 				"sync_error": err.Error(),
 			})
 			return
@@ -672,27 +672,27 @@ func (uc *UserController) DeleteKnowledgeBase(c *gin.Context) {
 	if len(docs) == 0 {
 		if err := enqueueKnowledgeSyncDelete(uc.DB, item); err != nil {
 			c.JSON(http.StatusOK, gin.H{
-				"message":    "删除成功",
-				"warning":    "本地删除成功，但知识库清理任务入队失败",
+				"message":    "delete successful",
+				"warning":    "local delete successful, but knowledge base cleanup task failed to enqueue",
 				"sync_error": err.Error(),
 			})
 			return
 		}
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "删除成功，后台正在清理知识库数据"})
+	c.JSON(http.StatusOK, gin.H{"message": "Delete successful, background cleanup in progress"})
 }
 
 func (uc *UserController) SyncKnowledgeBase(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	id, _ := strconv.Atoi(c.Param("id"))
 	if id <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的知识库ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid knowledge base ID"})
 		return
 	}
 
 	var item models.KnowledgeBase
 	if err := uc.DB.Where("id = ? AND user_id = ?", id, userID).First(&item).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "知识库不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Knowledge base does not exist"})
 		return
 	}
 
@@ -702,7 +702,7 @@ func (uc *UserController) SyncKnowledgeBase(c *gin.Context) {
 		"sync_status": knowledgeSyncStatusPending,
 		"sync_error":  "",
 	}).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新同步状态失败: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update sync status: " + err.Error()})
 		return
 	}
 
@@ -713,14 +713,14 @@ func (uc *UserController) SyncKnowledgeBase(c *gin.Context) {
 		}).Error
 		_ = uc.DB.Where("id = ?", item.ID).First(&item).Error
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":      "同步任务入队失败: " + err.Error(),
+			"error":      "sync task failed to enqueue: " + err.Error(),
 			"data":       item,
 			"sync_error": err.Error(),
 		})
 		return
 	}
 	_ = uc.DB.Where("id = ?", item.ID).First(&item).Error
-	c.JSON(http.StatusAccepted, gin.H{"message": "同步任务已提交", "data": item})
+	c.JSON(http.StatusAccepted, gin.H{"message": "Sync task submitted", "data": item})
 }
 
 func (uc *UserController) TestKnowledgeBaseSearch(c *gin.Context) {
@@ -729,7 +729,7 @@ func (uc *UserController) TestKnowledgeBaseSearch(c *gin.Context) {
 	startAt := time.Now()
 	kbID, _ := strconv.Atoi(c.Param("id"))
 	if kbID <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的知识库ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid knowledge base ID"})
 		return
 	}
 	kb, err := uc.getOwnedKnowledgeBase(userIDUint, uint(kbID))
@@ -744,13 +744,13 @@ func (uc *UserController) TestKnowledgeBaseSearch(c *gin.Context) {
 		Threshold *float64 `json:"threshold"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数错误: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Request parameter error: " + err.Error()})
 		return
 	}
 
 	query := strings.TrimSpace(req.Query)
 	if query == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "query 不能为空"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "query cannot be empty"})
 		return
 	}
 	topK := req.TopK
@@ -762,14 +762,14 @@ func (uc *UserController) TestKnowledgeBaseSearch(c *gin.Context) {
 	}
 	if req.Threshold != nil {
 		if *req.Threshold < 0 || *req.Threshold > 1 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "threshold 必须在 0~1 之间"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "threshold must be between 0~1"})
 			return
 		}
 	}
 
 	datasetID := strings.TrimSpace(kb.ExternalKBID)
 	if datasetID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "知识库尚未同步到外部 provider（external_kb_id 为空）"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Knowledge base not synced to external provider (external_kb_id is empty)"})
 		return
 	}
 
@@ -862,7 +862,7 @@ func (uc *UserController) TestKnowledgeBaseSearch(c *gin.Context) {
 			return
 		}
 	default:
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("当前 provider %s 暂不支持测试检索", provider)})
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("current provider %s does not support test retrieval yet", provider)})
 		return
 	}
 
@@ -884,7 +884,7 @@ func (uc *UserController) TestKnowledgeBaseSearch(c *gin.Context) {
 	)
 	if len(hits) == 0 {
 		log.Printf(
-			"[KnowledgeTest] EmptyResultHint kb_id=%d dataset_id=%s provider=%s hint=请优先检查文档是否已同步成功且外部平台索引已完成，再检查阈值和query关键词",
+			"[KnowledgeTest] EmptyResultHint kb_id=%d dataset_id=%s provider=%s hint=please first check if document is synced and external platform index is completed, then check threshold and query keywords",
 			kb.ID,
 			datasetID,
 			provider,
@@ -910,7 +910,7 @@ func (uc *UserController) GetKnowledgeBaseDocuments(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	kbID, _ := strconv.Atoi(c.Param("id"))
 	if kbID <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的知识库ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid knowledge base ID"})
 		return
 	}
 	kb, err := uc.getOwnedKnowledgeBase(userID.(uint), uint(kbID))
@@ -921,7 +921,7 @@ func (uc *UserController) GetKnowledgeBaseDocuments(c *gin.Context) {
 
 	var docs []models.KnowledgeBaseDocument
 	if err := uc.DB.Where("knowledge_base_id = ?", kb.ID).Order("id DESC").Find(&docs).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取知识库文档失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get knowledge base documents"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": docs})
@@ -931,7 +931,7 @@ func (uc *UserController) CreateKnowledgeBaseDocument(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	kbID, _ := strconv.Atoi(c.Param("id"))
 	if kbID <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的知识库ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid knowledge base ID"})
 		return
 	}
 	kb, err := uc.getOwnedKnowledgeBase(userID.(uint), uint(kbID))
@@ -945,35 +945,35 @@ func (uc *UserController) CreateKnowledgeBaseDocument(c *gin.Context) {
 		Content string `json:"content" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数错误: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Request parameter error: " + err.Error()})
 		return
 	}
 	if strings.TrimSpace(req.Content) == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "文档内容不能为空"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Document content cannot be empty"})
 		return
 	}
 
 	doc, enqueueErr, err := uc.createKnowledgeBaseDocumentRecord(kb.ID, req.Name, req.Content)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建文档失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create document"})
 		return
 	}
 	if enqueueErr != nil {
 		c.JSON(http.StatusCreated, gin.H{
 			"data":       doc,
-			"warning":    "文档已保存，但同步任务入队失败",
+			"warning":    "document saved, but sync task failed to enqueue",
 			"sync_error": enqueueErr.Error(),
 		})
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"data": doc, "message": "文档已保存，后台正在同步"})
+	c.JSON(http.StatusCreated, gin.H{"data": doc, "message": "Document saved, syncing in background"})
 }
 
 func (uc *UserController) CreateKnowledgeBaseDocumentByUpload(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	kbID, _ := strconv.Atoi(c.Param("id"))
 	if kbID <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的知识库ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid knowledge base ID"})
 		return
 	}
 	kb, err := uc.getOwnedKnowledgeBase(userID.(uint), uint(kbID))
@@ -988,13 +988,13 @@ func (uc *UserController) CreateKnowledgeBaseDocumentByUpload(c *gin.Context) {
 	}
 	provider = strings.ToLower(strings.TrimSpace(provider))
 	if provider != "dify" && provider != "ragflow" && provider != "weknora" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("当前知识库提供商为 %s，暂不支持文件上传创建文档", provider)})
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("current knowledge base provider is %s, does not support file upload to create document yet", provider)})
 		return
 	}
 
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "请上传文件(file)"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Please upload file"})
 		return
 	}
 	uploadFileName, fileData, err := readKnowledgeUploadFileData(provider, fileHeader)
@@ -1004,25 +1004,25 @@ func (uc *UserController) CreateKnowledgeBaseDocumentByUpload(c *gin.Context) {
 	}
 	content, err := encodeKnowledgeUploadContent(uploadFileName, fileData)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "编码上传文件失败"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to encode uploaded file"})
 		return
 	}
 
 	docName := buildKnowledgeUploadDocumentName(c.PostForm("name"), fileHeader.Filename)
 	doc, enqueueErr, err := uc.createKnowledgeBaseDocumentRecord(kb.ID, docName, content)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "上传文件创建文档失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create document from uploaded file"})
 		return
 	}
 	if enqueueErr != nil {
 		c.JSON(http.StatusCreated, gin.H{
 			"data":       doc,
-			"warning":    "文件已上传并创建文档，但同步任务入队失败",
+			"warning":    "file uploaded and document created, but sync task failed to enqueue",
 			"sync_error": enqueueErr.Error(),
 		})
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"data": doc, "message": "文件上传成功，文档已创建并提交异步同步"})
+	c.JSON(http.StatusCreated, gin.H{"data": doc, "message": "File uploaded successfully, document created and async sync submitted"})
 }
 
 func (uc *UserController) createKnowledgeBaseDocumentRecord(kbID uint, name, content string) (models.KnowledgeBaseDocument, error, error) {
@@ -1033,7 +1033,7 @@ func (uc *UserController) createKnowledgeBaseDocumentRecord(kbID uint, name, con
 		SyncStatus:      knowledgeSyncStatusPending,
 	}
 	if doc.Name == "" {
-		doc.Name = "上传文档"
+		doc.Name = "uploaded document"
 	}
 	if err := uc.DB.Create(&doc).Error; err != nil {
 		return doc, nil, err
@@ -1055,7 +1055,7 @@ func (uc *UserController) UpdateKnowledgeBaseDocument(c *gin.Context) {
 	kbID, _ := strconv.Atoi(c.Param("id"))
 	docID, _ := strconv.Atoi(c.Param("doc_id"))
 	if kbID <= 0 || docID <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的参数"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid parameters"})
 		return
 	}
 	kb, err := uc.getOwnedKnowledgeBase(userID.(uint), uint(kbID))
@@ -1066,7 +1066,7 @@ func (uc *UserController) UpdateKnowledgeBaseDocument(c *gin.Context) {
 
 	var doc models.KnowledgeBaseDocument
 	if err := uc.DB.Where("id = ? AND knowledge_base_id = ?", docID, kb.ID).First(&doc).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "文档不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Document does not exist"})
 		return
 	}
 
@@ -1075,11 +1075,11 @@ func (uc *UserController) UpdateKnowledgeBaseDocument(c *gin.Context) {
 		Content string `json:"content" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数错误: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Request parameter error: " + err.Error()})
 		return
 	}
 	if strings.TrimSpace(req.Content) == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "文档内容不能为空"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Document content cannot be empty"})
 		return
 	}
 
@@ -1088,7 +1088,7 @@ func (uc *UserController) UpdateKnowledgeBaseDocument(c *gin.Context) {
 	doc.SyncStatus = knowledgeSyncStatusPending
 	doc.SyncError = ""
 	if err := uc.DB.Save(&doc).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新文档失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update document"})
 		return
 	}
 
@@ -1100,12 +1100,12 @@ func (uc *UserController) UpdateKnowledgeBaseDocument(c *gin.Context) {
 		_ = uc.DB.Where("id = ?", doc.ID).First(&doc).Error
 		c.JSON(http.StatusOK, gin.H{
 			"data":       doc,
-			"warning":    "文档已更新，但同步任务入队失败",
+			"warning":    "document updated, but sync task failed to enqueue",
 			"sync_error": err.Error(),
 		})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": doc, "message": "文档已更新，后台正在同步"})
+	c.JSON(http.StatusOK, gin.H{"data": doc, "message": "Document updated, syncing in background"})
 }
 
 func (uc *UserController) DeleteKnowledgeBaseDocument(c *gin.Context) {
@@ -1113,7 +1113,7 @@ func (uc *UserController) DeleteKnowledgeBaseDocument(c *gin.Context) {
 	kbID, _ := strconv.Atoi(c.Param("id"))
 	docID, _ := strconv.Atoi(c.Param("doc_id"))
 	if kbID <= 0 || docID <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的参数"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid parameters"})
 		return
 	}
 	kb, err := uc.getOwnedKnowledgeBase(userID.(uint), uint(kbID))
@@ -1124,23 +1124,23 @@ func (uc *UserController) DeleteKnowledgeBaseDocument(c *gin.Context) {
 
 	var doc models.KnowledgeBaseDocument
 	if err := uc.DB.Where("id = ? AND knowledge_base_id = ?", docID, kb.ID).First(&doc).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "文档不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Document does not exist"})
 		return
 	}
 
 	if err := uc.DB.Delete(&doc).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除文档失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete document"})
 		return
 	}
 	if err := enqueueKnowledgeDocumentSyncDelete(uc.DB, *kb, doc); err != nil {
 		c.JSON(http.StatusOK, gin.H{
-			"message":    "删除成功",
-			"warning":    "本地删除成功，但知识库文档清理任务入队失败",
+			"message":    "delete successful",
+			"warning":    "local delete successful, but knowledge base document cleanup task failed to enqueue",
 			"sync_error": err.Error(),
 		})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "删除成功，后台正在清理知识库文档"})
+	c.JSON(http.StatusOK, gin.H{"message": "Delete successful, cleaning up knowledge base documents in background"})
 }
 
 func (uc *UserController) SyncKnowledgeBaseDocument(c *gin.Context) {
@@ -1148,7 +1148,7 @@ func (uc *UserController) SyncKnowledgeBaseDocument(c *gin.Context) {
 	kbID, _ := strconv.Atoi(c.Param("id"))
 	docID, _ := strconv.Atoi(c.Param("doc_id"))
 	if kbID <= 0 || docID <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的参数"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid parameters"})
 		return
 	}
 	kb, err := uc.getOwnedKnowledgeBase(userID.(uint), uint(kbID))
@@ -1158,11 +1158,11 @@ func (uc *UserController) SyncKnowledgeBaseDocument(c *gin.Context) {
 	}
 	var doc models.KnowledgeBaseDocument
 	if err := uc.DB.Where("id = ? AND knowledge_base_id = ?", docID, kb.ID).First(&doc).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "文档不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Document does not exist"})
 		return
 	}
 	if strings.TrimSpace(doc.Content) == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "文档内容为空，无法同步"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Document content is empty, cannot sync"})
 		return
 	}
 
@@ -1170,7 +1170,7 @@ func (uc *UserController) SyncKnowledgeBaseDocument(c *gin.Context) {
 		"sync_status": knowledgeSyncStatusPending,
 		"sync_error":  "",
 	}).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新同步状态失败: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update sync status: " + err.Error()})
 		return
 	}
 	if err := enqueueKnowledgeDocumentSyncUpsert(uc.DB, kb.ID, doc.ID); err != nil {
@@ -1180,21 +1180,21 @@ func (uc *UserController) SyncKnowledgeBaseDocument(c *gin.Context) {
 		}).Error
 		_ = uc.DB.Where("id = ?", doc.ID).First(&doc).Error
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":      "同步任务入队失败: " + err.Error(),
+			"error":      "sync task failed to enqueue: " + err.Error(),
 			"data":       doc,
 			"sync_error": err.Error(),
 		})
 		return
 	}
 	_ = uc.DB.Where("id = ?", doc.ID).First(&doc).Error
-	c.JSON(http.StatusAccepted, gin.H{"message": "同步任务已提交", "data": doc})
+	c.JSON(http.StatusAccepted, gin.H{"message": "Sync task submitted", "data": doc})
 }
 
 func (uc *UserController) GetAgentKnowledgeBases(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	agentID, _ := strconv.Atoi(c.Param("id"))
 	if agentID <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的智能体ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid agent ID"})
 		return
 	}
 	if err := uc.assertAgentOwnership(userID.(uint), uint(agentID)); err != nil {
@@ -1203,13 +1203,13 @@ func (uc *UserController) GetAgentKnowledgeBases(c *gin.Context) {
 	}
 	ids, err := uc.listAgentKnowledgeBaseIDs(uint(agentID))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取智能体知识库关联失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get agent knowledge base association"})
 		return
 	}
 	var items []models.KnowledgeBase
 	if len(ids) > 0 {
 		if err := uc.DB.Where("id IN ? AND user_id = ?", ids, userID).Find(&items).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "获取知识库详情失败"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get knowledge base details"})
 			return
 		}
 	}
@@ -1220,7 +1220,7 @@ func (uc *UserController) UpdateAgentKnowledgeBases(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	agentID, _ := strconv.Atoi(c.Param("id"))
 	if agentID <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的智能体ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid agent ID"})
 		return
 	}
 	if err := uc.assertAgentOwnership(userID.(uint), uint(agentID)); err != nil {
@@ -1231,7 +1231,7 @@ func (uc *UserController) UpdateAgentKnowledgeBases(c *gin.Context) {
 		KnowledgeBaseIDs []uint `json:"knowledge_base_ids"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数错误: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Request parameter error: " + err.Error()})
 		return
 	}
 	if err := uc.validateKnowledgeBaseOwnership(userID.(uint), req.KnowledgeBaseIDs); err != nil {
@@ -1251,17 +1251,17 @@ func (uc *UserController) UpdateAgentKnowledgeBases(c *gin.Context) {
 		return nil
 	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新智能体知识库关联失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update agent knowledge base association"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "更新成功", "data": gin.H{"knowledge_base_ids": uniqueUintSlice(req.KnowledgeBaseIDs)}})
+	c.JSON(http.StatusOK, gin.H{"message": "Update successful", "data": gin.H{"knowledge_base_ids": uniqueUintSlice(req.KnowledgeBaseIDs)}})
 }
 
 func (uc *UserController) getOwnedKnowledgeBase(userID uint, kbID uint) (*models.KnowledgeBase, error) {
 	var kb models.KnowledgeBase
 	if err := uc.DB.Where("id = ? AND user_id = ?", kbID, userID).First(&kb).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, fmt.Errorf("知识库不存在")
+			return nil, fmt.Errorf("knowledge base does not exist")
 		}
 		return nil, err
 	}
@@ -1274,7 +1274,7 @@ func (uc *UserController) assertAgentOwnership(userID uint, agentID uint) error 
 		return err
 	}
 	if count == 0 {
-		return fmt.Errorf("智能体不存在或不属于当前用户")
+		return fmt.Errorf("agent does not exist or does not belong to current user")
 	}
 	return nil
 }
@@ -1289,7 +1289,7 @@ func (uc *UserController) validateKnowledgeBaseOwnership(userID uint, knowledgeB
 		return err
 	}
 	if count != int64(len(uniqueIDs)) {
-		return fmt.Errorf("包含无效或越权的知识库ID")
+		return fmt.Errorf("contains invalid or unauthorized knowledge base IDs")
 	}
 	return nil
 }
@@ -1335,11 +1335,11 @@ func buildKnowledgeRetrievalThreshold(inherit *bool, value *float64) (*float64, 
 		return nil, nil
 	}
 	if value == nil {
-		return nil, fmt.Errorf("请填写自定义检索阈值（0~1）")
+		return nil, fmt.Errorf("please enter custom retrieval threshold (0~1)")
 	}
 	v := *value
 	if v < 0 || v > 1 {
-		return nil, fmt.Errorf("检索阈值必须在0到1之间")
+		return nil, fmt.Errorf("retrieval threshold must be between 0 and 1")
 	}
 	ret := v
 	return &ret, nil
@@ -1424,7 +1424,7 @@ func queryKnowledgeTestByDify(
 	}
 	statusCode, bodyBytes, err := doDifyJSONRequest(client, http.MethodPost, buildDifyURL(cfg.BaseURL, path), cfg.APIKey, payload, &resp)
 	if err != nil {
-		return nil, fmt.Errorf("Dify检索失败(dataset_id=%s): %w", datasetID, err)
+		return nil, fmt.Errorf("Difyretrieval failed(dataset_id=%s): %w", datasetID, err)
 	}
 
 	title := strings.TrimSpace(datasetName)
@@ -1528,7 +1528,7 @@ func queryKnowledgeTestByRagflow(
 	}
 	statusCode, bodyBytes, err := doRagflowJSONRequest(client, http.MethodPost, buildRagflowURL(cfg.BaseURL, "/retrieval"), cfg.APIKey, payload, &resp)
 	if err != nil {
-		return nil, fmt.Errorf("RAGFlow检索失败(dataset_id=%s): %w", datasetID, err)
+		return nil, fmt.Errorf("RAGFlowretrieval failed(dataset_id=%s): %w", datasetID, err)
 	}
 
 	title := strings.TrimSpace(datasetName)
@@ -1623,7 +1623,7 @@ func queryKnowledgeTestByWeknora(
 	}
 	statusCode, bodyBytes, err := doWeknoraJSONRequest(client, http.MethodPost, buildWeknoraURL(cfg.BaseURL, "/knowledge-search"), cfg.APIKey, payload, &resp)
 	if err != nil {
-		return nil, fmt.Errorf("Weknora检索失败(dataset_id=%s): %w", datasetID, err)
+		return nil, fmt.Errorf("Weknoraretrieval failed(dataset_id=%s): %w", datasetID, err)
 	}
 
 	title := strings.TrimSpace(datasetName)
@@ -1750,37 +1750,37 @@ func parseKnowledgeSearchBool(input interface{}, defaultValue bool) bool {
 
 func readKnowledgeUploadFileData(provider string, fileHeader *multipart.FileHeader) (string, []byte, error) {
 	if fileHeader == nil {
-		return "", nil, fmt.Errorf("上传文件不能为空")
+		return "", nil, fmt.Errorf("upload file cannot be empty")
 	}
 	if fileHeader.Size > knowledgeDocumentUploadMaxBytes {
-		return "", nil, fmt.Errorf("文件过大，最大支持 %dMB", knowledgeDocumentUploadMaxBytes/(1024*1024))
+		return "", nil, fmt.Errorf("file too large, maximum support %dMB", knowledgeDocumentUploadMaxBytes/(1024*1024))
 	}
 
 	fileName := sanitizeKnowledgeUploadFileName(fileHeader.Filename)
 	ext := strings.ToLower(filepath.Ext(fileName))
 	allowedExtMap, supportedText := getAllowedKnowledgeUploadExtByProvider(provider)
 	if ext == "" {
-		return "", nil, fmt.Errorf("文件类型不支持，缺少扩展名，%s支持格式: %s", strings.ToUpper(provider), supportedText)
+		return "", nil, fmt.Errorf("file type not supported, missing extension, %s supported formats: %s", strings.ToUpper(provider), supportedText)
 	}
 	if _, ok := allowedExtMap[ext]; !ok {
-		return "", nil, fmt.Errorf("文件类型不支持，%s支持格式: %s", strings.ToUpper(provider), supportedText)
+		return "", nil, fmt.Errorf("file type not supported, %s supported formats: %s", strings.ToUpper(provider), supportedText)
 	}
 
 	f, err := fileHeader.Open()
 	if err != nil {
-		return "", nil, fmt.Errorf("读取上传文件失败: %w", err)
+		return "", nil, fmt.Errorf("failed to read uploaded file: %w", err)
 	}
 	defer f.Close()
 
 	data, err := io.ReadAll(io.LimitReader(f, knowledgeDocumentUploadMaxBytes+1))
 	if err != nil {
-		return "", nil, fmt.Errorf("读取上传文件失败: %w", err)
+		return "", nil, fmt.Errorf("failed to read uploaded file: %w", err)
 	}
 	if int64(len(data)) > knowledgeDocumentUploadMaxBytes {
-		return "", nil, fmt.Errorf("文件过大，最大支持 %dMB", knowledgeDocumentUploadMaxBytes/(1024*1024))
+		return "", nil, fmt.Errorf("file too large, maximum support %dMB", knowledgeDocumentUploadMaxBytes/(1024*1024))
 	}
 	if len(data) == 0 {
-		return "", nil, fmt.Errorf("上传文件为空")
+		return "", nil, fmt.Errorf("upload file is empty")
 	}
 	return fileName, data, nil
 }
@@ -1794,7 +1794,7 @@ func getAllowedKnowledgeUploadExtByProvider(provider string) (map[string]struct{
 	case "weknora":
 		return allowedKnowledgeWeknoraFileExt, "txt, text, md, markdown, pdf, doc, docx, ppt, pptx, xls, xlsx, wps, json, csv, log, xml, html, htm, yml, yaml, rtf, sql, ini, jpg, jpeg, png, gif, bmp, webp, tif, tiff, eml, msg"
 	default:
-		return allowedKnowledgeRagflowFileExt, "txt, md, pdf, docx 等"
+		return allowedKnowledgeRagflowFileExt, "txt, md, pdf, docx, etc."
 	}
 }
 
@@ -1807,7 +1807,7 @@ func buildKnowledgeUploadDocumentName(inputName, fileName string) string {
 		}
 	}
 	if name == "" {
-		name = "上传文档"
+		name = "uploaded document"
 	}
 	return truncateRunes(name, 200)
 }
@@ -1858,7 +1858,7 @@ func decodeKnowledgeUploadContent(content string) (string, []byte, bool, error) 
 
 	jsonPart := strings.TrimSpace(strings.TrimPrefix(raw, knowledgeUploadContentPrefix))
 	if jsonPart == "" {
-		return "", nil, true, fmt.Errorf("上传文件元数据为空")
+		return "", nil, true, fmt.Errorf("upload file metadata is empty")
 	}
 
 	var payload struct {
@@ -1866,18 +1866,18 @@ func decodeKnowledgeUploadContent(content string) (string, []byte, bool, error) 
 		ContentBase64 string `json:"content_base64"`
 	}
 	if err := json.Unmarshal([]byte(jsonPart), &payload); err != nil {
-		return "", nil, true, fmt.Errorf("解析上传文件元数据失败: %w", err)
+		return "", nil, true, fmt.Errorf("failed to parse uploaded file metadata: %w", err)
 	}
 	payload.FileName = sanitizeKnowledgeUploadFileName(payload.FileName)
 	if strings.TrimSpace(payload.ContentBase64) == "" {
-		return "", nil, true, fmt.Errorf("上传文件内容为空")
+		return "", nil, true, fmt.Errorf("uploaded file content is empty")
 	}
 	fileData, err := base64.StdEncoding.DecodeString(payload.ContentBase64)
 	if err != nil {
-		return "", nil, true, fmt.Errorf("解析上传文件内容失败: %w", err)
+		return "", nil, true, fmt.Errorf("failed to parse uploaded file content: %w", err)
 	}
 	if len(fileData) == 0 {
-		return "", nil, true, fmt.Errorf("上传文件内容为空")
+		return "", nil, true, fmt.Errorf("uploaded file content is empty")
 	}
 	return payload.FileName, fileData, true, nil
 }
@@ -1885,12 +1885,12 @@ func decodeKnowledgeUploadContent(content string) (string, []byte, bool, error) 
 func (ac *AdminController) GetUserKnowledgeBasesAdmin(c *gin.Context) {
 	userID, _ := strconv.Atoi(c.Param("id"))
 	if userID <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的用户ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
 	var items []models.KnowledgeBase
 	if err := ac.DB.Where("user_id = ?", userID).Order("id DESC").Find(&items).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取知识库列表失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get knowledge base list"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": items})
@@ -1902,7 +1902,7 @@ func (ac *AdminController) CreateUserKnowledgeBaseAdmin(c *gin.Context) {
 	}
 	userID, _ := strconv.Atoi(c.Param("id"))
 	if userID <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的用户ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
 	var req struct {
@@ -1914,7 +1914,7 @@ func (ac *AdminController) CreateUserKnowledgeBaseAdmin(c *gin.Context) {
 		InheritGlobalThreshold *bool    `json:"inherit_global_threshold"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数错误: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Request parameter error: " + err.Error()})
 		return
 	}
 	if req.Status == "" {
@@ -1936,7 +1936,7 @@ func (ac *AdminController) CreateUserKnowledgeBaseAdmin(c *gin.Context) {
 		SyncProvider:       resolveDefaultKnowledgeProviderName(ac.DB),
 	}
 	if err := ac.DB.Create(&item).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建知识库失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create knowledge base"})
 		return
 	}
 	if err := enqueueKnowledgeSyncUpsert(ac.DB, item.ID); err != nil {
@@ -1947,12 +1947,12 @@ func (ac *AdminController) CreateUserKnowledgeBaseAdmin(c *gin.Context) {
 		_ = ac.DB.Where("id = ?", item.ID).First(&item).Error
 		c.JSON(http.StatusCreated, gin.H{
 			"data":       item,
-			"warning":    "知识库已保存，但同步任务入队失败",
+			"warning":    "knowledge base saved, but sync task failed to enqueue",
 			"sync_error": err.Error(),
 		})
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"data": item, "message": "知识库已保存，后台正在同步"})
+	c.JSON(http.StatusCreated, gin.H{"data": item, "message": "Knowledge base saved, syncing in background"})
 }
 
 func (ac *AdminController) UpdateUserKnowledgeBaseAdmin(c *gin.Context) {
@@ -1962,12 +1962,12 @@ func (ac *AdminController) UpdateUserKnowledgeBaseAdmin(c *gin.Context) {
 	userID, _ := strconv.Atoi(c.Param("id"))
 	kbID, _ := strconv.Atoi(c.Param("kb_id"))
 	if userID <= 0 || kbID <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的参数"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid parameters"})
 		return
 	}
 	var item models.KnowledgeBase
 	if err := ac.DB.Where("id = ? AND user_id = ?", kbID, userID).First(&item).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "知识库不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Knowledge base does not exist"})
 		return
 	}
 	var req struct {
@@ -1979,7 +1979,7 @@ func (ac *AdminController) UpdateUserKnowledgeBaseAdmin(c *gin.Context) {
 		InheritGlobalThreshold *bool    `json:"inherit_global_threshold"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数错误: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Request parameter error: " + err.Error()})
 		return
 	}
 	item.Name = req.Name
@@ -1999,7 +1999,7 @@ func (ac *AdminController) UpdateUserKnowledgeBaseAdmin(c *gin.Context) {
 	item.SyncStatus = knowledgeSyncStatusPending
 	item.SyncError = ""
 	if err := ac.DB.Save(&item).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新知识库失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update knowledge base"})
 		return
 	}
 	if err := enqueueKnowledgeSyncUpsert(ac.DB, item.ID); err != nil {
@@ -2010,30 +2010,30 @@ func (ac *AdminController) UpdateUserKnowledgeBaseAdmin(c *gin.Context) {
 		_ = ac.DB.Where("id = ?", item.ID).First(&item).Error
 		c.JSON(http.StatusOK, gin.H{
 			"data":       item,
-			"warning":    "知识库已更新，但同步任务入队失败",
+			"warning":    "knowledge base updated, but sync task failed to enqueue",
 			"sync_error": err.Error(),
 		})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": item, "message": "知识库已更新，后台正在同步"})
+	c.JSON(http.StatusOK, gin.H{"data": item, "message": "Knowledge base updated, syncing in background"})
 }
 
 func (ac *AdminController) DeleteUserKnowledgeBaseAdmin(c *gin.Context) {
 	userID, _ := strconv.Atoi(c.Param("id"))
 	kbID, _ := strconv.Atoi(c.Param("kb_id"))
 	if userID <= 0 || kbID <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的参数"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid parameters"})
 		return
 	}
 
 	var item models.KnowledgeBase
 	if err := ac.DB.Where("id = ? AND user_id = ?", kbID, userID).First(&item).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "知识库不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Knowledge base does not exist"})
 		return
 	}
 	var docs []models.KnowledgeBaseDocument
 	if err := ac.DB.Where("knowledge_base_id = ?", item.ID).Find(&docs).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询知识库文档失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query knowledge base documents"})
 		return
 	}
 
@@ -2047,14 +2047,14 @@ func (ac *AdminController) DeleteUserKnowledgeBaseAdmin(c *gin.Context) {
 		return tx.Where("knowledge_base_id = ?", kbID).Delete(&models.AgentKnowledgeBase{}).Error
 	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除知识库失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete knowledge base"})
 		return
 	}
 	for _, doc := range docs {
 		if err := enqueueKnowledgeDocumentSyncDelete(ac.DB, item, doc); err != nil {
 			c.JSON(http.StatusOK, gin.H{
-				"message":    "删除成功",
-				"warning":    "本地删除成功，但部分知识库文档清理任务入队失败",
+				"message":    "delete successful",
+				"warning":    "local delete successful, but some knowledge base document cleanup tasks failed to enqueue",
 				"sync_error": err.Error(),
 			})
 			return
@@ -2064,12 +2064,12 @@ func (ac *AdminController) DeleteUserKnowledgeBaseAdmin(c *gin.Context) {
 	if len(docs) == 0 {
 		if err := enqueueKnowledgeSyncDelete(ac.DB, item); err != nil {
 			c.JSON(http.StatusOK, gin.H{
-				"message":    "删除成功",
-				"warning":    "本地删除成功，但知识库清理任务入队失败",
+				"message":    "delete successful",
+				"warning":    "local delete successful, but knowledge base cleanup task failed to enqueue",
 				"sync_error": err.Error(),
 			})
 			return
 		}
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "删除成功，后台正在清理知识库数据"})
+	c.JSON(http.StatusOK, gin.H{"message": "Delete successful, background cleanup in progress"})
 }

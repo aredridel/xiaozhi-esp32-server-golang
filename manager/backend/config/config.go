@@ -24,17 +24,17 @@ type ServerConfig struct {
 }
 
 type DatabaseConfig struct {
-	Type   string        `json:"type"` // "mysql" 或 "sqlite"，决定使用哪种数据库
+	Type   string        `json:"type"` // "mysql" or "sqlite", determines which database to use
 	MySQL  *MySQLConfig  `json:"mysql,omitempty"`
 	SQLite *SQLiteConfig `json:"sqlite,omitempty"`
 }
 
-// GetStorageType 获取当前配置的存储类型
+// GetStorageType gets the currently configured storage type
 func (c *DatabaseConfig) GetStorageType() string {
 	if c.Type == "sqlite" || c.Type == "mysql" {
 		return c.Type
 	}
-	// 未设置 type 时，根据已有配置推断
+	// When type is not set, infer from existing configuration
 	if c.SQLite != nil {
 		return "sqlite"
 	}
@@ -44,7 +44,7 @@ func (c *DatabaseConfig) GetStorageType() string {
 	return "mysql"
 }
 
-// MySQLConfig MySQL 数据库配置
+// MySQLConfig MySQL database configuration
 type MySQLConfig struct {
 	Host     string `json:"host"`
 	Port     int    `json:"port"`
@@ -53,9 +53,9 @@ type MySQLConfig struct {
 	Database string `json:"database"`
 }
 
-// SQLiteConfig SQLite 数据库配置
+// SQLiteConfig SQLite database configuration
 type SQLiteConfig struct {
-	FilePath string `json:"file_path"` // 数据库文件路径，如 ./data/xiaozhi.db
+	FilePath string `json:"file_path"` // Database file path, e.g. ./data/xiaozhi.db
 }
 
 type JWTConfig struct {
@@ -64,18 +64,18 @@ type JWTConfig struct {
 }
 
 type SpeakerServiceConfig struct {
-	URL string `json:"url"` // asr_server 的服务地址
+	URL string `json:"url"` // asr_server service address
 }
 
 type StorageConfig struct {
-	SpeakerAudioPath string `json:"speaker_audio_path"` // 音频文件存储路径
-	MaxFileSize      int64  `json:"max_file_size"`      // 最大文件大小（字节），默认10MB
+	SpeakerAudioPath string `json:"speaker_audio_path"` // Audio file storage path
+	MaxFileSize      int64  `json:"max_file_size"`      // Maximum file size (bytes), default 10MB
 }
 
 type HistoryConfig struct {
 	Enabled       bool   `json:"enabled"`
-	AudioBasePath string `json:"audio_base_path"` // 音频存储基础路径
-	MaxFileSize   int64  `json:"max_file_size"`   // 最大文件大小(字节)，默认10MB
+	AudioBasePath string `json:"audio_base_path"` // Audio storage base path
+	MaxFileSize   int64  `json:"max_file_size"`   // Maximum file size (bytes), default 10MB
 }
 
 func Load() *Config {
@@ -85,7 +85,7 @@ func Load() *Config {
 func LoadWithPath(configPath string) *Config {
 	config := LoadFromFile(configPath)
 
-	// 仅当使用 MySQL 时，确保有 MySQL 配置并应用环境变量覆盖
+	// Only when using MySQL, ensure MySQL config exists and apply environment variable overrides
 	if config.Database.GetStorageType() == "mysql" {
 		if config.Database.MySQL == nil {
 			config.Database.MySQL = &MySQLConfig{}
@@ -109,11 +109,11 @@ func LoadWithPath(configPath string) *Config {
 		}
 	}
 
-	// 优先使用环境变量覆盖声纹服务配置
+	// Priority use environment variables to override speaker service configuration
 	if serviceURL := os.Getenv("SPEAKER_SERVICE_URL"); serviceURL != "" {
 		config.SpeakerService.URL = serviceURL
 	}
-	// 优先使用环境变量覆盖音频存储路径
+	// Priority use environment variables to override audio storage path
 	if audioBasePath := os.Getenv("AUDIO_BASE_PATH"); audioBasePath != "" {
 		config.History.AudioBasePath = audioBasePath
 	}
@@ -126,14 +126,14 @@ func LoadWithPath(configPath string) *Config {
 func LoadFromFile(configPath string) *Config {
 	file, err := os.Open(configPath)
 	if err != nil {
-		log.Fatalf("无法打开配置文件 %s: %v", configPath, err)
+		log.Fatalf("Failed to open configuration file %s: %v", configPath, err)
 	}
 	defer file.Close()
 
 	var config Config
 	decoder := json.NewDecoder(file)
 	if err := decoder.Decode(&config); err != nil {
-		log.Fatalf("解析配置文件失败 %s: %v", configPath, err)
+		log.Fatalf("Failed to parse configuration file %s: %v", configPath, err)
 	}
 
 	return &config

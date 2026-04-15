@@ -1,11 +1,11 @@
 ### Load Testing
 
 ```
-root@hackers365-System-Product-Name:~# docker run -itd --name websocket_meter docker.jsdelivr.fyi/hackers365/xiaozhi_websocket_client                      
+root@hackers365-System-Product-Name:~# docker run -itd --name websocket_meter docker.jsdelivr.fyi/hackers365/xiaozhi_websocket_client
 87311584e5fef592f32e0b7d7062d9053e956d5e0d50edb220370ff37d2293ac
-root@hackers365-System-Product-Name:~# 
-root@hackers365-System-Product-Name:~# docker exec -it websocket_meter /bin/bash                                                      
-root@87311584e5fe:/workspace# 
+root@hackers365-System-Product-Name:~#
+root@hackers365-System-Product-Name:~# docker exec -it websocket_meter /bin/bash
+root@87311584e5fe:/workspace#
 root@87311584e5fe:/workspace# ./ws_multi  -h
 Usage of ./ws_multi:
   -count int
@@ -16,7 +16,7 @@ Usage of ./ws_multi:
         Server address (default "ws://localhost:8989/xiaozhi/v1/")
   -text string
         Chat content, multiple sentences separated by commas will be sent sequentially (default "Hello")
-root@87311584e5fe:/workspace# ./ws_multi -count 1 -server wss://joeyzhou.chat/ws/xiaozhi/v1/ -text "Hello,What are you doing,Let's go out and play" 
+root@87311584e5fe:/workspace# ./ws_multi -count 1 -server wss://joeyzhou.chat/ws/xiaozhi/v1/ -text "Hello,What are you doing,Let's go out and play"
 Running Xiaozhi client
 Server: wss://joeyzhou.chat/ws/xiaozhi/v1/
 Number of clients: 1
@@ -39,14 +39,17 @@ Sending Opus frame: 59
 ```
 
 #### Overall Description
-    1. The program will call the TTS interface to generate audio data based on user input text, and send it to the server sequentially
-    2. Time statistics start from type: listen, state: stop until receiving the first frame of audio data from the server
+
+1. The program will call the TTS interface to generate audio data based on user input text, and send it to the server sequentially
+2. Time statistics start from type: listen, state: stop until receiving the first frame of audio data from the server
 
 #### Parameter Description:
-    -count: Number of concurrent connections
-    -device: By default, deviceId is randomly generated. If using this parameter to specify a device, -count must be 1
-    -server: WebSocket server address
-    -text: Content to send, separated by "," and sent in a loop
+
+- count: Number of concurrent connections
+- device: By default, deviceId is randomly generated. If using this parameter to specify a device, -count must be 1
+- server: WebSocket server address
+- text: Content to send, separated by "," and sent in a loop
 
 #### Output Description
-    You can redirect output to a log file, then tail -f xx.log | grep 'Average response time'
+
+You can redirect output to a log file, then tail -f xx.log | grep 'Average response time'

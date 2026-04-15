@@ -19,7 +19,7 @@ func TestClearTTSQueueDismissesDrainedItemsForTurnBarrier(t *testing.T) {
 		t.Fatal("expected tracker to be stored in context")
 	}
 
-	if err := manager.handleTextResponseWithHooks(ctx, llm_common.LLMResponseStruct{Text: "你好"}, false, tracker.Add); err != nil {
+	if err := manager.handleTextResponseWithHooks(ctx, llm_common.LLMResponseStruct{Text: "Hello"}, false, tracker.Add); err != nil {
 		t.Fatalf("enqueue tts item failed: %v", err)
 	}
 
@@ -55,7 +55,7 @@ func TestClearTTSQueueResetsDualStreamState(t *testing.T) {
 	}
 
 	if err := manager.handleTextResponseWithHooks(ctx, llm_common.LLMResponseStruct{
-		Text:    "第一段",
+		Text:    "first segment",
 		IsStart: true,
 	}, false, tracker.Add); err != nil {
 		t.Fatalf("enqueue dual-stream tts item failed: %v", err)

@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # MySQL数据库服务
+  # MySQL database service
   mysql:
     image: mysql:8.0
     container_name: xiaozhi-mysql
@@ -9,7 +9,7 @@ services:
       MYSQL_ROOT_PASSWORD: password
       MYSQL_DATABASE: xiaozhi_admin
     ports:
-      - "23306:3306"        #可以不进行映射
+      - "23306:3306"        # Optional: mapping not required
     volumes:
       - mysql_data:/var/lib/mysql
     command: --default-authentication-plugin=mysql_native_password --skip-ssl
@@ -23,7 +23,7 @@ services:
       interval: 10s
       start_period: 180s
 
-  # 主程序服务（本地构建版本）
+  # Main program service (local build version)
   main-server:
     build:
       context: ../..
@@ -34,9 +34,9 @@ services:
     container_name: xiaozhi-main-server
     command: ["/workspace/bin/xiaozhi_server", "-c", "/workspace/config/config.personal.yaml"]
     ports:
-      - "8989:8989"        # websocket服务 端口 18989端口
-      - "2883:2883"        # mqtt server 12883
-      - "8888:8888/udp"     # udp server 8888
+      - "8989:8989"        # WebSocket service port (maps to host 18989)
+      - "2883:2883"        # MQTT server port (maps to host 12883)
+      - "8888:8888/udp"     # UDP server port 8888
     depends_on:
       mysql:
         condition: service_healthy
@@ -56,14 +56,14 @@ services:
       - xiaozhi-network
     restart: unless-stopped
 
-  # 后端管理服务（本地构建版本）
+  # Backend management service (local build version)
   backend:
     build:
       context: ../../manager/backend
       dockerfile: Dockerfile
     container_name: xiaozhi-backend
     ports:
-      - "8081:8080"        # 后端管理服务 端口 映射至宿主机 28080
+      - "8081:8080"        # Backend management service port (maps to host 28080)
     depends_on:
       mysql:
         condition: service_healthy
@@ -79,14 +79,14 @@ services:
       - xiaozhi-network
     restart: unless-stopped
 
-  # 前端管理服务（本地构建版本）
+  # Frontend management service (local build version)
   frontend:
     build:
       context: ../../manager/frontend
       dockerfile: Dockerfile
     container_name: xiaozhi-frontend
     ports:
-      - "8080:80"           # 前端管理服务 端口 映射至宿主机 18080
+      - "8080:80"           # Frontend management service port (maps to host 18080)
     depends_on:
       - backend
     networks:

@@ -15,72 +15,72 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-// 模拟 TTS WebSocket 服务器
+// mock TTS WebSocket server
 func mockTTSServer(t *testing.T) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// 升级HTTP连接为WebSocket
+		// upgradeHTTPjoinisWebSocket
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
-			t.Errorf("升级WebSocket失败: %v", err)
+			t.Errorf("upgradeWebSocketfailed: %v", err)
 			return
 		}
 		defer conn.Close()
 
-		// 读取文本消息
+		// readtextmessage
 		_, text, err := conn.ReadMessage()
 		if err != nil {
-			t.Errorf("读取文本消息失败: %v", err)
+			t.Errorf("readtextmessagefailed: %v", err)
 			return
 		}
 
-		// 模拟音频数据
+		// mockaudio data
 		audioData := []byte("mock audio data for: " + string(text))
 
-		// 发送二进制音频数据
+		// send二systemaudio data
 		err = conn.WriteMessage(websocket.BinaryMessage, audioData)
 		if err != nil {
-			t.Errorf("发送音频数据失败: %v", err)
+			t.Errorf("sendaudio datafailed: %v", err)
 			return
 		}
 
-		// 正常关闭连接
+		// normalclosejoin
 		err = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 		if err != nil {
-			t.Errorf("关闭WebSocket连接失败: %v", err)
+			t.Errorf("closeWebSocketjoinfailed: %v", err)
 			return
 		}
 	}))
 }
 
 func TestEdgeOfflineTTSProvider(t *testing.T) {
-	// 启动模拟服务器
+	// startmockserver
 	server := mockTTSServer(t)
 	defer server.Close()
 
-	// 创建配置
+	// createconfig
 	config := map[string]interface{}{
-		"server_url": "ws" + server.URL[4:], // 将 http:// 替换为 ws://
-		"timeout":    float64(5),            // 5秒超时
+		"server_url": "ws" + server.URL[4:], // will http:// replaceis ws://
+		"timeout":    float64(5),            // 5secondtimeout
 	}
 
 	provider := NewEdgeOfflineTTSProvider(config)
 
 	t.Run("TestTextToSpeech", func(t *testing.T) {
 		ctx := context.Background()
-		frames, err := provider.TextToSpeech(ctx, "测试文本", 16000, 1, 20)
+		frames, err := provider.TextToSpeech(ctx, "testtext", 16000, 1, 20)
 		if err != nil {
-			t.Fatalf("TextToSpeech失败: %v", err)
+			t.Fatalf("TextToSpeechfailed: %v", err)
 		}
 		if len(frames) == 0 {
-			t.Error("未返回任何音频帧")
+			t.Error("notreturn任何audio frame")
 		}
 	})
 
 	t.Run("TestTextToSpeechStream", func(t *testing.T) {
 		ctx := context.Background()
-		outputChan, err := provider.TextToSpeechStream(ctx, "测试文本", 16000, 1, 20)
+		outputChan, err := provider.TextToSpeechStream(ctx, "testtext", 16000, 1, 20)
 		if err != nil {
-			t.Fatalf("TextToSpeechStream失败: %v", err)
+			t.Fatalf("TextToSpeechStreamfailed: %v", err)
 		}
 
 		var receivedFrames [][]byte
@@ -95,13 +95,13 @@ func TestEdgeOfflineTTSProvider(t *testing.T) {
 				}
 				receivedFrames = append(receivedFrames, frame)
 			case <-timeout:
-				t.Error("接收音频帧超时")
+				t.Error("receiveaudio frametimeout")
 				break ReceiveLoop
 			}
 		}
 
 		if len(receivedFrames) == 0 {
-			t.Error("未接收到任何音频帧")
+			t.Error("notreceiveto任何audio frame")
 		}
 	})
 
@@ -112,36 +112,36 @@ func TestEdgeOfflineTTSProvider(t *testing.T) {
 		})
 
 		ctx := context.Background()
-		_, err := provider.TextToSpeech(ctx, "测试文本", 16000, 1, 20)
+		_, err := provider.TextToSpeech(ctx, "testtext", 16000, 1, 20)
 		if err == nil {
-			t.Error("期望连接无效服务器时返回错误")
+			t.Error("期望joininvalidserverwhenreturnerror")
 		}
 	})
 
 	t.Run("TestTimeout", func(t *testing.T) {
-		// 创建一个会延迟响应的服务器
+		// create awilldelayrespondofserver
 		slowServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			conn, err := upgrader.Upgrade(w, r, nil)
 			if err != nil {
-				t.Errorf("升级WebSocket失败: %v", err)
+				t.Errorf("upgradeWebSocketfailed: %v", err)
 				return
 			}
 			defer conn.Close()
 
-			// 延迟2秒
+			// delay2second
 			time.Sleep(2 * time.Second)
 		}))
 		defer slowServer.Close()
 
 		provider := NewEdgeOfflineTTSProvider(map[string]interface{}{
 			"server_url": "ws" + slowServer.URL[4:],
-			"timeout":    float64(1), // 1秒超时
+			"timeout":    float64(1), // 1secondtimeout
 		})
 
 		ctx := context.Background()
-		_, err := provider.TextToSpeech(ctx, "测试文本", 16000, 1, 20)
+		_, err := provider.TextToSpeech(ctx, "testtext", 16000, 1, 20)
 		if err == nil {
-			t.Error("期望超时时返回错误")
+			t.Error("期望timeoutwhenreturnerror")
 		}
 	})
 }

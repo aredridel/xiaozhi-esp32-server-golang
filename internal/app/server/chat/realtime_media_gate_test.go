@@ -11,14 +11,14 @@ func TestDetectRealtimeMcpAudioControlAction(t *testing.T) {
 		text string
 		want string
 	}{
-		{text: "给我继续播放", want: "resume"},
-		{text: "先暂停一下。", want: "pause"},
-		{text: "停止播放吧", want: "stop"},
-		{text: "下一首", want: "next"},
-		{text: "上一首", want: "prev"},
-		{text: "播放歌单里的歌曲", want: "play_playlist"},
-		{text: "把当前播放加入歌单", want: "enqueue_current"},
-		{text: "帮我讲个笑话", want: ""},
+		{text: "给我continueplay", want: "resume"},
+		{text: "firstpauseadown。", want: "pause"},
+		{text: "stopplay吧", want: "stop"},
+		{text: "downafirst", want: "next"},
+		{text: "upafirst", want: "prev"},
+		{text: "playplaylistinofsong", want: "play_playlist"},
+		{text: "把currentplayadd toplaylist", want: "enqueue_current"},
+		{text: "帮我讲个笑conversation", want: ""},
 	}
 
 	for _, tc := range cases {
@@ -34,10 +34,10 @@ func TestIsRealtimeMcpAudioExitCommand(t *testing.T) {
 		text string
 		want bool
 	}{
-		{text: "再见", want: true},
-		{text: "那就退出对话", want: true},
+		{text: "goodbye", want: true},
+		{text: "那就exittoconversation", want: true},
 		{text: "拜拜啦", want: true},
-		{text: "继续播放", want: false},
+		{text: "continueplay", want: false},
 		{text: "今天天气怎么样", want: false},
 	}
 

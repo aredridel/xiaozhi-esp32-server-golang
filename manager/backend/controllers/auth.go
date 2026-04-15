@@ -26,7 +26,7 @@ type RegisterRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 }
 
-// 用户登录
+// User login
 func (ac *AuthController) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -34,29 +34,29 @@ func (ac *AuthController) Login(c *gin.Context) {
 		return
 	}
 
-	// 添加登录调试日志
-	log.Printf("[Login] 尝试登录用户: %s, 客户端IP: %s", req.Username, c.ClientIP())
-	log.Printf("[Login] 接收到的密码长度: %d", len(req.Password))
+	// Add login debug logs
+	log.Printf("[Login] Attempting login for user: %s, Client IP: %s", req.Username, c.ClientIP())
+	log.Printf("[Login] Received password length: %d", len(req.Password))
 
-	// 如果数据库可用，尝试从数据库验证
+	// If database is available, try to verify from database
 	if ac.DB != nil {
-		log.Printf("[Login] 数据库连接可用，开始数据库验证")
+		log.Printf("[Login] Database connection available, starting database verification")
 		var user models.User
 		if err := ac.DB.Where("username = ?", req.Username).First(&user).Error; err == nil {
-			log.Printf("[Login] 找到用户: ID=%d, Username=%s, Role=%s, Email=%s", user.ID, user.Username, user.Role, user.Email)
-			log.Printf("[Login] 数据库中密码哈希长度: %d, 哈希前缀: %s", len(user.Password), user.Password[:10])
-			log.Printf("[Login] 开始bcrypt密码比较验证")
+			log.Printf("[Login] Found user: ID=%d, Username=%s, Role=%s, Email=%s", user.ID, user.Username, user.Role, user.Email)
+			log.Printf("[Login] Password hash length in database: %d, hash prefix: %s", len(user.Password), user.Password[:10])
+			log.Printf("[Login] Starting bcrypt password comparison")
 
 			if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err == nil {
-				log.Printf("[Login] ✅ 密码验证成功 - 用户: %s", req.Username)
+				log.Printf("[Login] ✅ Password verification successful - User: %s", req.Username)
 				token, err := middleware.GenerateToken(user.ID, user.Username, user.Role)
 				if err != nil {
-					log.Printf("[Login] ❌ 生成token失败: %v", err)
-					c.JSON(http.StatusInternalServerError, gin.H{"error": "生成token失败"})
+					log.Printf("[Login] ❌ Token generation failed: %v", err)
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 					return
 				}
 
-				log.Printf("[Login] ✅ 登录成功，返回token - 用户: %s, 角色: %s", user.Username, user.Role)
+				log.Printf("[Login] ✅ Login successful, returning token - User: %s, Role: %s", user.Username, user.Role)
 				c.JSON(http.StatusOK, gin.H{
 					"token": token,
 					"user": gin.H{
@@ -68,21 +68,21 @@ func (ac *AuthController) Login(c *gin.Context) {
 				})
 				return
 			} else {
-				log.Printf("[Login] ❌ 密码验证失败 - 用户: %s, bcrypt错误: %v", req.Username, err)
-				log.Printf("[Login] 调试信息 - 输入密码: '%s', 哈希: '%s'", req.Password, user.Password)
+				log.Printf("[Login] ❌ Password verification failed - User: %s, bcrypt error: %v", req.Username, err)
+				log.Printf("[Login] Debug info - Input password: '%s', Hash: '%s'", req.Password, user.Password)
 			}
 		} else {
-			log.Printf("[Login] ❌ 用户不存在 - 用户名: %s, 数据库错误: %v", req.Username, err)
+			log.Printf("[Login] ❌ User does not exist - Username: %s, Database error: %v", req.Username, err)
 		}
 	} else {
-		log.Printf("[Login] ❌ 数据库连接不可用")
+		log.Printf("[Login] ❌ Database connection not available")
 	}
 
-	// Fallback: 硬编码的admin用户验证（当数据库不可用时）
+	// Fallback: Hardcoded admin user verification (when database is unavailable)
 	if req.Username == "admin" && req.Password == "admin123" {
 		token, err := middleware.GenerateToken(1, "admin", "admin")
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "生成token失败"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 			return
 		}
 
@@ -98,10 +98,10 @@ func (ac *AuthController) Login(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusUnauthorized, gin.H{"error": "用户名或密码错误"})
+	c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid username or password"})
 }
 
-// 用户注册
+// User registration
 func (ac *AuthController) Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -109,17 +109,17 @@ func (ac *AuthController) Register(c *gin.Context) {
 		return
 	}
 
-	// 检查用户名是否已存在
+	// Check if username already exists
 	var existingUser models.User
 	if err := ac.DB.Where("username = ?", req.Username).First(&existingUser).Error; err == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "用户名已存在"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Username already exists"})
 		return
 	}
 
-	// 加密密码
+	// Encrypt password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "密码加密失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Password encryption failed"})
 		return
 	}
 
@@ -131,12 +131,12 @@ func (ac *AuthController) Register(c *gin.Context) {
 	}
 
 	if err := ac.DB.Create(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建用户失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 		return
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
-		"message": "注册成功",
+		"message": "Registration successful",
 		"user": gin.H{
 			"id":       user.ID,
 			"username": user.Username,
@@ -146,27 +146,27 @@ func (ac *AuthController) Register(c *gin.Context) {
 	})
 }
 
-// 获取当前用户信息
+// Get current user info
 func (ac *AuthController) GetProfile(c *gin.Context) {
-	log.Printf("[GetProfile] 开始处理获取用户信息请求, 客户端IP: %s", c.ClientIP())
+	log.Printf("[GetProfile] Starting to process get user info request, Client IP: %s", c.ClientIP())
 
 	userID, exists := c.Get("user_id")
 	if !exists {
-		log.Printf("[GetProfile] ❌ 无法获取用户ID，认证中间件可能未正确设置")
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "认证信息缺失"})
+		log.Printf("[GetProfile] ❌ Cannot get user ID, authentication middleware may not be properly set")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication information missing"})
 		return
 	}
 
-	log.Printf("[GetProfile] 从上下文获取用户ID: %v", userID)
+	log.Printf("[GetProfile] Got user ID from context: %v", userID)
 
 	var user models.User
 	if err := ac.DB.First(&user, userID).Error; err != nil {
-		log.Printf("[GetProfile] ❌ 数据库查询用户失败: %v, 用户ID: %v", err, userID)
-		c.JSON(http.StatusNotFound, gin.H{"error": "用户不存在"})
+		log.Printf("[GetProfile] ❌ Database query for user failed: %v, User ID: %v", err, userID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "User does not exist"})
 		return
 	}
 
-	log.Printf("[GetProfile] ✅ 成功获取用户信息 - ID: %d, 用户名: %s, 角色: %s", user.ID, user.Username, user.Role)
+	log.Printf("[GetProfile] ✅ Successfully retrieved user info - ID: %d, Username: %s, Role: %s", user.ID, user.Username, user.Role)
 	c.JSON(http.StatusOK, gin.H{
 		"user": gin.H{
 			"id":       user.ID,

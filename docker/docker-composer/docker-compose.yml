@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # MySQL数据库服务
+  # MySQL database service
   mysql:
     image: mysql:8.0
     container_name: xiaozhi-mysql
@@ -9,7 +9,7 @@ services:
       MYSQL_ROOT_PASSWORD: password
       MYSQL_DATABASE: xiaozhi_admin
     ports:
-      - "23306:3306"        #可以不进行映射
+      - "23306:3306"        # Optional: mapping not required
     volumes:
       - mysql_data:/var/lib/mysql
     command: --default-authentication-plugin=mysql_native_password --skip-ssl
@@ -23,15 +23,15 @@ services:
       interval: 10s
       start_period: 180s
 
-  # 主程序服务
+  # Main program service
   main-server:
     image: ghcr.io/hackers365/xiaozhi_server:0.5.6
     container_name: xiaozhi-main-server
     command: ["/workspace/bin/xiaozhi_server", "-c", "/workspace/config/config.yaml"]
     ports:
-      - "8989:8989"        # websocket服务 端口 18989端口
-      - "2883:2883"        # mqtt server 12883
-      - "8888:8888/udp"     # udp server 8888
+      - "8989:8989"        # WebSocket service port (maps to host 18989)
+      - "2883:2883"        # MQTT server port (maps to host 12883)
+      - "8888:8888/udp"     # UDP server port 8888
     depends_on:
       mysql:
         condition: service_healthy
@@ -51,12 +51,12 @@ services:
       - xiaozhi-network
     restart: unless-stopped
 
-  # 后端管理服务
+  # Backend management service
   backend:
     image: ghcr.io/hackers365/xiaozhi_manager_backend:0.5.6
     container_name: xiaozhi-backend
     ports:
-      - "8081:8080"        # 后端管理服务 端口 映射至宿主机 28080
+      - "8081:8080"        # Backend management service port (maps to host 28080)
     depends_on:
       mysql:
         condition: service_healthy
@@ -77,37 +77,37 @@ services:
       - xiaozhi-network
     restart: unless-stopped
 
-  # 前端管理服务
+  # Frontend management service
   frontend:
     image: ghcr.io/hackers365/xiaozhi_manager_frontend:0.5.6
     container_name: xiaozhi-frontend
     ports:
-      - "8080:80"           # 前端管理服务 端口 映射至宿主机 18080
+      - "8080:80"           # Frontend management service port (maps to host 18080)
     depends_on:
       - backend
     networks:
       - xiaozhi-network
     restart: unless-stopped
 
-  # Qdrant向量数据库服务（用于说话人识别）
+  # Qdrant vector database service (for speaker recognition)
   qdrant:
     image: qdrant/qdrant:latest
     container_name: xiaozhi-qdrant
     ports:
-      - "6333:6333"         # REST API 端口
-      - "6334:6334"         # gRPC 端口
+      - "6333:6333"         # REST API port
+      - "6334:6334"         # gRPC port
     volumes:
       - qdrant_data:/qdrant/storage
     networks:
       - xiaozhi-network
     restart: unless-stopped
 
-  # ASR语音识别服务（说话人识别）
+  # ASR voice recognition service (speaker recognition)
   voice-server:
-    image: ghcr.io/hackers365/voice_server:0.1.0    # 替换为实际的镜像名称
+    image: ghcr.io/hackers365/voice_server:0.1.0    # Replace with actual image name
     container_name: xiaozhi-voice-server
     ports:
-      - "8082:8080"         # ASR服务端口 映射至宿主机 8082
+      - "8082:8080"         # ASR service port (maps to host 8082)
     depends_on:
       - qdrant
     environment:

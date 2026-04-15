@@ -1,25 +1,25 @@
 # Voice Clone Feature Documentation
 
-This document describes the **Voice Clone** feature in the project, including the creation/listening/retry workflow for regular users and quota management for administrators.
+This document describes the Voice Clone feature in the project, including the creation/listening/retry workflow for regular users and quota management for administrators.
 
 Related pages and documents:
 
-- Administrator `TTS Configuration Management` (provides available TTS configurations for users)
-- Administrator `User Management -> Clone Quota`
-- Regular user `Voice Clone`
+- Administrator TTS Configuration Management (provides available TTS configurations for users)
+- Administrator User Management -> Clone Quota
+- Regular user Voice Clone
 - [Management Console Guide](./manager_console_guide.md)
 
 ---
 
 ## 1. Feature Overview
 
-The Voice Clone feature allows users to upload audio (or record via browser) to create a "cloned voice" on supported TTS providers, which can then be selected for an agent/character to use for announcements.
+The Voice Clone feature allows users to upload audio (or record via browser) to create a cloned voice on supported TTS providers, which can then be selected for an agent/character to use for announcements.
 
 Currently supported clone providers (frontend and backend):
 
-- `minimax`
-- `cosyvoice`
-- `aliyun_qwen` (Qwen)
+- minimax
+- cosyvoice
+- aliyun_qwen (Qwen)
 
 Providers not in the above list cannot be used for voice cloning, even if they support regular TTS synthesis.
 
@@ -64,22 +64,22 @@ Note:
 
 Entry point:
 
-- `Regular User -> Voice Clone`
+- Regular User -> Voice Clone
 
 ## 4.1 Creating a Cloned Voice
 
-Click `Create Cloned Voice` and fill in:
+Click Create Cloned Voice and fill in:
 
-- `Clone Name` (optional, will use filename if not provided)
-- `TTS Configuration` (must select a configuration that supports cloning)
-- `Audio Source` (upload audio / browser recording)
-- `Audio Transcript` (required or not depends on provider capabilities)
-- `Text Language` (e.g., `zh-CN` / `en-US`)
+- Clone Name (optional, will use filename if not provided)
+- TTS Configuration (must select a configuration that supports cloning)
+- Audio Source (upload audio / browser recording)
+- Audio Transcript (required or not depends on provider capabilities)
+- Text Language (e.g., zh-CN / en-US)
 
 After submission, two results may occur:
 
 - Immediate success (rare)
-- "Clone task submitted, processing in background" (common, asynchronous)
+- Clone task submitted, processing in background (common, asynchronous)
 
 ## 4.2 Viewing Task Status
 
@@ -102,10 +102,10 @@ Common status types:
 
 Each clone record supports the following operations:
 
-- `Original Audio`: Play the audio sample submitted by the user
-- `Preview Clone`: Play the cloned voice returned by the provider (only shown for successful status)
-- `Edit`: Modify the clone name
-- `Re-clone`: Resubmit failed tasks (only shown for failed status)
+- Original Audio: Play the audio sample submitted by the user
+- Preview Clone: Play the cloned voice returned by the provider (only shown for successful status)
+- Edit: Modify the clone name
+- Re-clone: Resubmit failed tasks (only shown for failed status)
 
 ---
 
@@ -115,8 +115,8 @@ Each clone record supports the following operations:
 
 Frontend and backend will validate audio constraints. Common rules:
 
-- Audio format typically requires `WAV`
-- Audio duration should be at least `10 seconds`
+- Audio format typically requires WAV
+- Audio duration should be at least 10 seconds
 
 The page will show prompts in the upload/recording area and prevent submission if duration is insufficient.
 
@@ -134,7 +134,7 @@ Whether it's actually required depends on the current provider capability prompt
 Features:
 
 - Supports cloning
-- Supports more audio formats (e.g., `WAV/MP3/M4A`, check page prompts)
+- Supports more audio formats (e.g., WAV/MP3/M4A, check page prompts)
 - After selecting this cloned voice, the runtime will automatically switch to the corresponding clone model (frontend will show a prompt)
 
 ---
@@ -143,13 +143,13 @@ Features:
 
 Entry point:
 
-- `Administrator -> User Management -> Clone Quota`
+- Administrator -> User Management -> Clone Quota
 
 Administrators can configure clone quotas for a regular user by `TTS Configuration ID`:
 
-- `-1`: Unlimited
-- `0`: Creation prohibited
-- `Positive integer`: Maximum number of clones allowed
+- -1: Unlimited
+- 0: Creation prohibited
+- Positive integer: Maximum number of clones allowed
 
 Quota statistics typically count by "submitted clone tasks" (failed retries should also be included in the counting strategy, please use according to current business rules).
 
@@ -159,7 +159,7 @@ Quota statistics typically count by "submitted clone tasks" (failed retries shou
 
 ### 7.1 Capability Detection
 
-- `GET /user/voice-clone/capabilities?provider=<provider>`
+- GET /user/voice-clone/capabilities?provider=<provider>
 
 Purpose:
 
@@ -170,23 +170,23 @@ Purpose:
 
 ### 7.2 Clone Records and Task Operations
 
-- `POST /user/voice-clones` (create clone, `multipart/form-data`)
-- `GET /user/voice-clones` (list)
-- `PUT /user/voice-clones/:id` (modify name)
-- `POST /user/voice-clones/:id/retry` (retry failed task)
-- `GET /user/voice-clones/:id/preview` (preview cloned voice)
+- POST /user/voice-clones (create clone, multipart/form-data)
+- GET /user/voice-clones (list)
+- PUT /user/voice-clones/:id (modify name)
+- POST /user/voice-clones/:id/retry (retry failed task)
+- GET /user/voice-clones/:id/preview (preview cloned voice)
 
 ### 7.3 Original Audio Management
 
-- `GET /user/voice-clones/:id/audios`
-- `GET /user/voice-clones/audios/:audio_id/file`
+- GET /user/voice-clones/:id/audios
+- GET /user/voice-clones/audios/:audio_id/file
 
 ---
 
 ## 8. API Documentation (Administrator Quota)
 
-- `GET /admin/users/:id/voice-clone-quotas`
-- `PUT /admin/users/:id/voice-clone-quotas`
+- GET /admin/users/:id/voice-clone-quotas
+- PUT /admin/users/:id/voice-clone-quotas
 
 ---
 
@@ -206,7 +206,7 @@ This means the provider capability requires transcript to be filled in. Please a
 
 ### 9.3 Submission shows insufficient quota
 
-Administrator needs to increase quota or set to `-1` for the corresponding `TTS Configuration ID` in `User Management -> Clone Quota`.
+Administrator needs to increase quota or set to -1 for the corresponding TTS Configuration ID in User Management -> Clone Quota.
 
 ### 9.4 Clone successful but cannot preview
 

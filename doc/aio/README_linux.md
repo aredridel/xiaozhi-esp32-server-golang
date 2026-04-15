@@ -1,6 +1,6 @@
 # Xiaozhi Service Linux Usage Instructions
 
-Welcome to use Xiaozhi Service Linux aio package. This document contains dependency installation, startup and configuration instructions.
+Welcome to use Xiaozhi Service Linux AIO package. This document contains dependency installation, startup and configuration instructions.
 
 ## Directory Structure
 

@@ -11,7 +11,7 @@ import (
 
 var supportedOpusSampleRates = []int{8000, 12000, 16000, 24000, 48000}
 
-// NormalizeOpusSampleRate 将采样率规整到 Opus 支持的标准采样率。
+// NormalizeOpusSampleRate willsampling率规bodyto Opus supportofstandardsampling率。
 func NormalizeOpusSampleRate(sampleRate int) int {
 	if sampleRate <= 0 {
 		return 16000
@@ -29,10 +29,10 @@ func NormalizeOpusSampleRate(sampleRate int) int {
 	return best
 }
 
-// PCM16ToOggOpus 将 PCM16 数据编码为 Ogg/Opus。
+// PCM16ToOggOpus will PCM16 dataencodeis Ogg/Opus。
 func PCM16ToOggOpus(samples []int16, sampleRate int, channels int, frameDurationMs int) ([]byte, error) {
 	if channels < 1 || channels > 2 {
-		return nil, fmt.Errorf("Opus 仅支持 1 或 2 声道，当前: %d", channels)
+		return nil, fmt.Errorf("Opus onlysupport 1 or 2 声道，current: %d", channels)
 	}
 
 	sampleRate = NormalizeOpusSampleRate(sampleRate)
@@ -42,13 +42,13 @@ func PCM16ToOggOpus(samples []int16, sampleRate int, channels int, frameDuration
 
 	frameSizePerChannel := sampleRate * frameDurationMs / 1000
 	if frameSizePerChannel <= 0 {
-		return nil, fmt.Errorf("无效的 Opus 帧时长: %d ms", frameDurationMs)
+		return nil, fmt.Errorf("invalidof Opus frameduration: %d ms", frameDurationMs)
 	}
 
 	frameSize := frameSizePerChannel * channels
 	encoder, err := opus.NewEncoder(sampleRate, channels, opus.AppAudio)
 	if err != nil {
-		return nil, fmt.Errorf("创建 Opus 编码器失败: %v", err)
+		return nil, fmt.Errorf("create Opus encode器failed: %v", err)
 	}
 
 	packets := make([][]byte, 0, len(samples)/maxInt(frameSize, 1)+1)
@@ -64,7 +64,7 @@ func PCM16ToOggOpus(samples []int16, sampleRate int, channels int, frameDuration
 
 		n, err := encoder.Encode(frame, opusBuffer)
 		if err != nil {
-			return nil, fmt.Errorf("Opus 编码失败: %v", err)
+			return nil, fmt.Errorf("Opus encodefailed: %v", err)
 		}
 		packet := make([]byte, n)
 		copy(packet, opusBuffer[:n])
@@ -74,7 +74,7 @@ func PCM16ToOggOpus(samples []int16, sampleRate int, channels int, frameDuration
 	return WrapOggOpusPackets(packets, sampleRate, channels, frameSizePerChannel), nil
 }
 
-// WrapOggOpusPackets 将原始 Opus packet 包装为 Ogg/Opus 数据流。
+// WrapOggOpusPackets willoriginal Opus packet package装is Ogg/Opus datastream。
 func WrapOggOpusPackets(packets [][]byte, sampleRate int, channels int, frameSizePerChannel int) []byte {
 	var out bytes.Buffer
 	const serial = uint32(0x58495a48)

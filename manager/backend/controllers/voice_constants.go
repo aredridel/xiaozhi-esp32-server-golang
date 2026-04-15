@@ -2,18 +2,18 @@ package controllers
 
 import "strings"
 
-// VoiceOption 音色选项
+// VoiceOption voice option
 type VoiceOption struct {
-	Value string `json:"value"` // 音色值
-	Label string `json:"label"` // 音色显示名称
+	Value string `json:"value"` // Voice value
+	Label string `json:"label"` // Voice display name
 }
 
-// VoiceOptions 定义各provider的音色选项
-// 根据火山引擎豆包语音文档：https://www.volcengine.com/docs/6561/97465?lang=zh
-// 和豆包WebSocket文档：https://www.volcengine.com/docs/6561/1257544?lang=zh
+// VoiceOptions defines voice options for each provider
+// Based on Volcano Engine Doubao Speech docs: https://www.volcengine.com/docs/6561/97465
+// and Doubao WebSocket docs: https://www.volcengine.com/docs/6561/1257544
 var VoiceOptions = map[string][]VoiceOption{
-	// Edge TTS 音色列表（中文）
-	// 参考：https://blog.csdn.net/u012917925/article/details/134683773
+	// Edge TTS voice list (Chinese)
+	// Reference: https://blog.csdn.net/u012917925/article/details/134683773
 	"edge": {
 		{Value: "zh-CN-XiaoxiaoNeural", Label: "晓晓（女声）"},
 		{Value: "zh-CN-YunxiNeural", Label: "云希（男声）"},
@@ -35,7 +35,7 @@ var VoiceOptions = map[string][]VoiceOption{
 		{Value: "zh-CN-YunzeNeural", Label: "云泽（男声）"},
 	},
 
-	// Microsoft TTS 音色列表（中文）
+	// Microsoft TTS voice list (Chinese)
 	"microsoft": {
 		{Value: "zh-CN-XiaoxiaoNeural", Label: "晓晓（女声）"},
 		{Value: "zh-CN-YunxiNeural", Label: "云希（男声）"},
@@ -57,8 +57,8 @@ var VoiceOptions = map[string][]VoiceOption{
 		{Value: "zh-CN-YunzeNeural", Label: "云泽（男声）"},
 	},
 
-	// 豆包 TTS 音色列表（HTTP接口）
-	// 参考：https://www.volcengine.com/docs/6561/97465?lang=zh
+	// Doubao TTS voice list (HTTP interface)
+	// Reference: https://www.volcengine.com/docs/6561/97465
 	"doubao": {
 		{Value: "BV700_V2_streaming", Label: "灿灿 2.0"},
 		{Value: "BV705_streaming", Label: "炀炀"},
@@ -103,15 +103,15 @@ var VoiceOptions = map[string][]VoiceOption{
 		{Value: "BV421_streaming", Label: "天才少女"},
 	},
 
-	// 豆包 WebSocket TTS 音色列表
-	// 参考官方文档《音色列表》：
-	// https://www.volcengine.com/docs/6561/1257544?lang=zh
-	// 这里维护的是项目内常用的官方在线音色候选项。
-	// 注意：音色列表仅作为候选项展示，不再依据音色名强绑定 model/resource_id。
-	// 实际可用性仍取决于当前 appid/access_token 在火山控制台实际开通的资源。
+	// Doubao WebSocket TTS voice list
+	// Reference official docs "Voice List":
+	// https://www.volcengine.com/docs/6561/1257544
+	// This maintains commonly used official online voice candidates within the project.
+	// Note: Voice list is only for candidate display, no longer strongly bound to model/resource_id by voice name.
+	// Actual availability depends on resources enabled in Volcano Console for current appid/access_token.
 
 	"doubao_ws": {
-		// 女声音色
+		// Female voices
 		{Value: "zh_female_cancan_mars_bigtts", Label: "灿灿 / Shiny（女声）"},
 		{Value: "zh_female_vv_uranus_bigtts", Label: "vivi 2.0（女声）"},
 		{Value: "zh_female_vv_jupiter_bigtts", Label: "vivi O版（女声）"},
@@ -152,7 +152,7 @@ var VoiceOptions = map[string][]VoiceOption{
 		{Value: "ICL_zh_female_wuxi_tob", Label: "元气甜妹（女声）"},
 		{Value: "ICL_zh_female_zhixingwenwan_tob", Label: "知性温婉（女声）"},
 
-		// 男声音色
+		// Male voices
 		{Value: "saturn_zh_male_shuanglangshaonian_tob", Label: "爽朗少年（男声）"},
 		{Value: "saturn_zh_male_tiancaitongzhuo_tob", Label: "天才同桌（男声）"},
 		{Value: "zh_male_yunzhou_jupiter_bigtts", Label: "云舟 O版（男声）"},
@@ -203,7 +203,7 @@ var VoiceOptions = map[string][]VoiceOption{
 		{Value: "ICL_zh_male_lengjunshangsi_tob", Label: "冷峻上司（男声）"},
 		{Value: "ICL_en_male_michael_tob", Label: "Michael（美式英语男声）"},
 
-		// IP/特色音色
+		// IP/Special voices
 		{Value: "zh_male_lubanqihao_mars_bigtts", Label: "鲁班七号（男声）"},
 		{Value: "zh_female_yangmi_mars_bigtts", Label: "林潇（女声）"},
 		{Value: "zh_female_linzhiling_mars_bigtts", Label: "玲玲姐姐（女声）"},
@@ -219,10 +219,10 @@ var VoiceOptions = map[string][]VoiceOption{
 		{Value: "zh_male_silang_mars_bigtts", Label: "四郎（男声）"},
 	},
 
-	// Minimax TTS 音色列表
-	// 参考：https://www.minimaxi.com/document/guides/tts-model
+	// Minimax TTS voice list
+	// Reference: https://www.minimaxi.com/document/guides/tts-model
 	"minimax": {
-		// 中文 (普通话)
+		// Chinese (Mandarin)
 		{Value: "male-qn-qingse", Label: "青涩青年音色"},
 		{Value: "male-qn-jingying", Label: "精英青年音色"},
 		{Value: "male-qn-badao", Label: "霸道青年音色"},
@@ -281,14 +281,14 @@ var VoiceOptions = map[string][]VoiceOption{
 		{Value: "Chinese (Mandarin)_Crisp_Girl", Label: "清脆少女"},
 		{Value: "Chinese (Mandarin)_Pure-hearted_Boy", Label: "清澈邻家弟弟"},
 		{Value: "Chinese (Mandarin)_Soft_Girl", Label: "柔和少女"},
-		// 中文 (粤语)
+		// Chinese (Cantonese)
 		{Value: "Cantonese_ProfessionalHost（F)", Label: "专业女主持"},
 		{Value: "Cantonese_GentleLady", Label: "温柔女声"},
 		{Value: "Cantonese_ProfessionalHost（M)", Label: "专业男主持"},
 		{Value: "Cantonese_PlayfulMan", Label: "活泼男声"},
 		{Value: "Cantonese_CuteGirl", Label: "可爱女孩"},
 		{Value: "Cantonese_KindWoman", Label: "善良女声"},
-		// 英文
+		// English
 		{Value: "Santa_Claus", Label: "Santa Claus"},
 		{Value: "Grinch", Label: "Grinch"},
 		{Value: "Rudolph", Label: "Rudolph"},
@@ -307,7 +307,7 @@ var VoiceOptions = map[string][]VoiceOption{
 		{Value: "English_Gentle-voiced_man", Label: "Gentle-voiced man"},
 	},
 
-	// 阿里云千问 TTS 音色列表（基础列表，模型过滤由 GetAliyunQwenVoicesByModel 处理）
+	// Alibaba Cloud Qwen TTS voice list (basic list, model filtering handled by GetAliyunQwenVoicesByModel)
 	"aliyun_qwen": {
 		{Value: "Cherry", Label: "芊悦"},
 		{Value: "Serena", Label: "苏瑶"},
@@ -324,9 +324,9 @@ var VoiceOptions = map[string][]VoiceOption{
 		{Value: "Ryan", Label: "甜茶"},
 	},
 
-	// 讯飞在线 TTS 音色列表
-	// 说明：这里保留一组常用静态音色，最终是否可用以讯飞控制台实际授权为准。
-	// 参考：
+	// iFlytek online TTS voice list
+	// Note: A set of commonly used static voices is retained here, final availability depends on actual authorization in iFlytek console.
+	// Reference:
 	// https://www.xfyun.cn/doc/tts/online_tts/API.html
 	// https://aiui.xfyun.cn/doc/aiui/3_access_service/access_interact/functions/speech_synthesis.html
 	"xunfei": {
@@ -343,8 +343,8 @@ var VoiceOptions = map[string][]VoiceOption{
 		{Value: "catherine", Label: "Catherine（英文女声）"},
 	},
 
-	// 讯飞超拟人 TTS 音色列表
-	// 说明：保留一组推荐静态音色，最终可用性以讯飞控制台授权为准。
+	// iFlytek super realistic TTS voice list
+	// Note: A set of recommended static voices is retained, final availability depends on iFlytek console authorization.
 	"xunfei_super_tts": {
 		{Value: "x6_lingxiaoxue_pro", Label: "灵小雪（x6）"},
 		{Value: "x6_lingfeiyi_pro", Label: "灵飞逸（x6）"},
@@ -361,7 +361,7 @@ var VoiceOptions = map[string][]VoiceOption{
 		{Value: "x4_ziyang_oral", Label: "紫阳（x4，口语化）"},
 	},
 
-	// 智谱 TTS 音色列表
+	// Zhipu TTS voice list
 	"zhipu": {
 		{Value: "tongtong", Label: "彤彤（默认音色）"},
 		{Value: "chuichui", Label: "锤锤"},
@@ -373,7 +373,7 @@ var VoiceOptions = map[string][]VoiceOption{
 	},
 }
 
-// GetVoiceOptionsByProvider 根据provider获取音色列表
+// GetVoiceOptionsByProvider gets voice list by provider
 func GetVoiceOptionsByProvider(provider string) []VoiceOption {
 	if voices, ok := VoiceOptions[provider]; ok {
 		return voices
@@ -381,8 +381,8 @@ func GetVoiceOptionsByProvider(provider string) []VoiceOption {
 	return []VoiceOption{}
 }
 
-// GetAliyunQwenVoicesByModel 根据千问模型名称获取音色列表
-// 使用 qwen 包中的模型映射来获取准确的音色列表
+// GetAliyunQwenVoicesByModel gets voice list by Qwen model name
+// Uses model mapping in qwen package to get accurate voice list
 func GetAliyunQwenVoicesByModel(model string) []VoiceOption {
 	model = strings.TrimSpace(model)
 	if model == "" {

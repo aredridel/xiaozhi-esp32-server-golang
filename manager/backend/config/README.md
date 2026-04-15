@@ -1,110 +1,110 @@
-# 配置文件说明
+# Configuration File Documentation
 
-## 配置文件列表
+## Configuration File List
 
-- `config.json` - 默认配置文件
-- `config.dev.json` - 开发环境配置
-- `config.prod.json` - 生产环境配置
-- `config.example.json` - 配置文件示例
+- `config.json` - Default configuration file
+- `config.dev.json` - Development environment configuration
+- `config.prod.json` - Production environment configuration
+- `config.example.json` - Configuration file example
 
-## 配置文件结构
+## Configuration File Structure
 
 ```json
 {
   "server": {
-    "port": "8080",        // 服务器端口
-    "mode": "debug"        // 运行模式: debug/release
+    "port": "8080",        // Server port
+    "mode": "debug"        // Run mode: debug/release
   },
   "database": {
-    "host": "localhost",   // 数据库主机
-    "port": "3306",        // 数据库端口
-    "username": "root",    // 数据库用户名
-    "password": "password", // 数据库密码
-    "database": "xiaozhi_admin" // 数据库名称
+    "host": "localhost",   // Database host
+    "port": "3306",        // Database port
+    "username": "root",    // Database username
+    "password": "password", // Database password
+    "database": "xiaozhi_admin" // Database name
   },
   "jwt": {
-    "secret": "your_secret_key", // JWT签名密钥
-    "expire_hour": 24           // Token过期时间(小时)
+    "secret": "your_secret_key", // JWT signing key
+    "expire_hour": 24           // Token expiration time (hours)
   }
 }
 ```
 
-## 使用方法
+## Usage
 
-### 1. 命令行参数
+### 1. Command Line Arguments
 
 ```bash
-# 使用默认配置文件
+# Use default configuration file
 go run main.go
 
-# 指定配置文件
+# Specify configuration file
 go run main.go -config=config/config.dev.json
 go run main.go -c config/config.prod.json
 ```
 
-### 2. 启动脚本
+### 2. Startup Scripts
 
 **Windows:**
 ```cmd
-start.bat                    # 默认配置
-start.bat dev                # 开发环境
-start.bat prod               # 生产环境
-start.bat custom my.json     # 自定义配置
-start.bat help               # 显示帮助
+start.bat                    # Default configuration
+start.bat dev                # Development environment
+start.bat prod               # Production environment
+start.bat custom my.json     # Custom configuration
+start.bat help               # Show help
 ```
 
 **Linux/Mac:**
 ```bash
-./start.sh                   # 默认配置
-./start.sh dev               # 开发环境
-./start.sh prod              # 生产环境
-./start.sh custom my.json    # 自定义配置
-./start.sh help              # 显示帮助
+./start.sh                   # Default configuration
+./start.sh dev               # Development environment
+./start.sh prod              # Production environment
+./start.sh custom my.json    # Custom configuration
+./start.sh help              # Show help
 ```
 
-## 环境配置建议
+## Environment Configuration Recommendations
 
-### 开发环境 (config.dev.json)
-- 使用debug模式
-- 数据库名称添加_dev后缀
-- JWT密钥可以使用简单的字符串
-- Token过期时间可以设置较长
+### Development Environment (config.dev.json)
+- Use debug mode
+- Add _dev suffix to database name
+- JWT key can use simple string
+- Token expiration time can be set longer
 
-### 生产环境 (config.prod.json)
-- 使用release模式
-- 使用独立的生产数据库
-- JWT密钥必须使用强密码
-- Token过期时间建议设置较短
-- 数据库用户权限最小化
+### Production Environment (config.prod.json)
+- Use release mode
+- Use independent production database
+- JWT key must use strong password
+- Token expiration time should be set shorter
+- Database user permissions minimized
 
-## 安全注意事项
+## Security Notes
 
-1. **不要将生产环境配置文件提交到版本控制系统**
-2. **JWT密钥必须保密且足够复杂**
-3. **数据库密码应该定期更换**
-4. **生产环境建议使用环境变量覆盖敏感配置**
+1. **Do not commit production environment configuration files to version control**
+2. **JWT key must be kept secret and complex enough**
+3. **Database passwords should be changed regularly**
+4. **Production environment recommends using environment variables to override sensitive configuration**
 
-## 配置文件优先级
+## Configuration File Priority
 
-1. 命令行指定的配置文件
-2. 默认配置文件 (config.json)
+1. Configuration file specified on command line
+2. Default configuration file (config.json)
 
-## 故障排除
+## Troubleshooting
 
-### 配置文件不存在
+### Configuration file does not exist
 ```
-错误: 无法打开配置文件 config/missing.json: no such file or directory
+Error: Unable to open configuration file config/missing.json: no such file or directory
 ```
-**解决方案**: 检查配置文件路径是否正确
+**Solution**: Check if configuration file path is correct
 
-### 配置文件格式错误
+### Configuration file format error
 ```
-错误: 解析配置文件失败 config/config.json: invalid character '}' looking for beginning of object key string
+Error: Failed to parse configuration file config/config.json: invalid character '}' looking for beginning of object key string
 ```
-**解决方案**: 检查JSON格式是否正确，可以使用JSON验证工具
+**Solution**: Check if JSON format is correct, can use JSON validation tools
 
-### 数据库连接失败
+### Database connection failed
 ```
-错误: 数据库连接失败: Error 1045: Access denied for user 'root'@'localhost'
+Error: Database connection failed: Error 1045: Access denied for user 'root'@'localhost'
 ```
-**解决方案**: 检查数据库配置信息是否正确
+**Solution**: Check if database configuration information is correct

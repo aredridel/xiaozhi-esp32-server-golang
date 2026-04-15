@@ -7,9 +7,9 @@ import (
 )
 
 func TestCosyVoiceTTS(t *testing.T) {
-	// 跳过实际的网络请求测试，除非设置了环境变量
+	// skip actual network request test unless environment variable is set
 	if os.Getenv("RUN_COSYVOICE_TEST") != "1" {
-		t.Skip("跳过CosyVoice API测试，设置环境变量RUN_COSYVOICE_TEST=1以启用")
+		t.Skip("skip CosyVoice API test, set environment variable RUN_COSYVOICE_TEST=1 to enable")
 	}
 
 	config := map[string]interface{}{
@@ -18,33 +18,33 @@ func TestCosyVoiceTTS(t *testing.T) {
 		"frame_duration": float64(60),
 		"target_sr":      float64(16000),
 		"audio_format":   "mp3",
-		"instruct_text":  "你好",
+		"instruct_text":  "Hello",
 	}
 
 	provider := NewCosyVoiceTTSProvider(config)
 
-	// 测试文本转语音
+	// test text to speech
 	t.Run("TestTextToSpeech", func(t *testing.T) {
-		frames, err := provider.TextToSpeech("你会说四川话吗")
+		frames, err := provider.TextToSpeech("Can you speak Sichuan dialect?")
 		if err != nil {
-			t.Fatalf("TextToSpeech失败: %v", err)
+			t.Fatalf("TextToSpeech failed: %v", err)
 		}
 
 		if len(frames) == 0 {
-			t.Error("未返回任何音频帧")
+			t.Error("did not return any audio frames")
 		}
 	})
 
-	// 测试流式文本转语音
+	// test streaming text to speech
 	t.Run("TestTextToSpeechStream", func(t *testing.T) {
-		outputChan, cancel, err := provider.TextToSpeechStream("你会说四川话吗")
+		outputChan, cancel, err := provider.TextToSpeechStream("Can you speak Sichuan dialect?")
 		if err != nil {
-			t.Fatalf("TextToSpeechStream失败: %v", err)
+			t.Fatalf("TextToSpeechStream failed: %v", err)
 		}
 
 		defer cancel()
 
-		// 接收所有帧
+		// receive all frames
 		var receivedFrames [][]byte
 		timeout := time.After(10 * time.Second)
 
@@ -57,13 +57,13 @@ func TestCosyVoiceTTS(t *testing.T) {
 				}
 				receivedFrames = append(receivedFrames, frame)
 			case <-timeout:
-				t.Error("接收音频帧超时")
+				t.Error("receive audio frame timeout")
 				break receiveLoop
 			}
 		}
 
 		if len(receivedFrames) == 0 {
-			t.Error("未接收到任何音频帧")
+			t.Error("did not receive any audio frames")
 		}
 	})
 }
