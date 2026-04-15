@@ -1,12 +1,12 @@
-# OTA接口MQTT认证配置
+# OTA Interface MQTT Authentication Configuration
 
-## 概述
+## Overview
 
-OTA接口现在支持基于HMAC-SHA256签名的MQTT密码验证机制，提供更安全的认证方式。同时MQTT服务器也支持相应的验证逻辑。
+The OTA interface now supports HMAC-SHA256 signature-based MQTT password verification mechanism, providing a more secure authentication method. The MQTT server also supports corresponding verification logic.
 
-## 配置结构
+## Configuration Structure
 
-### 配置文件 (config/config.yaml)
+### Configuration File (config/config.yaml)
 
 ```yaml
 mqtt_server:
@@ -27,111 +27,111 @@ ota:
       endpoint: "www.youdomain.cn"
 ```
 
-### 配置说明
+### Configuration Description
 
-- `mqtt_server.signature_key`: MQTT签名密钥，用于生成MQTT密码签名
-- `ota.signature_key`: OTA下发MQTT 密码 时使用的key，需要与mqtt_server.signature_key对应
-- `ota.test`: 测试环境配置（内网IP使用）
-- `ota.external`: 外部环境配置（外网IP使用）
+- `mqtt_server.signature_key`: MQTT signature key, used to generate MQTT password signature
+- `ota.signature_key`: Key used when OTA issues MQTT password, needs to correspond with mqtt_server.signature_key
+- `ota.test`: Test environment configuration (for internal network IP use)
+- `ota.external`: External environment configuration (for external network IP use)
 
-### 与 xiaozhi-mqtt-gateway 集成
+### Integration with xiaozhi-mqtt-gateway
 
-本系统与虾哥官方的 [xiaozhi-mqtt-gateway](https://github.com/78/xiaozhi-mqtt-gateway) 项目配合使用，实现完整的MQTT认证流程：
+This system works with the official [xiaozhi-mqtt-gateway](https://github.com/78/xiaozhi-mqtt-gateway) project to implement the complete MQTT authentication flow:
 
-1. **配置一致性要求**: `ota.signature_key` 必须与 xiaozhi-mqtt-gateway 项目中的签名密钥完全一致
-2. **认证流程**: 
-   - xiaozhi-mqtt-gateway 负责生成MQTT连接凭据
-   - 本系统负责验证MQTT连接凭据
-   - 双方使用相同的签名算法和密钥确保认证成功
-3. **部署建议**: 建议将两个项目部署在同一网络环境中，确保配置同步更新
+1. **Configuration Consistency Requirement**: `ota.signature_key` must be completely consistent with the signature key in the xiaozhi-mqtt-gateway project
+2. **Authentication Flow**:
+   - xiaozhi-mqtt-gateway is responsible for generating MQTT connection credentials
+   - This system is responsible for verifying MQTT connection credentials
+   - Both parties use the same signature algorithm and key to ensure authentication success
+3. **Deployment Recommendation**: It is recommended to deploy both projects in the same network environment to ensure configuration synchronization updates
 
-## 工具函数
+## Utility Functions
 
-### 1. 密码签名生成
+### 1. Password Signature Generation
 
 ```go
-// 生成HMAC-SHA256密码签名
+// Generate HMAC-SHA256 password signature
 password := util.GeneratePasswordSignature(data, key)
 ```
 
-### 2. MQTT凭据生成
+### 2. MQTT Credentials Generation
 
 ```go
-// 生成完整的MQTT连接凭据
+// Generate complete MQTT connection credentials
 credentials, err := util.GenerateMqttCredentials(deviceId, clientId, ip, signatureKey)
 if err != nil {
-    // 处理错误
+    // Handle error
 }
-// credentials包含: ClientId, Username, Password
+// credentials contains: ClientId, Username, Password
 ```
 
-### 3. MQTT凭据验证
+### 3. MQTT Credentials Verification
 
 ```go
-// 验证MQTT连接凭据
+// Verify MQTT connection credentials
 credentialInfo, err := util.ValidateMqttCredentials(clientId, username, password, signatureKey)
 if err != nil {
-    // 验证失败
+    // Verification failed
 }
-// credentialInfo包含: GroupId, MacAddress, UUID, UserData
+// credentialInfo contains: GroupId, MacAddress, UUID, UserData
 ```
 
-## MQTT认证逻辑
+## MQTT Authentication Logic
 
-### 1. Client ID格式
+### 1. Client ID Format
 
 ```
 GID_test@@@{deviceId}@@@{clientId}
 ```
 
-示例：
+Example:
 ```
 GID_test@@@02_4A_7D_E3_89_BF@@@e3b0c442-98fc-4e1a-8c3d-6a5b6a5b6a5b
 ```
 
-### 2. Username格式
+### 2. Username Format
 
-Base64编码的JSON，包含客户端IP信息：
+Base64 encoded JSON containing client IP information:
 
 ```yaml
 ip: "1.202.193.194"
 ```
 
-Base64编码后：
+After Base64 encoding:
 ```
 eyJpcCI6IjEuMjAyLjE5My4xOTQifQ==
 ```
 
-### 3. Password生成
+### 3. Password Generation
 
-使用HMAC-SHA256算法生成密码签名：
+Use HMAC-SHA256 algorithm to generate password signature:
 
 ```go
 signatureData := clientId + "|" + username
 password := HMAC-SHA256(signatureData, signature_key)
 ```
 
-### 4. 验证逻辑
+### 4. Verification Logic
 
-客户端验证时需要：
+When client verifies, it needs to:
 
-1. 解析clientId，提取groupId、macAddress、uuid
-2. 解码username，获取IP信息
-3. 使用相同的签名密钥和算法验证密码
+1. Parse clientId, extract groupId, macAddress, uuid
+2. Decode username, get IP information
+3. Use the same signature key and algorithm to verify password
 
-## MQTT服务器认证
+## MQTT Server Authentication
 
-### 认证流程
+### Authentication Flow
 
-1. **超级管理员验证**
-   - 用户名: `admin` (可配置)
-   - 密码: `shijingbo!@#` (可配置)
+1. **Super Admin Verification**
+   - Username: `admin` (configurable)
+   - Password: `shijingbo!@#` (configurable)
 
-2. **普通用户验证**
-   - 优先使用HMAC-SHA256签名验证
-   - 如果未配置签名密钥，回退到AES验证方式
+2. **Regular User Verification**
+   - Prioritize HMAC-SHA256 signature verification
+   - If signature key is not configured, fall back to AES verification method
 
-### 认证钩子实现
+### Authentication Hook Implementation
 
 ```go
 func (h *AuthHook) OnConnectAuthenticate(cl *mqttServer.Client, pk packets.Packet) bool {
@@ -139,12 +139,12 @@ func (h *AuthHook) OnConnectAuthenticate(cl *mqttServer.Client, pk packets.Packe
     password := string(pk.Connect.Password)
     clientId := string(pk.Connect.ClientIdentifier)
 
-    // 超级管理员校验
+    // Super admin verification
     if username == adminUsername && password == adminPassword {
         return true
     }
 
-    // 普通用户校验 - 使用新的签名验证逻辑
+    // Regular user verification - use new signature verification logic
     signatureKey := viper.GetString("mqtt_server.signature_key")
     if signatureKey != "" {
         credentialInfo, err := util.ValidateMqttCredentials(clientId, username, password, signatureKey)
@@ -154,27 +154,27 @@ func (h *AuthHook) OnConnectAuthenticate(cl *mqttServer.Client, pk packets.Packe
         return true
     }
 
-    // 回退到AES验证逻辑
+    // Fall back to AES verification logic
     return h.validateWithAes(username, password)
 }
 ```
 
-## 兼容性
+## Compatibility
 
-- 如果未配置`mqtt_server.signature_key`，系统会回退到原来的SHA256/AES密码生成方式
-- 保持向后兼容性，不会影响现有功能
-- MQTT服务器支持多种认证方式并存
+- If `mqtt_server.signature_key` is not configured, the system will fall back to the original SHA256/AES password generation method
+- Maintains backward compatibility, will not affect existing functionality
+- MQTT server supports multiple authentication methods coexisting
 
-## 安全建议
+## Security Recommendations
 
-1. 使用强随机字符串作为签名密钥
-2. 定期轮换签名密钥
-3. 在生产环境中使用HTTPS/WSS连接
-4. 监控异常登录尝试
-5. 启用日志记录，跟踪认证成功/失败情况
-6. **确保 xiaozhi-mqtt-gateway 与本系统的签名密钥同步更新**
+1. Use strong random strings as signature keys
+2. Rotate signature keys regularly
+3. Use HTTPS/WSS connections in production environment
+4. Monitor abnormal login attempts
+5. Enable logging to track authentication success/failure status
+6. **Ensure xiaozhi-mqtt-gateway and this system's signature keys are synchronized and updated**
 
-## 数据结构
+## Data Structures
 
 ### MqttCredentials
 ```go
@@ -195,32 +195,32 @@ type MqttCredentialInfo struct {
 }
 ``` 
 
-# 虾哥官方 xiaozhi-mqtt-gateway 使用说明
+# Official xiaozhi-mqtt-gateway Usage Instructions
 
-本系统可以与虾哥官方的 [xiaozhi-mqtt-gateway](https://github.com/78/xiaozhi-mqtt-gateway) 项目配合使用。
+This system can work with the official [xiaozhi-mqtt-gateway](https://github.com/78/xiaozhi-mqtt-gateway) project.
 
-只需ota接口中MQTT的用户名密码与xiaozhi-mqtt-gateway认证通过，为确保MQTT认证正常工作，**`ota.signature_key` 配置必须与 xiaozhi-mqtt-gateway 中的签名密钥保持一致**。
+Only the MQTT username and password in the OTA interface need to pass xiaozhi-mqtt-gateway authentication. To ensure MQTT authentication works properly, **`ota.signature_key` configuration must be consistent with the signature key in xiaozhi-mqtt-gateway**.
 
-配置如下:
-1. 不启用mqtt server (使用 xiaozhi-mqtt-gateway)
-2. `ota.signature_key` 配置必须与 xiaozhi-mqtt-gateway 中的签名密钥保持一致
-3. 配置 xiaozhi-mqtt-gateway 的websocket后端为本项目地址
+Configuration is as follows:
+1. Do not enable mqtt server (use xiaozhi-mqtt-gateway)
+2. `ota.signature_key` configuration must be consistent with the signature key in xiaozhi-mqtt-gateway
+3. Configure xiaozhi-mqtt-gateway's websocket backend to this project's address
 
 ```yaml
 mqtt_server:
   enable: false
 ota:
   signature_key: "your_ota_signature_key_here"
-  test:  # 内网测试的返回
+  test:  # Internal network test return
     websocket:
       url: "ws://192.168.208.214:8989/xiaozhi/v1/"
     mqtt:
       enable: true
-      endpoint: "192.168.208.214:1883"  # xiaozhi-mqtt-gateway中的mqtt server地址
-  external:  # 外网的返回
+      endpoint: "192.168.208.214:1883"  # xiaozhi-mqtt-gateway mqtt server address
+  external:  # External network return
     websocket:
       url: "wss://www.tb263.cn:55555/go_ws/xiaozhi/v1/"
     mqtt:
       enable: true
-      endpoint: "mqtt.youdomain.com:1883"  # xiaozhi-mqtt-gateway中的mqtt server地址
+      endpoint: "mqtt.youdomain.com:1883"  # xiaozhi-mqtt-gateway mqtt server address
 ```

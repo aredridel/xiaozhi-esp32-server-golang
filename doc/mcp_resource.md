@@ -1,69 +1,69 @@
-# MCP 工具调用返回内容类型文档
+# MCP Tool Call Return Content Type Documentation
 
-## 概述
+## Overview
 
-本文档详细描述了程序支持的工具调用返回内容类型。程序采用**结构化响应系统**，支持多种内容类型的处理和渲染。
+This document describes in detail the tool call return content types supported by the program. The program adopts a **structured response system**, supporting processing and rendering of multiple content types.
 
-## 🔧 核心处理流程
+## 🔧 Core Processing Flow
 
-### 工具调用响应处理
+### Tool Call Response Processing
 
-工具调用响应的核心处理器负责：
+The core processor of tool call responses is responsible for:
 
-1. **工具调用执行**: 遍历所有工具调用请求
-2. **结果解析**: 解析工具返回的结果
-3. **内容类型识别**: 根据内容类型进行不同的处理
-4. **资源渲染**: 处理音频、文本、资源链接等不同类型的内容
+1. **Tool Call Execution**: Iterate through all tool call requests
+2. **Result Parsing**: Parse results returned by tools
+3. **Content Type Identification**: Process differently based on content type
+4. **Resource Rendering**: Process different types of content such as audio, text, resource links, etc.
 
-## 📋 支持的内容类型
+## 📋 Supported Content Types
 
-### 1. 音频内容 (AudioContent)
+### 1. Audio Content (AudioContent)
 
-**类型**: `mcp_go.AudioContent`
+**Type**: `mcp_go.AudioContent`
 
-**特征**:
-- 包含 Base64 编码的音频数据
-- 支持多种音频格式 (MIME Type)
-- 直接播放，终止后续 LLM 处理
+**Features**:
+- Contains Base64 encoded audio data
+- Supports multiple audio formats (MIME Type)
+- Direct playback, terminates subsequent LLM processing
 
-**处理流程**:
+**Processing Flow**:
 ```go
 if audioContent, ok := content.(mcp_go.AudioContent); ok {
-    // 解码 Base64 音频数据
+    // Decode Base64 audio data
     rawAudioData, err := base64.StdEncoding.DecodeString(audioContent.Data)
-    // 使用 music_player 播放音频
+    // Use music_player to play audio
     audioChan, err := play_music.PlayMusicFromAudioData(ctx, rawAudioData, ...)
-    // 发送播放状态消息
+    // Send playback status message
     l.serverTransport.SendSentenceStart(playText)
-    // 通过 TTS 管理器播放音频
+    // Play audio through TTS manager
     l.ttsManager.SendTTSAudio(ctx, audioChan, true)
 }
 ```
 
-**使用场景**:
-- 音乐播放工具
-- 语音合成工具
-- 音频文件播放
+**Use Cases**:
+- Music playback tools
+- Speech synthesis tools
+- Audio file playback
 
-### 2. 资源链接 (ResourceLink)
+### 2. Resource Link (ResourceLink)
 
-**类型**: `mcp_go.ResourceLink`
+**Type**: `mcp_go.ResourceLink`
 
-**特征**:
-- 包含资源 URI 和元数据
-- 支持分页读取大型资源
-- 流式处理，适合大文件
-- 使用 Pipe 机制实现实时音频流播放
+**Features**:
+- Contains resource URI and metadata
+- Supports paginated reading of large resources
+- Streaming processing, suitable for large files
+- Uses Pipe mechanism for real-time audio stream playback
 
-**处理流程**:
+**Processing Flow**:
 ```go
 if resourceLink, ok := content.(mcp_go.ResourceLink); ok {
-    // 创建 Pipe 用于流式传输
+    // Create Pipe for streaming transmission
     pipeReader, pipeWriter = io.Pipe()
     
-    // 启动分页读取协程
+    // Start paginated reading goroutine
     go func() {
-        // 分页读取资源
+        // Paginated reading of resource
         resourceResult, err := client.ReadResource(readCtx, mcp_go.ReadResourceRequest{
             Params: mcp_go.ReadResourceParams{
                 URI: resourceLink.URI,
@@ -75,39 +75,39 @@ if resourceLink, ok := content.(mcp_go.ResourceLink); ok {
             },
         })
         
-        // 处理 BlobResourceContents
+        // Process BlobResourceContents
         for _, content := range resourceResult.Contents {
             if audioContent, ok := content.(mcp_go.BlobResourceContents); ok {
-                // 解码并发送到音频流通道
+                // Decode and send to audio stream channel
                 rawAudioData, err := base64.StdEncoding.DecodeString(audioContent.Blob)
                 streamChan <- rawAudioData
             }
         }
     }()
     
-    // 使用 music_player 播放音频流
+    // Use music_player to play audio stream
     audioChan, err := play_music.PlayMusicFromPipe(ctx, pipeReader, ...)
 }
 ```
 
-**分页读取参数详解**:
+**Paginated Reading Parameter Details**:
 
-#### 请求参数格式
+#### Request Parameter Format
 ```go
 Arguments: map[string]any{
-    "url": resourceLink.Description,  // 实际资源URL
-    "start": start,                   // 起始字节位置
-    "end": start + page,              // 结束字节位置
+    "url": resourceLink.Description,  // Actual resource URL
+    "start": start,                   // Starting byte position
+    "end": start + page,              // Ending byte position
 }
 ```
 
-#### 参数说明
-- **url**: 实际资源的 URL 地址，来自 `resourceLink.Description`
-- **start**: 起始字节位置，从0开始计数
-- **end**: 结束字节位置（不包含），即读取范围 [start, end)
-- **分页大小**: 由 `McpReadResourcePageSize` 常量定义，默认 100KB
+#### Parameter Description
+- **url**: Actual resource URL address, from `resourceLink.Description`
+- **start**: Starting byte position, counted from 0
+- **end**: Ending byte position (exclusive), i.e., reading range [start, end)
+- **Page Size**: Defined by `McpReadResourcePageSize` constant, default 100KB
 
-#### 分页读取流程
+#### Paginated Reading Flow
 ```go
 start := 0
 page := McpReadResourcePageSize  // 100 * 1024
@@ -115,10 +115,10 @@ totalRead := 0
 pageCount := 0
 
 for {
-    // 创建带超时的上下文
+    // Create context with timeout
     readCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
     
-    // 发送分页读取请求
+    // Send paginated reading request
     resourceResult, err := client.ReadResource(readCtx, mcp_go.ReadResourceRequest{
         Params: mcp_go.ReadResourceParams{
             URI: resourceLink.URI,
@@ -131,42 +131,42 @@ for {
     })
     cancel()
     
-    // 处理返回的 BlobResourceContents
+    // Process returned BlobResourceContents
     for _, content := range resourceResult.Contents {
         if audioContent, ok := content.(mcp_go.BlobResourceContents); ok {
-            // 解码Base64数据
+            // Decode Base64 data
             rawAudioData, err := base64.StdEncoding.DecodeString(audioContent.Blob)
             
-            // 检查是否为结束标志
+            // Check if it's end flag
             if string(rawAudioData) == McpReadResourceStreamDoneFlag {
-                return nil // 读取完成
+                return nil // Reading complete
             }
             
-            // 发送到音频流通道
+            // Send to audio stream channel
             streamChan <- rawAudioData
             totalRead += len(rawAudioData)
         }
     }
     
-    // 检查读取完成条件
+    // Check reading completion condition
     if len(rawAudioData) < page || !hasData {
-        return nil // 读取完成
+        return nil // Reading complete
     }
     
-    // 更新起始位置
+    // Update starting position
     start += page
     pageCount++
 }
 ```
 
-#### 流式处理机制
+#### Streaming Processing Mechanism
 
-**Pipe 传输架构**:
+**Pipe Transmission Architecture**:
 ```go
-// 创建 Pipe 用于音频流传输
+// Create Pipe for audio stream transmission
 pipeReader, pipeWriter = io.Pipe()
 
-// 启动数据写入协程
+// Start data writing goroutine
 go func() {
     for {
         select {
@@ -182,147 +182,142 @@ go func() {
     }
 }()
 
-// 使用 music_player 从 Pipe 播放音频
+// Use music_player to play audio from Pipe
 audioChan, err := play_music.PlayMusicFromPipe(ctx, pipeReader, ...)
 ```
 
-#### 错误处理机制
+#### Error Handling Mechanism
 
-**超时重试**:
+**Timeout Retry**:
 ```go
 if err != nil {
-    // 如果是超时错误，尝试重试
+    // If it's a timeout error, try retry
     if strings.Contains(err.Error(), "timeout") || strings.Contains(err.Error(), "deadline") {
-        log.Warnf("资源读取超时，尝试重试...")
+        log.Warnf("Resource read timeout, trying retry...")
         time.Sleep(1 * time.Second)
         continue
     }
-    return fmt.Errorf("读取资源失败: %v", err)
+    return fmt.Errorf("Failed to read resource: %v", err)
 }
 ```
 
-**上下文取消**:
+**Context Cancellation**:
 ```go
 select {
 case <-ctx.Done():
-    log.Debugf("资源读取被取消")
+    log.Debugf("Resource read cancelled")
     return nil
 case streamChan <- rawAudioData:
-    // 正常发送数据
+    // Normal data send
 }
 ```
 
-#### 分页机制特性
-- **内存优化**: 分页读取避免一次性加载大文件到内存
-- **流式处理**: 边读取边播放，支持实时音频流
-- **自动结束**: 检测 `McpReadResourceStreamDoneFlag` 标志判断读取完成
-- **错误恢复**: 支持超时重试和上下文取消
-- **实时播放**: 使用 Pipe 机制实现边读取边播放
-- **超时控制**: 每次分页读取都有30秒超时限制
+#### Pagination Mechanism Features
+- **Memory Optimization**: Paginated reading avoids loading large files into memory at once
+- **Streaming Processing**: Read and play simultaneously, supports real-time audio streams
+- **Auto End**: Detect `McpReadResourceStreamDoneFlag` flag to determine reading completion
+- **Error Recovery**: Supports timeout retry and context cancellation
+- **Real-time Playback**: Use Pipe mechanism to read and play simultaneously
+- **Timeout Control**: Each paginated read has a 30-second timeout limit
+- **Retry Mechanism**: Automatic retry on timeout errors, 1-second interval
 
-#### 配置参数
-- **McpReadResourcePageSize**: 分页大小，默认 100KB (100 * 1024)
-- **McpReadResourceStreamDoneFlag**: 流结束标志，为 `"[DONE]"`
-- **读取超时**: 每次分页读取的超时时间，默认30秒
-- **重试机制**: 超时错误自动重试，间隔1秒
+**Use Cases**:
+- Large audio file playback
+- Streaming media resource processing
+- Network resource access
+- Real-time audio stream playback
 
-**使用场景**:
-- 大型音频文件播放
-- 流媒体资源处理
-- 网络资源访问
-- 实时音频流播放
+### 3. Text Content (TextContent)
 
-### 3. 文本内容 (TextContent)
+**Type**: `mcp_go.TextContent`
 
-**类型**: `mcp_go.TextContent`
+**Features**:
+- Plain text content
+- Accumulated into response message
+- Does not terminate subsequent processing
 
-**特征**:
-- 纯文本内容
-- 累积到响应消息中
-- 不终止后续处理
-
-**处理流程**:
+**Processing Flow**:
 ```go
 if textContent, ok := content.(mcp_go.TextContent); ok {
     mcpContent += textContent.Text
 }
 ```
 
-**使用场景**:
-- 查询结果返回
-- 状态信息显示
-- 错误消息展示
+**Use Cases**:
+- Query result return
+- Status information display
+- Error message display
 
-### 4. Blob 资源内容 (BlobResourceContents)
+### 4. Blob Resource Content (BlobResourceContents)
 
-**类型**: `mcp_go.BlobResourceContents`
+**Type**: `mcp_go.BlobResourceContents`
 
-**特征**:
-- 二进制数据内容
-- Base64 编码
-- 支持流式处理
+**Features**:
+- Binary data content
+- Base64 encoded
+- Supports streaming processing
 
-**处理流程**:
+**Processing Flow**:
 ```go
 if audioContent, ok := content.(mcp_go.BlobResourceContents); ok {
     rawAudioData, err := base64.StdEncoding.DecodeString(audioContent.Blob)
-    // 检查是否为结束标志
+    // Check if it's end flag
     if string(rawAudioData) == McpReadResourceStreamDoneFlag {
         return nil
     }
-    // 发送到音频流通道
+    // Send to audio stream channel
     streamChan <- rawAudioData
 }
 ```
 
-## 🏗️ 结构化响应系统
+## 🏗️ Structured Response System
 
-### 响应类型分类
+### Response Type Classification
 
-程序支持四种主要的响应类型：
+The program supports four main response types:
 
-#### 1. 动作类响应 (MCPActionResponse)
-- **用途**: 执行特定动作，如播放音乐、退出对话
-- **终止性**: 可配置，通常终止后续 LLM 处理
-- **控制标志**: `FinalAction`, `NoFurtherResponse`, `SilenceLLM`
+#### 1. Action Response (MCPActionResponse)
+- **Purpose**: Execute specific actions, such as playing music, exiting dialogue
+- **Termination**: Configurable, usually terminates subsequent LLM processing
+- **Control Flags**: `FinalAction`, `NoFurtherResponse`, `SilenceLLM`
 
-#### 2. 音频类响应 (MCPAudioResponse)
-- **用途**: 音频资源播放
-- **终止性**: 通常终止后续处理
-- **特征**: 包含音频数据和播放信息
+#### 2. Audio Response (MCPAudioResponse)
+- **Purpose**: Audio resource playback
+- **Termination**: Usually terminates subsequent processing
+- **Features**: Contains audio data and playback information
 
-#### 3. 内容类响应 (MCPContentResponse)
-- **用途**: 返回查询数据、状态信息
-- **终止性**: 不终止后续处理
-- **特征**: 包含数据和显示提示
+#### 3. Content Response (MCPContentResponse)
+- **Purpose**: Return query data, status information
+- **Termination**: Does not terminate subsequent processing
+- **Features**: Contains data and display prompts
 
-#### 4. 错误类响应 (MCPErrorResponse)
-- **用途**: 统一错误处理
-- **终止性**: 不终止后续处理
-- **特征**: 包含错误码和建议
+#### 4. Error Response (MCPErrorResponse)
+- **Purpose**: Unified error handling
+- **Termination**: Does not terminate subsequent processing
+- **Features**: Contains error code and suggestions
 
-### 响应处理接口
+### Response Processing Interface
 
 ```go
 type MCPResponse interface {
     GetType() MCPResponseType
     GetSuccess() bool
-    IsTerminal() bool // 关键：判断是否终止后续LLM处理
+    IsTerminal() bool // Key: Determine whether to terminate subsequent LLM processing
     ToJSON() (string, error)
     GetContent() []mcp_go.Content
 }
 ```
 
-## 🔄 处理流程详解
+## 🔄 Processing Flow Details
 
-### 1. 工具调用执行
+### 1. Tool Call Execution
 ```go
 fcResult, err := tool.InvokableRun(toolCtx, toolCall.Function.Arguments)
 ```
 
-### 2. 结果解析
+### 2. Result Parsing
 ```go
-// 尝试解析本地工具结果
+// Try to parse local tool result
 if mcpResp, ok := l.handleLocalToolResult(fcResult); ok {
     contentList = mcpResp.GetContent()
 } else if toolCallResult, ok := l.handleToolResult(fcResult); ok {
@@ -330,135 +325,135 @@ if mcpResp, ok := l.handleLocalToolResult(fcResult); ok {
 }
 ```
 
-> `handleToolResult` **不再要求工具返回值必须是 JSON**。  
-> - 如果返回的是标准 MCP `CallToolResult` JSON，会按结构化内容解析。  
-> - 如果返回的是普通字符串，会自动包装成 `TextContent` 继续后续流程。  
-> 这样普通文本工具和结构化 MCP 工具都可以被统一处理。
+> `handleToolResult` **no longer requires tool return values to be JSON**.  
+> - If returning standard MCP `CallToolResult` JSON, it will be parsed as structured content.  
+> - If returning plain string, it will be automatically wrapped as `TextContent` to continue subsequent flow.  
+> This allows both plain text tools and structured MCP tools to be processed uniformly.
 
-### 3. 内容类型处理
+### 3. Content Type Processing
 ```go
 for _, content := range contentList {
     switch content.(type) {
     case mcp_go.AudioContent:
-        // 处理音频内容
+        // Process audio content
     case mcp_go.ResourceLink:
-        // 处理资源链接
+        // Process resource link
     case mcp_go.TextContent:
-        // 处理文本内容
+        // Process text content
     }
 }
 ```
 
-### 4. 后续处理控制
+### 4. Subsequent Processing Control
 ```go
 if invokeToolSuccess && !shouldStopLLMProcessing {
     l.DoLLmRequest(ctx, nil, l.einoTools, true)
 }
 ```
 
-## 📊 内容类型对比表
+## 📊 Content Type Comparison Table
 
-| 内容类型 | 终止性 | 处理方式 | 使用场景 | 示例工具 |
+| Content Type | Termination | Processing Method | Use Case | Example Tool |
 |----------|--------|----------|----------|----------|
-| **AudioContent** | 终止 | 直接播放 | 小音频文件 | play_music |
-| **ResourceLink** | 终止 | 分页读取+流式播放 | 大文件/流媒体 | music_player |
-| **TextContent** | 不终止 | 累积文本 | 信息查询 | get_datetime |
-| **BlobResourceContents** | 终止 | 流式处理 | 音频流数据 | audio_stream |
+| **AudioContent** | Terminate | Direct playback | Small audio files | play_music |
+| **ResourceLink** | Terminate | Paginated reading + Streaming playback | Large files/Streaming | music_player |
+| **TextContent** | Not terminate | Accumulate text | Information query | get_datetime |
+| **BlobResourceContents** | Terminate | Streaming processing | Audio stream data | audio_stream |
 
-## 🎯 最佳实践
+## 🎯 Best Practices
 
-### 1. 工具实现建议
-- **音频工具**: 返回 `AudioContent` 或 `ResourceLink`
-- **查询工具**: 返回 `TextContent`
-- **动作工具**: 使用结构化响应系统
+### 1. Tool Implementation Suggestions
+- **Audio tools**: Return `AudioContent` or `ResourceLink`
+- **Query tools**: Return `TextContent`
+- **Action tools**: Use structured response system
 
-### 2. 性能优化
-- 大文件使用 `ResourceLink` 进行分页处理，支持流式播放
-- 小音频文件直接使用 `AudioContent`，减少网络开销
-- 文本内容避免过长，影响响应速度
-- 使用 Pipe 机制实现边读取边播放，提升用户体验
+### 2. Performance Optimization
+- Use `ResourceLink` for paginated processing of large files, supports streaming playback
+- Use `AudioContent` directly for small audio files, reduces network overhead
+- Avoid overly long text content, affects response speed
+- Use Pipe mechanism to read and play simultaneously, improves user experience
 
-### 3. 错误处理
-- 使用 `MCPErrorResponse` 统一错误格式
-- 提供有意义的错误码和建议
-- 保持向后兼容性
+### 3. Error Handling
+- Use `MCPErrorResponse` for unified error format
+- Provide meaningful error codes and suggestions
+- Maintain backward compatibility
 
-## 🔧 配置参数
+## 🔧 Configuration Parameters
 
-### 分页配置
-- `McpReadResourcePageSize`: 资源读取分页大小，默认 100KB (100 * 1024)
-- `McpReadResourceStreamDoneFlag`: 流结束标志，为 `"[DONE]"`
-- **读取超时**: 每次分页读取的超时时间，默认30秒
-- **重试机制**: 超时错误自动重试，间隔1秒
+### Pagination Configuration
+- `McpReadResourcePageSize`: Resource read page size, default 100KB (100 * 1024)
+- `McpReadResourceStreamDoneFlag`: Stream end flag, is `"[DONE]"`
+- **Read Timeout**: Timeout for each paginated read, default 30 seconds
+- **Retry Mechanism**: Automatic retry on timeout errors, 1-second interval
 
-### 音频配置
-- `OutputAudioFormat.SampleRate`: 输出音频采样率
-- `OutputAudioFormat.FrameDuration`: 输出音频帧时长
-- **音频格式**: 根据 `resourceLink.MIMEType` 自动识别
+### Audio Configuration
+- `OutputAudioFormat.SampleRate`: Output audio sample rate
+- `OutputAudioFormat.FrameDuration`: Output audio frame duration
+- **Audio Format**: Automatically recognized based on `resourceLink.MIMEType`
 
-## 📝 扩展指南
+## 📝 Extension Guide
 
-### 添加新的内容类型
-1. 在 `mcp_go` 包中定义新的内容类型
-2. 在 `handleToolCallResponse` 中添加类型处理逻辑
-3. 实现相应的处理函数
-4. 更新文档和测试
+### Adding New Content Types
+1. Define new content type in `mcp_go` package
+2. Add type processing logic in `handleToolCallResponse`
+3. Implement corresponding processing function
+4. Update documentation and tests
 
-### 自定义响应类型
-1. 继承 `MCPResponseBase`
-2. 实现 `MCPResponse` 接口
-3. 在 `ParseMCPResponse` 中添加解析逻辑
-4. 提供便利构造函数
+### Custom Response Types
+1. Inherit `MCPResponseBase`
+2. Implement `MCPResponse` interface
+3. Add parsing logic in `ParseMCPResponse`
+4. Provide convenient constructor
 
-## 🎵 MCP Audio Server 独立仓库
+## 🎵 MCP Audio Server Independent Repository
 
-### 概述
+### Overview
 
-MCP Audio Server 已经拆分为独立仓库，推荐通过独立项目运行和调试音频类 MCP Server。当前文档中的这一节主要说明它与主服务的协议兼容方式。
+MCP Audio Server has been split into an independent repository. It is recommended to run and debug audio MCP Servers through an independent project. The current section of the document mainly explains its protocol compatibility with the main service.
 
-### 核心功能
+### Core Functions
 
-#### 1. 音乐播放工具
-- **工具名称**: `musicPlayer`
-- **功能**: 搜索并播放音乐
-- **返回**: `ResourceLink` 类型的音频资源链接
+#### 1. Music Playback Tool
+- **Tool Name**: `musicPlayer`
+- **Function**: Search and play music
+- **Return**: `ResourceLink` type audio resource link
 
-#### 2. 音频资源模板
-- **URI 格式**: `resource://read_from_http`
-- **功能**: 支持分页读取音频数据，通过 Arguments 传递参数
-- **参数**: url (实际音乐URL), start (起始位置), end (结束位置)
-- **返回**: `BlobResourceContents` 类型的音频数据
+#### 2. Audio Resource Template
+- **URI Format**: `resource://read_from_http`
+- **Function**: Supports paginated reading of audio data, parameters passed through Arguments
+- **Parameters**: url (actual music URL), start (starting position), end (ending position)
+- **Return**: `BlobResourceContents` type audio data
 
-### 关键特性
+### Key Features
 
-- **分页读取**: 支持大文件的流式处理
-- **HTTP Range 请求**: 实现音频数据的分段获取
-- **错误处理**: 处理 416 状态码等异常情况
-- **超时重试**: 自动重试超时错误，间隔1秒
-- **上下文取消**: 支持优雅的资源读取取消
-- **Base64 编码**: 安全传递音乐 URL 参数
-- **多传输支持**: stdio 和 HTTP 两种传输方式
-- **实时播放**: 使用 Pipe 机制实现边读取边播放
+- **Paginated Reading**: Supports streaming processing of large files
+- **HTTP Range Request**: Implements segmented acquisition of audio data
+- **Error Handling**: Handles 416 status code and other exceptions
+- **Timeout Retry**: Automatic retry on timeout errors, 1-second interval
+- **Context Cancellation**: Supports graceful resource read cancellation
+- **Base64 Encoding**: Securely passes music URL parameters
+- **Multi-transport Support**: stdio and HTTP two transport methods
+- **Real-time Playback**: Use Pipe mechanism to read and play simultaneously
 
-### 使用方式
+### Usage
 
 ```bash
-# 获取并进入独立仓库
+# Get and enter independent repository
 git clone https://github.com/hackers365/mcp_audio_server.git
 cd mcp_audio_server
 
-# 启动服务器
+# Start server
 go run .
 
-# 工具调用
+# Tool call
 {
   "name": "musicPlayer",
-  "arguments": {"query": "周杰伦"}
+  "arguments": {"query": "Jay Chou"}
 }
 ```
 
-这个独立项目展示了如何构建支持音频资源处理的 MCP 工具，可作为开发其他音频相关工具的参考模板。更完整的使用说明可参考 `doc/mcp_audio_example.md`。
+This independent project demonstrates how to build MCP tools supporting audio resource processing, and can be used as a reference template for developing other audio-related tools. For more complete usage instructions, please refer to `doc/mcp_audio_example.md`.
 
 ---
 
-*本文档反映了程序当前支持的所有工具调用返回内容类型。* 
+*This document reflects all tool call return content types currently supported by the program.* 

@@ -1,37 +1,37 @@
-# WebSocket服务器与OTA配置流程说明
+# WebSocket Server and OTA Configuration Guide
 
-本说明面向零基础用户，详细介绍如何配置WebSocket服务器及OTA（固件升级）相关参数。
+This guide is for beginners and provides detailed instructions on configuring the WebSocket server and OTA (Over-The-Air) related parameters.
 
 ---
 
-## 1. 配置文件位置
+## 1. Configuration File Location
 
-所有主要配置都在：
+All main configurations are in:
 
 - `config/config.yaml`
 
-如找不到该文件，也可参考 `config/config.json.git`。
+If you cannot find this file, you can also refer to `config/config.json.git`.
 
 ---
 
-## 2. WebSocket服务器配置
+## 2. WebSocket Server Configuration
 
-### 2.1 作用
-WebSocket服务器用于设备与服务器之间的实时通信。
+### 2.1 Purpose
+The WebSocket server is used for real-time communication between devices and the server.
 
-### 2.2 关键配置项
-在 `config/config.yaml` 文件中找到如下内容：
+### 2.2 Key Configuration Items
+Find the following content in the `config/config.yaml` file:
 
 ```yaml
 websocket:
   host: "0.0.0.0"
   port: 8989
 ```
-- `host`：监听地址，通常保持 `0.0.0.0` 即可。
-- `port`：监听端口，默认 `8989`，可根据需要修改。
+- `host`: Listening address, usually keep as `0.0.0.0`.
+- `port`: Listening port, default `8989`, can be modified as needed.
 
-### 2.3 修改方法
-如需更改端口为 9000：
+### 2.3 Modification Method
+To change the port to 9000:
 ```yaml
 websocket:
   host: "0.0.0.0"
@@ -40,13 +40,13 @@ websocket:
 
 ---
 
-## 3. OTA（固件升级）配置
+## 3. OTA (Firmware Upgrade) Configuration
 
-### 3.1 作用
-OTA用于设备自动获取服务器下发的WebSocket/MQTT连接参数和固件升级信息。
+### 3.1 Purpose
+OTA is used for devices to automatically obtain WebSocket/MQTT connection parameters and firmware upgrade information from the server.
 
-### 3.2 关键配置项
-在 `config/config.yaml` 文件中找到 `ota` 部分：
+### 3.2 Key Configuration Items
+Find the `ota` section in the `config/config.yaml` file:
 
 ```yaml
 ota:
@@ -63,21 +63,21 @@ ota:
       enable: false
       endpoint: "www.youdomain.cn"
 ```
-- `test`：内网环境下设备获取的参数，在程序中判断条件是以 192.168或127.0开头。
-- `external`：外网环境下设备获取的参数。
-- `websocket.url`：设备应连接的WebSocket服务器地址。
-- `mqtt.enable`：如果启用，会在ota接口中返回配置的mqtt地址，设备会优先选择mqtt+udp的方式。
-- `mqtt.endpoint`：MQTT服务器地址，设备端默认是8883端口(tls连接)，如果带非8883的端口 则会使用非加密的tcp连接。
+- `test`: Parameters for devices in internal network environment; in the program, the condition is determined by whether it starts with 192.168 or 127.0.
+- `external`: Parameters for devices in external network environment.
+- `websocket.url`: The WebSocket server address that devices should connect to.
+- `mqtt.enable`: If enabled, the configured MQTT address will be returned in the OTA interface, and devices will prefer MQTT+UDP mode.
+- `mqtt.endpoint`: MQTT server address; the device side defaults to port 8883 (TLS connection). If a non-8883 port is specified, it will use unencrypted TCP connection.
 
-### 3.3 常见修改举例
-- 修改内网WebSocket地址：
+### 3.3 Common Modification Examples
+- Modify internal network WebSocket address:
   ```yaml
   ota:
     test:
       websocket:
         url: "ws://192.168.1.100:8989/xiaozhi/v1/"
   ```
-- 修改外网WebSocket地址：
+- Modify external network WebSocket address:
   ```yaml
   ota:
     external:
@@ -87,26 +87,26 @@ ota:
 
 ---
 
-## 4. OTA接口说明（设备如何获取配置）
+## 4. OTA Interface Description (How Devices Obtain Configuration)
 
-1. 设备通过HTTP POST请求 `http://服务器地址:端口/xiaozhi/ota/`。
-2. 请求头需包含：
-   - `Device-Id`：设备唯一ID（如MAC地址）
-   - `Client-Id`：客户端唯一ID
-3. 服务器会根据设备IP自动选择 `test` 或 `external` 配置，并返回WebSocket/MQTT等参数。
-4. 设备解析返回内容，按 `websocket.url` 连接WebSocket服务器。
-
----
-
-## 5. 常见问题
-
-- **端口被占用？**
-  - 修改 `websocket.port`，重启服务。
-- **设备连不上服务器？**
-  - 检查 `ota` 配置的 `websocket.url` 是否正确，服务器端口是否开放。
-- **需要MQTT？**
-  - 设置 `mqtt.enable` 为 `true`，并配置 `endpoint`。
+1. Devices make an HTTP POST request to `http://server_address:port/xiaozhi/ota/`.
+2. Request headers must include:
+   - `Device-Id`: Device unique ID (e.g., MAC address)
+   - `Client-Id`: Client unique ID
+3. The server automatically selects `test` or `external` configuration based on device IP and returns WebSocket/MQTT and other parameters.
+4. Devices parse the returned content and connect to the WebSocket server according to `websocket.url`.
 
 ---
 
-如有疑问，建议先检查 `config/config.yaml` 配置项，再查阅本说明。
+## 5. FAQ
+
+- **Port occupied?**
+  - Modify `websocket.port` and restart the service.
+- **Device cannot connect to server?**
+  - Check if `websocket.url` in `ota` configuration is correct and if the server port is open.
+- **Need MQTT?**
+  - Set `mqtt.enable` to `true` and configure `endpoint`.
+
+---
+
+If you have questions, it is recommended to first check the `config/config.yaml` configuration items, then refer to this guide.

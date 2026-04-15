@@ -1,23 +1,23 @@
-# 知识库功能说明
+# Knowledge Base Feature Documentation
 
-本文档介绍项目中的 **知识库（Knowledge Base / RAG）** 功能，包括管理员侧 provider 配置、普通用户侧知识库与文档管理、召回测试，以及主程序聊天链路中的知识库检索集成。
+This document introduces the **Knowledge Base (Knowledge Base / RAG)** feature in the project, including administrator-side provider configuration, regular user-side knowledge base and document management, recall testing, and knowledge base retrieval integration in the main program chat chain.
 
-相关文档：
+Related documents:
 
-- [管理后台使用指南](./manager_console_guide.md)
-- [MCP 架构说明](./mcp.md)（知识库检索工具 `search_knowledge` 会通过本地工具链路触发）
+- [Management Console Guide](./manager_console_guide.md)
+- [MCP Architecture Documentation](./mcp.md) (Knowledge base retrieval tool `search_knowledge` will be triggered through local tool chain)
 
 ---
 
-## 1. 功能概览
+## 1. Feature Overview
 
-知识库功能用于为智能体提供“文档依据型回答”能力，包含三层：
+Knowledge base feature is used to provide agents with "document-based answer" capability, containing three layers:
 
-1. 管理员配置知识库检索 provider（Dify / RAGFlow / WeKnora）
-2. 普通用户创建知识库与文档，并异步同步到 provider
-3. 智能体关联知识库，在对话时触发本地 `search_knowledge` 工具完成召回
+1. Administrator configures knowledge base retrieval provider (Dify / RAGFlow / WeKnora)
+2. Regular users create knowledge bases and documents, and asynchronously sync to provider
+3. Agent associates knowledge base, triggers local `search_knowledge` tool to complete recall during dialogue
 
-当前前端管理页已支持的 provider：
+Currently supported providers in frontend management page:
 
 - `dify`
 - `ragflow`
@@ -25,60 +25,60 @@
 
 ---
 
-## 2. 角色分工
+## 2. Role Division
 
-## 2.1 管理员
+## 2.1 Administrator
 
-负责：
+Responsible for:
 
-- 配置知识库检索 provider（全局）
-- 维护 provider 连接参数与默认阈值
-- （可选）代用户管理知识库
+- Configure knowledge base retrieval provider (global)
+- Maintain provider connection parameters and default thresholds
+- (Optional) Manage knowledge bases on behalf of users
 
-入口：
+Entry point:
 
-- `管理员 -> 知识库检索配置`
+- `Administrator -> Knowledge Base Retrieval Configuration`
 
-## 2.2 普通用户
+## 2.2 Regular User
 
-负责：
+Responsible for:
 
-- 创建/编辑/删除自己的知识库
-- 管理知识库文档（文本录入 / 文件上传）
-- 发起手动同步与重试
-- 使用“召回测试”验证关键词命中效果
-- 在智能体中选择关联知识库
+- Create/edit/delete their own knowledge bases
+- Manage knowledge base documents (text entry / file upload)
+- Initiate manual sync and retry
+- Use "Recall Test" to verify keyword hit effect
+- Select associated knowledge base in agent
 
-入口：
+Entry point:
 
-- `普通用户 -> 我的知识库`
-- `普通用户 -> 智能体编辑（关联知识库）`
+- `Regular User -> My Knowledge Bases`
+- `Regular User -> Agent Edit (Associate Knowledge Base)`
 
 ---
 
-## 3. 管理员：知识库检索配置（Provider 配置）
+## 3. Administrator: Knowledge Base Retrieval Configuration (Provider Configuration)
 
-管理端支持维护多个 provider 配置，并指定默认 provider。
+Management side supports maintaining multiple provider configurations, and specifying default provider.
 
-常见配置项（按 provider 不同有所差异）：
+Common configuration items (vary by provider):
 
 - `Base URL`
 - `API Key / Token`
-- 默认检索阈值
-- provider 特定参数（如 RAGFlow 相似度阈值、WeKnora 分块参数等）
+- Default retrieval threshold
+- Provider-specific parameters (such as RAGFlow similarity threshold, WeKnora chunk parameters, etc.)
 
 ### 3.1 Dify
 
-典型配置项：
+Typical configuration items:
 
 - `base_url`
 - `api_key`
 - `score_threshold`
-- 其他 provider 参数
+- Other provider parameters
 
 ### 3.2 RAGFlow
 
-典型配置项：
+Typical configuration items:
 
 - `base_url`
 - `api_key`
@@ -86,170 +86,170 @@
 
 ### 3.3 WeKnora
 
-典型配置项：
+Typical configuration items:
 
 - `base_url`
 - `api_key`
 - `score_threshold`
-- 分块参数（`chunk_size` / `chunk_overlap` / `separators`）
-- 解析轮询参数（`parse_poll_interval_ms` / `parse_timeout_ms`）
+- Chunk parameters (`chunk_size` / `chunk_overlap` / `separators`)
+- Parsing polling parameters (`parse_poll_interval_ms` / `parse_timeout_ms`)
 
-管理页还支持拉取 WeKnora 模型列表（embedding / llm / rerank）辅助填写配置。
+Management page also supports pulling WeKnora model list (embedding / llm / rerank) to assist in filling configuration.
 
 ---
 
-## 4. 普通用户：我的知识库（KB 管理）
+## 4. Regular User: My Knowledge Bases (KB Management)
 
-入口：
+Entry point:
 
-- `普通用户 -> 我的知识库`
+- `Regular User -> My Knowledge Bases`
 
-支持操作：
+Supported operations:
 
-- 新增/编辑知识库
-- 设置状态（`active` / `inactive`）
-- 设置检索阈值（可继承全局）
-- 文档管理
-- 手动重试同步
-- 召回测试
-- 删除知识库
+- Add/Edit knowledge base
+- Set status (`active` / `inactive`)
+- Set retrieval threshold (can inherit global)
+- Document management
+- Manual retry sync
+- Recall test
+- Delete knowledge base
 
-### 4.1 知识库字段（用户可见）
+### 4.1 Knowledge Base Fields (User Visible)
 
-常见展示列：
+Common display columns:
 
 - ID
-- 名称
-- 描述
-- 提供商
-- 状态
-- 同步状态
-- 最近同步时间
-- 操作
+- Name
+- Description
+- Provider
+- Status
+- Sync Status
+- Last Sync Time
+- Operations
 
-说明：
+Description:
 
-- 同步失败时，错误信息会以“提示（tooltip）”形式显示在“同步状态”列中，避免表格横向过宽
+- When sync fails, error information will be displayed in "Sync Status" column as "tooltip" to avoid table being too wide
 
-### 4.2 同步状态（常见）
+### 4.2 Sync Status (Common)
 
-知识库与文档都可能出现类似状态：
+Knowledge bases and documents may have similar statuses:
 
-- 待同步
-- 上传中 / 已上传 / 解析中
-- 已同步
-- 失败（含上传失败、解析失败等）
+- Pending sync
+- Uploading / Uploaded / Parsing
+- Synced
+- Failed (including upload failure, parsing failure, etc.)
 
-如失败可点击 `重试同步` 重新入队异步任务。
-
----
-
-## 5. 文档管理（知识库下）
-
-每个知识库可包含多条文档，支持：
-
-- 文本型文档（在线编辑）
-- 文件上传创建文档（按 provider 限制格式）
-
-页面功能：
-
-- 新增文档
-- 编辑文档（文件型文档通常不支持在线编辑）
-- 删除文档
-- 重试同步
-- 文件上传
-
-### 5.1 文件上传格式
-
-前端会根据当前知识库 provider 展示不同的 `accept` 提示与上传说明：
-
-- Dify：支持常见文本/文档格式（如 txt/md/pdf/html/xlsx/docx/csv 等）
-- RAGFlow：支持更广文件类型（含图片、日志、配置文件等）
-- WeKnora：支持较广文件类型（含 Office、图片、邮件等）
-
-具体可上传格式请以页面提示为准。
+If failed, you can click `Retry Sync` to re-queue async task.
 
 ---
 
-## 6. 召回测试（用户侧）
+## 5. Document Management (Under Knowledge Base)
 
-知识库列表中可对单个知识库执行 `召回测试`，用于直接验证 provider 检索效果。
+Each knowledge base can contain multiple documents, supporting:
 
-测试项：
+- Text-type documents (online editing)
+- File upload to create documents (format limited by provider)
 
-- `query`：测试关键词或问题
+Page functions:
+
+- Add document
+- Edit document (file-type documents usually do not support online editing)
+- Delete document
+- Retry sync
+- File upload
+
+### 5.1 File Upload Format
+
+Frontend will display different `accept` prompts and upload instructions based on current knowledge base provider:
+
+- Dify: Supports common text/document formats (such as txt/md/pdf/html/xlsx/docx/csv, etc.)
+- RAGFlow: Supports wider file types (including images, logs, configuration files, etc.)
+- WeKnora: Supports wider file types (including Office, images, emails, etc.)
+
+Specific uploadable formats please refer to page prompts.
+
+---
+
+## 6. Recall Test (User Side)
+
+Knowledge base list can execute `Recall Test` on a single knowledge base, used to directly verify provider retrieval effect.
+
+Test items:
+
+- `query`: Test keyword or question
 - `top_k`
-- `threshold`（仅本次测试生效，可为空）
+- `threshold` (only effective for this test, can be empty)
 
-返回内容：
+Return content:
 
-- 命中条数
-- 命中来源（title）
+- Hit count
+- Hit source (title)
 - score
-- 命中文本片段
-- 响应耗时
+- Hit text snippet
+- Response time
 
-### 6.1 阈值优先级（逻辑说明）
+### 6.1 Threshold Priority (Logic Description)
 
-通常按以下优先级取阈值：
+Usually take threshold in the following priority:
 
-1. 本次测试请求阈值（若填写）
-2. 知识库自身阈值
-3. provider 全局默认阈值
+1. This test request threshold (if filled)
+2. Knowledge base's own threshold
+3. Provider global default threshold
 
-### 6.2 WeKnora 参数说明（重要）
+### 6.2 WeKnora Parameter Description (Important)
 
-当前 WeKnora 召回测试已按知识库维度使用：
+Current WeKnora recall test already uses by knowledge base dimension:
 
-- `knowledge_base_ids`（知识库 ID 列表）
+- `knowledge_base_ids` (knowledge base ID list)
 
-用于精确限制检索范围到当前知识库。
-
----
-
-## 7. 智能体关联知识库
-
-在智能体编辑页可为智能体选择多个知识库（多选）。
-
-行为说明：
-
-- 支持多库关联
-- 对话时会根据模型判断是否触发知识库检索
-- 若可判断具体知识库，工具调用会传 `knowledge_base_ids`
-- 检索失败时会降级为普通 LLM 对话（前端有提示文案）
+Used to precisely limit retrieval scope to current knowledge base.
 
 ---
 
-## 8. 主程序对话链路中的知识库检索
+## 7. Agent Associate Knowledge Base
 
-主程序通过本地工具 `search_knowledge` 实现知识库检索。
+In agent edit page, you can select multiple knowledge bases for the agent (multiple select).
 
-工具调用参数核心字段：
+Behavior description:
+
+- Supports multiple library association
+- During dialogue, will trigger knowledge base retrieval based on model judgment
+- If specific knowledge base can be judged, tool call will pass `knowledge_base_ids`
+- If retrieval fails, will degrade to normal LLM dialogue (frontend has prompt text)
+
+---
+
+## 8. Knowledge Base Retrieval in Main Program Dialogue Chain
+
+Main program implements knowledge base retrieval through local tool `search_knowledge`.
+
+Tool call parameter core fields:
 
 - `query`
 - `top_k`
-- `knowledge_base_ids`（可选，知识库 ID 列表）
+- `knowledge_base_ids` (optional, knowledge base ID list)
 
-行为说明：
+Behavior description:
 
-- 不传 `knowledge_base_ids`：在当前智能体关联的所有可用知识库中检索
-- 传入 `knowledge_base_ids`：仅在指定知识库内检索
+- Do not pass `knowledge_base_ids`: Retrieve in all available knowledge bases associated with current agent
+- Pass `knowledge_base_ids`: Only retrieve within specified knowledge bases
 
-这使得模型可以在已知问题归属时缩小检索范围，提升相关性并减少无关召回。
+This allows the model to narrow retrieval scope when the question归属 is known, improving relevance and reducing irrelevant recall.
 
-### 8.1 WeKnora 主程序检索参数
+### 8.1 WeKnora Main Program Retrieval Parameters
 
-当前 WeKnora 主程序检索请求已使用：
+Current WeKnora main program retrieval request already uses:
 
 - `knowledge_base_ids`
 
-与控制台召回测试保持一致。
+Consistent with console recall test.
 
 ---
 
-## 9. 接口清单（用户侧）
+## 9. Interface List (User Side)
 
-### 9.1 知识库 CRUD
+### 9.1 Knowledge Base CRUD
 
 - `GET /user/knowledge-bases`
 - `POST /user/knowledge-bases`
@@ -258,11 +258,11 @@
 - `DELETE /user/knowledge-bases/:id`
 - `POST /user/knowledge-bases/:id/sync`
 
-### 9.2 召回测试
+### 9.2 Recall Test
 
 - `POST /user/knowledge-bases/:id/test-search`
 
-### 9.3 文档管理
+### 9.3 Document Management
 
 - `GET /user/knowledge-bases/:id/documents`
 - `POST /user/knowledge-bases/:id/documents`
@@ -271,27 +271,27 @@
 - `DELETE /user/knowledge-bases/:id/documents/:doc_id`
 - `POST /user/knowledge-bases/:id/documents/:doc_id/sync`
 
-### 9.4 智能体关联知识库
+### 9.4 Agent Associate Knowledge Base
 
 - `GET /user/agents/:id/knowledge-bases`
 - `PUT /user/agents/:id/knowledge-bases`
 
 ---
 
-## 10. 接口清单（管理员侧）
+## 10. Interface List (Administrator Side)
 
-### 10.1 provider 配置管理
+### 10.1 Provider Configuration Management
 
 - `GET /admin/knowledge-search-configs`
 - `POST /admin/knowledge-search-configs`
 - `PUT /admin/knowledge-search-configs/:id`
 - `DELETE /admin/knowledge-search-configs/:id`
 
-### 10.2 WeKnora 模型拉取（配置辅助）
+### 10.2 WeKnora Model Pull (Configuration Assist)
 
 - `POST /admin/knowledge-search-configs/weknora/models`
 
-### 10.3 管理员代用户管理知识库（按用户维度）
+### 10.3 Administrator Manage Knowledge Bases on Behalf of Users (By User Dimension)
 
 - `GET /admin/users/:id/knowledge-bases`
 - `POST /admin/users/:id/knowledge-bases`
@@ -300,33 +300,32 @@
 
 ---
 
-## 11. 常见问题与排查
+## 11. FAQ and Troubleshooting
 
-### 11.1 知识库创建后一直未命中
+### 11.1 Knowledge base created but never hits
 
-优先排查：
+Priority check:
 
-1. 知识库/文档是否已同步成功
-2. 外部 provider 是否已完成索引构建
-3. 检索阈值是否过高
-4. `query` 是否过于宽泛或偏离文档内容
+1. Whether knowledge base/document has synced successfully
+2. Whether external provider has completed index building
+3. Whether retrieval threshold is too high
+4. Whether `query` is too broad or deviates from document content
 
-### 11.2 文件上传后文档不能编辑
+### 11.2 Document cannot be edited after file upload
 
-文件上传创建的文档通常作为“文件型文档”处理，前端会限制在线编辑，建议删除后重新上传。
+File upload created documents are usually handled as "file-type documents", frontend will restrict online editing, recommend deleting and re-uploading.
 
-### 11.3 WeKnora 检索范围不对
+### 11.3 WeKnora retrieval scope incorrect
 
-确认：
+Confirm:
 
-- 控制台召回测试是否使用当前知识库发起测试
-- 智能体工具调用中是否正确传入 `knowledge_base_ids`
+- Whether console recall test uses current knowledge base to initiate test
+- Whether `knowledge_base_ids` is correctly passed in agent tool call
 
 ---
 
-## 12. 使用建议
+## 12. Usage Suggestions
 
-- 为不同业务域拆分多个知识库（如售后、产品、合同）
-- 使用“召回测试”先调好阈值，再接入智能体
-- 在智能体说明中明确何时需要知识库回答，可提升触发质量
-
+- Split multiple knowledge bases for different business domains (such as after-sales, products, contracts)
+- Use "Recall Test" to adjust threshold first, then integrate into agent
+- Clearly specify in agent description when knowledge base answers are needed, can improve trigger quality

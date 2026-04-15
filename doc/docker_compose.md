@@ -1,128 +1,128 @@
-﻿# Docker Compose 部署指南
+# Docker Compose Deployment Guide
 
-## 概述
+## Overview
 
-本项目使用 Docker Compose 进行容器化部署，包含以下核心服务：
+This project uses Docker Compose for containerized deployment, containing the following core services:
 
-- **MySQL 数据库服务**：数据存储
-- **主程序服务**：核心业务逻辑
-- **后端管理服务**：API 接口服务
-- **前端管理服务**：Web 管理界面
+- **MySQL Database Service**: Data storage
+- **Main Program Service**: Core business logic
+- **Backend Management Service**: API interface service
+- **Frontend Management Service**: Web management interface
 
-## 快速指引（补充）
+## Quick Guide (Supplement)
 
-本节为 `doc/docker.md` 的补充说明，帮助快速选择与落地部署方式。
+This section is a supplement to `doc/docker.md`, helping to quickly select and implement deployment methods.
 
-### 1. 选择部署方式
+### 1. Select Deployment Method
 
-- 推荐：Docker Compose（包含管理后台与完整服务）
-- 简化：单容器 Docker（无控制台或精简模式）
+- Recommended: Docker Compose (includes management backend and complete services)
+- Simplified: Single container Docker (no console or streamlined mode)
 
-### 2. Docker Compose 快速路径
+### 2. Docker Compose Quick Path
 
-1) 拉取代码或准备 `docker-compose.yml`
-2) 参考本文后续“配置文件准备”与“启动服务”完成配置
-3) 启动：
+1) Pull code or prepare `docker-compose.yml`
+2) Refer to subsequent "Configuration File Preparation" and "Start Service" in this document to complete configuration
+3) Start:
 
 ```bash
 docker compose up -d
 ```
 
-4) 管理后台默认地址：`http://<服务器IP或域名>:8080/`
+4) Management backend default address: `http://<Server IP or Domain>:8080/`
 
-### 3. 单容器 Docker（补充）
+### 3. Single Container Docker (Supplement)
 
-按 `doc/docker.md` 构建或拉取镜像后运行。常见建议：
+After building or pulling the image according to `doc/docker.md`, run. Common suggestions:
 
-- 映射 `config/`、`logs/`、`storage/` 目录为数据卷
-- 对外暴露 WebSocket / MQTT / UDP 端口
-- 需要管理后台时启用对应参数或使用 Compose
+- Map `config/`, `logs/`, `storage/` directories as data volumes
+- Expose WebSocket / MQTT / UDP ports externally
+- Enable corresponding parameters or use Compose when management backend is needed
 
-### 4. 配置向导与测试
+### 4. Configuration Wizard and Testing
 
-启动后可在管理后台使用配置向导完成引擎配置，并在测试工具中进行 VAD/ASR/LLM/TTS 可用性与延迟测试，以及 OTA 全流程验证。
+After startup, you can use the configuration wizard in the management backend to complete engine configuration, and use testing tools for VAD/ASR/LLM/TTS availability and latency testing, as well as OTA full process verification.
 
-### 5. 常见问题
+### 5. FAQ
 
-- 端口冲突：检查 8080/8989/2883/8990 占用情况
-- 配置未生效：确认数据卷挂载路径正确，重启容器生效
-- 权限问题：Linux 下注意挂载目录权限与 SELinux 限制
+- Port conflict: Check 8080/8989/2883/8990 occupancy
+- Configuration not taking effect: Confirm data volume mount path is correct, restart container to take effect
+- Permission issues: On Linux, pay attention to mount directory permissions and SELinux restrictions
 
-## 服务架构
+## Service Architecture
 
-### 1. MySQL 数据库服务 (xiaozhi-mysql)
+### 1. MySQL Database Service (xiaozhi-mysql)
 
-**配置信息：**
-- 镜像：`docker.jsdelivr.fyi/mysql:8.0`
-- 端口映射：`23306:3306`
-- 数据库名：`xiaozhi_admin`
-- 用户名：`root`
-- 密码：`password`
+**Configuration Information:**
+- Image: `docker.jsdelivr.fyi/mysql:8.0`
+- Port mapping: `23306:3306`
+- Database name: `xiaozhi_admin`
+- Username: `root`
+- Password: `password`
 
-**特性：**
-- 使用 MySQL 8.0
-- 配置健康检查
-- 数据持久化
+**Features:**
+- Uses MySQL 8.0
+- Configures health check
+- Data persistence
 
-### 2. 主程序服务 (xiaozhi-main-server)
+### 2. Main Program Service (xiaozhi-main-server)
 
-**配置信息：**
-- 镜像：`docker.jsdelivr.fyi/hackers365/xiaozhi_server:0.5`
-- 端口映射：
-  - `8989:8989` - WebSocket 服务
-  - `2882:2883` - MQTT 服务
-  - `8888:8888/udp` - UDP 服务
+**Configuration Information:**
+- Image: `docker.jsdelivr.fyi/hackers365/xiaozhi_server:0.5`
+- Port mapping:
+  - `8989:8989` - WebSocket service
+  - `2882:2883` - MQTT service
+  - `8888:8888/udp` - UDP service
 
-**依赖关系：**
-- 依赖 MySQL 服务健康状态
-- 依赖后端服务启动完成
+**Dependencies:**
+- Depends on MySQL service health status
+- Depends on backend service startup completion
 
-**配置文件支持：**
-- 通过卷挂载导入自定义配置文件
-- 配置文件路径：`../../config:/workspace/config`
+**Configuration File Support:**
+- Import custom configuration files through volume mount
+- Configuration file path: `../../config:/workspace/config`
 
-**ten_vad 支持：**
-- Docker 镜像已包含 ten_vad 库（`/workspace/lib/ten-vad/`）
-- 运行时库路径已通过 `LD_LIBRARY_PATH` 自动配置
+**ten_vad Support:**
+- Docker image already includes ten_vad library (`/workspace/lib/ten-vad/`)
+- Runtime library path automatically configured through `LD_LIBRARY_PATH`
 
-### 3. 后端管理服务 (xiaozhi-backend)
+### 3. Backend Management Service (xiaozhi-backend)
 
-**配置信息：**
-- 镜像：`docker.jsdelivr.fyi/hackers365/xiaozhi_manager_backend:0.5`
-- 端口映射：`8081:8080`
+**Configuration Information:**
+- Image: `docker.jsdelivr.fyi/hackers365/xiaozhi_manager_backend:0.5`
+- Port mapping: `8081:8080`
 
-**功能：**
-- 提供 RESTful API
-- 设备与用户管理
+**Functions:**
+- Provides RESTful API
+- Device and user management
 
-**配置文件支持：**
-- 通过卷挂载导入自定义配置文件
-- 配置文件路径：`../../manager/backend/config:/root/config`
+**Configuration File Support:**
+- Import custom configuration files through volume mount
+- Configuration file path: `../../manager/backend/config:/root/config`
 
-### 4. 前端管理服务 (xiaozhi-frontend)
+### 4. Frontend Management Service (xiaozhi-frontend)
 
-**配置信息：**
-- 镜像：`docker.jsdelivr.fyi/hackers365/xiaozhi_manager_frontend:0.5`
-- 端口映射：`8080:80`
+**Configuration Information:**
+- Image: `docker.jsdelivr.fyi/hackers365/xiaozhi_manager_frontend:0.5`
+- Port mapping: `8080:80`
 
-**功能：**
-- Web 管理界面（内控入口）
-- 设备状态与系统配置管理
+**Functions:**
+- Web management interface (internal control entry)
+- Device status and system configuration management
 
-## 部署流程
+## Deployment Process
 
-### 1. 环境准备
+### 1. Environment Preparation
 
-确保系统已安装 Docker 和 Docker Compose：
+Ensure system has Docker and Docker Compose installed:
 
 ```bash
 docker --version
 docker compose version
 ```
 
-### 2. 配置文件准备
+### 2. Configuration File Preparation
 
-确保以下目录与文件存在：
+Ensure the following directories and files exist:
 
 ```
 xiaozhi-esp32-server-golang/
@@ -131,21 +131,21 @@ xiaozhi-esp32-server-golang/
 ├─ config/
 │  ├─ config.yaml
 │  ├─ config.json
-│  └─ (其他配置文件)
+│  └─ (other configuration files)
 ├─ logs/
-│  └─ (日志目录)
+│  └─ (log directory)
 └─ manager/backend/config/
    ├─ config.yaml
-   └─ (其他配置文件)
+   └─ (other configuration files)
 ```
 
-**配置文件导入说明：**
-- 主程序配置文件通过卷挂载 `../../config:/workspace/config` 导入
-- 后端配置文件通过卷挂载 `../../manager/backend/config:/root/config` 导入
+**Configuration File Import Description:**
+- Main program configuration file imported through volume mount `../../config:/workspace/config`
+- Backend configuration file imported through volume mount `../../manager/backend/config:/root/config`
 
-### 3. 启动服务
+### 3. Start Service
 
-**必须先进入 `docker/docker-composer/` 目录执行命令：**
+**Must enter `docker/docker-composer/` directory to execute commands:**
 
 ```bash
 cd docker/docker-composer/
@@ -155,16 +155,16 @@ docker compose ps
 docker compose logs -f
 ```
 
-### 4. 服务访问
+### 4. Service Access
 
-- 前端管理界面：`http://<服务器IP或域名>:8080`
-- 后端 API：`http://localhost:8081`
-- WebSocket：`ws://localhost:8989`
-- MQTT：`localhost:2882`
-- UDP：`localhost:8888`
-- MySQL：`localhost:23306`
+- Frontend management interface: `http://<Server IP or Domain>:8080`
+- Backend API: `http://localhost:8081`
+- WebSocket: `ws://localhost:8989`
+- MQTT: `localhost:2882`
+- UDP: `localhost:8888`
+- MySQL: `localhost:23306`
 
-## 常用操作
+## Common Operations
 
 ```bash
 cd docker/docker-composer/
@@ -186,35 +186,35 @@ docker compose pull
 docker compose up -d
 ```
 
-## 网络配置
+## Network Configuration
 
-项目使用自定义网络 `xiaozhi-network`：
+Project uses custom network `xiaozhi-network`:
 
-- MySQL：`mysql:3306`
-- 后端：`backend:8080`
-- 前端：`frontend:80`
-- 主程序：`main-server:8989`（WebSocket）/ `main-server:2883`（MQTT）/ `main-server:8888`（UDP）
+- MySQL: `mysql:3306`
+- Backend: `backend:8080`
+- Frontend: `frontend:80`
+- Main program: `main-server:8989` (WebSocket) / `main-server:2883` (MQTT) / `main-server:8888` (UDP)
 
-**端口映射汇总：**
-- 8080 → 前端管理界面
-- 8081 → 后端 API
+**Port Mapping Summary:**
+- 8080 → Frontend management interface
+- 8081 → Backend API
 - 8989 → WebSocket
 - 2882 → MQTT
 - 8888 → UDP
 - 23306 → MySQL
 
-## 数据持久化
+## Data Persistence
 
-### MySQL 数据
+### MySQL Data
 
-通过 Docker 卷 `mysql_data` 持久化，容器重启不丢失数据。
+Persisted through Docker volume `mysql_data`, data not lost after container restart.
 
-### 配置文件
+### Configuration Files
 
-- 主程序配置：`../../config:/workspace/config`
-- 后端配置：`../../manager/backend/config:/root/config`
+- Main program configuration: `../../config:/workspace/config`
+- Backend configuration: `../../manager/backend/config:/root/config`
 
-修改配置后重启对应服务生效：
+After modifying configuration, restart corresponding service to take effect:
 
 ```bash
 cd docker/docker-composer/
@@ -223,62 +223,62 @@ docker compose restart main-server
 docker compose restart backend
 ```
 
-### 日志文件
+### Log Files
 
-- 主程序日志：`../../logs:/workspace/logs`
+- Main program logs: `../../logs:/workspace/logs`
 
-## 配置文件导入方法
+## Configuration File Import Methods
 
-### 1. 主程序配置
+### 1. Main Program Configuration
 
-**位置：**
+**Location:**
 ```
 xiaozhi-esp32-server-golang/config/
 ├─ config.yaml
 ├─ config.json
 ├─ mqtt_config.json
-└─ (其他配置文件)
+└─ (other configuration files)
 ```
 
-**导入：**
-1) 将配置文件放入 `config/`
-2) 启动后自动挂载到容器 `/workspace/config/`
-3) 修改后重启主程序服务：
+**Import:**
+1) Put configuration files in `config/`
+2) Automatically mount to container `/workspace/config/` after startup
+3) Restart main program service after modification:
 
 ```bash
 cd docker/docker-composer/
 docker compose restart main-server
 ```
 
-### 2. 后端管理配置
+### 2. Backend Management Configuration
 
-**位置：**
+**Location:**
 ```
 xiaozhi-esp32-server-golang/manager/backend/config/
 ├─ config.yaml
-└─ (其他配置文件)
+└─ (other configuration files)
 ```
 
-**导入：**
-1) 将配置文件放入 `manager/backend/config/`
-2) 启动后自动挂载到容器 `/root/config/`
-3) 修改后重启后端服务：
+**Import:**
+1) Put configuration files in `manager/backend/config/`
+2) Automatically mount to container `/root/config/` after startup
+3) Restart backend service after modification:
 
 ```bash
 cd docker/docker-composer/
 docker compose restart backend
 ```
 
-### 3. ten_vad 库文件
+### 3. ten_vad Library Files
 
-**说明：**
-- Docker 镜像已包含 ten_vad 库（`/workspace/lib/ten-vad/`）
-- 运行时库路径已通过 `LD_LIBRARY_PATH` 自动配置
-- 使用 ten_vad 无需额外挂载
+**Description:**
+- Docker image already includes ten_vad library (`/workspace/lib/ten-vad/`)
+- Runtime library path automatically configured through `LD_LIBRARY_PATH`
+- No additional mount needed to use ten_vad
 
-## 健康检查
+## Health Check
 
-MySQL 服务配置了健康检查：
+MySQL service configures health check:
 
 ```yaml
 healthcheck:
@@ -289,20 +289,20 @@ healthcheck:
   start_period: 30s
 ```
 
-## 故障排除
+## Troubleshooting
 
-### 1. 服务启动失败
+### 1. Service Startup Failure
 
 ```bash
 cd docker/docker-composer/
 
-docker compose logs [服务名]
+docker compose logs [service name]
 
-# 端口占用检查（Linux）
-netstat -tulpn | grep [端口]
+# Port occupancy check (Linux)
+netstat -tulpn | grep [port]
 ```
 
-### 2. 数据库连接失败
+### 2. Database Connection Failure
 
 ```bash
 cd docker/docker-composer/
@@ -314,7 +314,7 @@ docker compose logs mysql
 docker compose exec mysql mysql -u root -ppassword
 ```
 
-### 3. 网络连接问题
+### 3. Network Connection Issues
 
 ```bash
 cd docker/docker-composer/
@@ -325,30 +325,30 @@ docker network inspect xiaozhi-network
 docker compose exec main-server ping mysql
 ```
 
-## 性能优化建议
+## Performance Optimization Suggestions
 
-1) 生产环境为各服务设置资源限制
-2) 配置日志轮转，避免日志过大
-3) 定期备份 MySQL 数据
-4) 集成监控系统
+1) Set resource limits for each service in production environment
+2) Configure log rotation to avoid oversized logs
+3) Regularly backup MySQL data
+4) Integrate monitoring system
 
-## 安全注意事项
+## Security Notes
 
-1) 生产环境修改默认数据库密码
-2) 按需暴露端口
-3) 配置防火墙与访问控制
-4) 使用可信镜像源
+1) Modify default database password in production environment
+2) Expose ports as needed
+3) Configure firewall and access control
+4) Use trusted image sources
 
 ---
 
-## 下一步
+## Next Steps
 
-### 访问管理后台
+### Access Management Console
 
-服务启动后，访问 http://<服务器IP或域名>:8080 进入管理后台。
+After service startup, visit http://<Server IP or Domain>:8080 to enter management console.
 
-**[管理后台使用指南 →](manager_console_guide.md)**
+**[Management Console Guide →](manager_console_guide.md)**
 
-### 配置 ESP32 设备
+### Configure ESP32 Device
 
-参考 [ESP32端接入指南](esp32_xiaozhi_backend_guide.md) 完成设备接入。
+Refer to [ESP32 Device Access Guide](esp32_xiaozhi_backend_guide.md) to complete device access.

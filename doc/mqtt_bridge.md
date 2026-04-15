@@ -1,13 +1,13 @@
-# MQTT UDP Bridge 配置指南
+# MQTT UDP Bridge Configuration Guide
 
 ---
 
-### 名词解析
+### Terminology Explanation
 
-- **xiaozhi-mqtt-gateway:** 虾哥官方 mqtt udp bridge项目，实现了MQTT和UDP协议到WebSocket的转换。该服务允许设备通过MQTT协议进行控制消息传输，同时通过UDP协议高效传输音频数据，并将这些数据桥接到WebSocket服务。[xiaozhi-mqtt-gateway](https://github.com/78/xiaozhi-mqtt-gateway) 
-- **xiaozhi-esp32-server-golang:** 本项目
+- **xiaozhi-mqtt-gateway:** Official mqtt udp bridge project by XiaGe, implements MQTT and UDP protocol to WebSocket conversion. This service allows devices to transmit control messages via MQTT protocol, while efficiently transmitting audio data via UDP protocol, and bridging these data to WebSocket service. [xiaozhi-mqtt-gateway](https://github.com/78/xiaozhi-mqtt-gateway) 
+- **xiaozhi-esp32-server-golang:** This project
 
-### 整体架构
+### Overall Architecture
 
 ```mermaid
 flowchart TD
@@ -18,42 +18,42 @@ flowchart TD
         B["MQTT Server"]
         C["UDP Server"]
     end
-    subgraph Backend["xiaozhi-esp32-server-golang (WebSocket 后端)"]
+    subgraph Backend["xiaozhi-esp32-server-golang (WebSocket Backend)"]
         D["WebSocket Server"]
     end
-    A -- "信令 (MQTT)" --> B
-    A -- "音频数据 (UDP)" --> C
-    B -- "信令转发 (WebSocket)" --> D
-    C -- "音频数据转发 (WebSocket)" --> D
+    A -- "Signaling (MQTT)" --> B
+    A -- "Audio Data (UDP)" --> C
+    B -- "Signaling Forward (WebSocket)" --> D
+    C -- "Audio Data Forward (WebSocket)" --> D
     style MQTT_UDP_Gateway fill:#f9f,stroke:#333,stroke-width:2
     style Backend fill:#bbf,stroke:#333,stroke-width:2
     style Device fill:#bfb,stroke:#333,stroke-width:2
 ```
 
 
-## 一、MQTT UDP Bridge 配置指南
+## 1. MQTT UDP Bridge Configuration Guide
 
-### 安装步骤
+### Installation Steps
 ---
-1. 克隆仓库
+1. Clone repository
 ```
 git clone 'https://github.com/78/xiaozhi-mqtt-gateway'
 cd xiaozhi-mqtt-gateway
 ```
-2. 安装依赖
+2. Install dependencies
 ```
 npm install
 ```
-3. 创建配置文件
+3. Create configuration file
 ```
 mkdir -p config
 cp config/mqtt.json.example config/mqtt.json
 ```
-4. 编辑配置文件 config/mqtt.json，设置适当的参数
+4. Edit configuration file config/mqtt.json, set appropriate parameters
 
-### 配置说明
-配置文件 config/mqtt.json 需要包含以下内容:
-- `chat_servers`：填写 小智golang服务器ip和端口，***path必须为/xiaozhi/mqtt_udp/v1/***
+### Configuration Description
+Configuration file config/mqtt.json needs to contain the following:
+- `chat_servers`: Fill in Xiaozhi golang server IP and port, ***path must be /xiaozhi/mqtt_udp/v1/***
 ```
 {
   "debug": false,
@@ -67,37 +67,37 @@ cp config/mqtt.json.example config/mqtt.json
 }
 ```
 
-### 环境变量
-创建 .env 文件并设置以下环境变量:
+### Environment Variables
+Create .env file and set the following environment variables:
 ```
-MQTT_PORT=1883              # MQTT服务器端口
-UDP_PORT=8884               # UDP服务器端口
-PUBLIC_IP=192.168.0.100     # 服务器公网IP
+MQTT_PORT=1883              # MQTT server port
+UDP_PORT=8884               # UDP server port
+PUBLIC_IP=192.168.0.100     # Server public IP
 
-#MQTT_SIGNATURE_KEY=mqtt_key # mqtt key, 可选，如果配置则进行mqtt认证，需与 websocket服务器配置的key相同
+#MQTT_SIGNATURE_KEY=mqtt_key # mqtt key, optional, if configured then mqtt authentication is performed, must be the same as the key configured in the websocket server
 ```
 
-### 运行
+### Running
 
-##### 开发环境
+##### Development Environment
 
 ```
-# 直接运行
+# Run directly
 node app.js
 
-# 调试模式运行
+# Run in debug mode
 DEBUG=mqtt-server node app.js
 ```
 
 ---
 
-## 二、小智golang后端服务配置指南
+## 2. Xiaozhi Golang Backend Service Configuration Guide
 
 
 
-### 1. 关键配置项说明
+### 1. Key Configuration Items Description
 
-#### 关闭 本地 MQTT 和 UDP服务器
+#### Disable Local MQTT and UDP Servers
 ```yaml
 mqtt:
   enable: false
@@ -109,12 +109,12 @@ mqtt:
   password: "test!@#"
 ```
 
-#### OTA 配置（设备通过 OTA 获取连接参数）
-- `ota.signature_key`: 需要与xiaozhi-mqtt-bridge中的 .env文件中***MQTT_SIGNATURE_KEY***相同
-- `test`/`external`：内外网环境区分
-- `websocket.url`：返回的WebSocket 服务地址
-- `mqtt.endpoint`：MQTT 服务地址和端口
-- `mqtt.enable`：是否启用 MQTT（true 时设备优先用 MQTT+UDP）
+#### OTA Configuration (Devices obtain connection parameters through OTA)
+- `ota.signature_key`: Must be the same as ***MQTT_SIGNATURE_KEY*** in xiaozhi-mqtt-bridge .env file
+- `test`/`external`: Internal/external environment distinction
+- `websocket.url`: Returned WebSocket service address
+- `mqtt.endpoint`: MQTT service address and port
+- `mqtt.enable`: Whether to enable MQTT (when true, devices prefer MQTT+UDP)
 
 
 ```yaml
@@ -135,7 +135,7 @@ ota:
 ```
 ---
 
-## 三、参考文档
-- [mqtt_udp.md](./mqtt_udp.md)（详细架构、配置、流程）
-- [mqtt_udp_protocol.md](./mqtt_udp_protocol.md)（协议与数据流程）
-- [config.md](./config.md)（配置项详细说明）
+## 3. Reference Documentation
+- [mqtt_udp.md](./mqtt_udp.md) (Detailed architecture, configuration, flow)
+- [mqtt_udp_protocol.md](./mqtt_udp_protocol.md) (Protocol and data flow)
+- [config.md](./config.md) (Detailed configuration item description)

@@ -3,26 +3,26 @@
     <el-card class="login-card">
       <template #header>
         <div class="card-header">
-          <h2>小智管理系统</h2>
+          <h2>XiaoZhi Management System</h2>
         </div>
       </template>
       
       <el-tabs v-model="activeTab" class="login-tabs">
-        <el-tab-pane label="登录" name="login">
+        <el-tab-pane label="Login" name="login">
           <el-form
             ref="loginFormRef"
             :model="loginForm"
             :rules="loginRules"
             label-width="80px"
           >
-            <el-form-item label="用户名" prop="username">
-              <el-input v-model="loginForm.username" placeholder="请输入用户名" />
+            <el-form-item label="Username" prop="username">
+              <el-input v-model="loginForm.username" placeholder="Please enter username" />
             </el-form-item>
-            <el-form-item label="密码" prop="password">
+            <el-form-item label="Password" prop="password">
               <el-input
                 v-model="loginForm.password"
                 type="password"
-                placeholder="请输入密码"
+                placeholder="Please enter password"
                 @keyup.enter="handleLogin"
               />
             </el-form-item>
@@ -33,37 +33,37 @@
                 @click="handleLogin"
                 style="width: 100%"
               >
-                登录
+                Login
               </el-button>
             </el-form-item>
           </el-form>
         </el-tab-pane>
         
-        <el-tab-pane label="注册" name="register">
+        <el-tab-pane label="Register" name="register">
           <el-form
             ref="registerFormRef"
             :model="registerForm"
             :rules="registerRules"
             label-width="80px"
           >
-            <el-form-item label="用户名" prop="username">
-              <el-input v-model="registerForm.username" placeholder="请输入用户名" />
+            <el-form-item label="Username" prop="username">
+              <el-input v-model="registerForm.username" placeholder="Please enter username" />
             </el-form-item>
-            <el-form-item label="邮箱" prop="email">
-              <el-input v-model="registerForm.email" placeholder="请输入邮箱" />
+            <el-form-item label="Email" prop="email">
+              <el-input v-model="registerForm.email" placeholder="Please enter email" />
             </el-form-item>
-            <el-form-item label="密码" prop="password">
+            <el-form-item label="Password" prop="password">
               <el-input
                 v-model="registerForm.password"
                 type="password"
-                placeholder="请输入密码"
+                placeholder="Please enter password"
               />
             </el-form-item>
-            <el-form-item label="确认密码" prop="confirmPassword">
+            <el-form-item label="Confirm Password" prop="confirmPassword">
               <el-input
                 v-model="registerForm.confirmPassword"
                 type="password"
-                placeholder="请确认密码"
+                placeholder="Please confirm password"
                 @keyup.enter="handleRegister"
               />
             </el-form-item>
@@ -74,14 +74,14 @@
                 @click="handleRegister"
                 style="width: 100%"
               >
-                注册
+                Register
               </el-button>
             </el-form-item>
           </el-form>
         </el-tab-pane>
       </el-tabs>
       <div class="public-links">
-        <router-link to="/openapi-docs">查看公开 OpenAPI 接口说明</router-link>
+        <router-link to="/openapi-docs">View Public OpenAPI Documentation</router-link>
       </div>
     </el-card>
   </div>
@@ -116,26 +116,26 @@ const registerForm = reactive({
 })
 
 const loginRules = {
-  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+  username: [{ required: true, message: 'Please enter username', trigger: 'blur' }],
+  password: [{ required: true, message: 'Please enter password', trigger: 'blur' }]
 }
 
 const registerRules = {
-  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+  username: [{ required: true, message: 'Please enter username', trigger: 'blur' }],
   email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
+    { required: true, message: 'Please enter email', trigger: 'blur' },
+    { type: 'email', message: 'Please enter a valid email format', trigger: 'blur' }
   ],
   password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码长度不能少于6位', trigger: 'blur' }
+    { required: true, message: 'Please enter password', trigger: 'blur' },
+    { min: 6, message: 'Password must be at least 6 characters', trigger: 'blur' }
   ],
   confirmPassword: [
-    { required: true, message: '请确认密码', trigger: 'blur' },
+    { required: true, message: 'Please confirm password', trigger: 'blur' },
     {
       validator: (rule, value, callback) => {
         if (value !== registerForm.password) {
-          callback(new Error('两次输入密码不一致'))
+          callback(new Error('Passwords do not match'))
         } else {
           callback()
         }
@@ -155,7 +155,7 @@ const handleLogin = async () => {
       loading.value = false
       
       if (result.success) {
-        ElMessage.success('登录成功')
+        ElMessage.success('Login successful')
         router.push(getPostLoginRedirectPath(authStore.user))
       } else {
         ElMessage.error(result.message)
@@ -174,7 +174,7 @@ const handleRegister = async () => {
       loading.value = false
       
       if (result.success) {
-        ElMessage.success('注册成功，请登录')
+        ElMessage.success('Registration successful, please login')
         activeTab.value = 'login'
         Object.assign(registerForm, {
           username: '',
@@ -189,14 +189,14 @@ const handleRegister = async () => {
   })
 }
 
-// 检查系统状态，如果未初始化则跳转到引导页面
+// Check system status, redirect to setup if not initialized
 const checkSystemStatus = async () => {
   try {
     if (await checkNeedsSetup()) {
       router.push('/setup')
     }
   } catch (error) {
-    console.error('检查系统状态失败:', error)
+    console.error('Failed to check system status:', error)
   }
 }
 

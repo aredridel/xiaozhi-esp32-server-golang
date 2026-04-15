@@ -1,41 +1,41 @@
-# 🚦 数据流程
+# 🚦 Data Flow
 
-1. **调用 OTA 接口**
-   - 获取 **MQTT**、**WebSocket** 地址
+1. **Call OTA Interface**
+   - Get **MQTT**, **WebSocket** addresses
 
-2. **连接 MQTT**
-   - 发送 `hello` 消息，获取：
+2. **Connect MQTT**
+   - Send `hello` message to get:
      - 🎵 `audio_params`
-     - 🌐 UDP 服务器地址
+     - 🌐 UDP server address
      - 🔑 `aes_key`
      - 🧩 `nonce`
 
-3. **连接 UDP 服务器**
-   - 进行语音数据的发送与接收
+3. **Connect UDP Server**
+   - Send and receive voice data
 
 ---
 
-# 🛠️ 服务端流程
+# 🛠️ Server-side Flow
 
-| 步骤 | 说明 |
+| Step | Description |
 | :--- | :--- |
-| 1. MQTT 服务 | 生成 `aes_key`、`nonce`，并与 `device_id`、`client_id` 关联 |
-| 2. MQTT 消息监听 | 收到 `type: listen, state: start` 时，初始化 `clientState` 结构，状态为 `start` |
-| 3. UDP 服务 | 收到包后解析 `nonce`，查找对应 `clientState`，填充远程地址，状态为 `recv` |
-| 4. 停止接收 | 收到 `type: listen, state: stop` 或自动检测无声音时，停止接收 |
+| 1. MQTT Service | Generate `aes_key`, `nonce`, and associate with `device_id`, `client_id` |
+| 2. MQTT Message Listening | When receiving `type: listen, state: start`, initialize `clientState` structure with status `start` |
+| 3. UDP Service | After receiving packet, parse `nonce`, find corresponding `clientState`, fill remote address, status becomes `recv` |
+| 4. Stop Receiving | When receiving `type: listen, state: stop` or automatically detecting no sound, stop receiving |
 
 ---
 
-# 🔗 关联关系
+# 🔗 Association Relationships
 
-- OTA 验证 **MAC 地址** 和 **clientId**，并关联到 **uid**
-- OTA 下发的 **MQTT 地址** 和 **mqtt_clientId** 关联 **MAC 地址** 和 **clientId**
-- 通过 **MQTT 连接** 可解析出 **clientId** 和 **MAC 地址**
-- 通过 **MQTT hello 消息** 可关联到 `aes_key`、`nonce`
-- 通过 **UDP 音频消息** 可关联到 `nonce`
+- OTA verifies **MAC Address** and **clientId**, and associates with **uid**
+- OTA issued **MQTT address** and **mqtt_clientId** associate **MAC Address** and **clientId**
+- **MQTT connection** can parse **clientId** and **MAC Address**
+- **MQTT hello message** can associate to `aes_key`, `nonce`
+- **UDP audio message** can associate to `nonce`
 
 ---
 
-> **说明：**
-> - `clientState` 结构用于维护每个客户端的会话状态和资源。
-> - `nonce` 是客户端与服务端之间的唯一标识，用于安全关联和数据路由。
+> **Note:**
+> - `clientState` structure is used to maintain each client's session state and resources.
+> - `nonce` is the unique identifier between client and server, used for security association and data routing.

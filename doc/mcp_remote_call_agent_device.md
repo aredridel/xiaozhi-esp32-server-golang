@@ -1,235 +1,235 @@
-# 设备/智能体维度 MCP 远程调用说明
+# Device/Agent Dimension MCP Remote Call Documentation
 
-本文档介绍管理控制台中的 **MCP 远程调用调试能力**，包括：
+This document introduces the **MCP remote call debugging capability** in the management console, including:
 
-- 智能体维度 MCP 接入点（Endpoint）生成
-- 智能体维度工具列表获取与远程调用
-- 设备维度工具列表获取与远程调用
-- 管理员与普通用户的权限差异
+- Agent dimension MCP endpoint generation
+- Agent dimension tool list acquisition and remote calling
+- Device dimension tool list acquisition and remote calling
+- Permission differences between administrators and regular users
 
-相关文档：
+Related documents:
 
-- [MCP 架构说明](./mcp.md)
-- [MCP 市场功能说明](./mcp_market.md)
-- [管理后台使用指南](./manager_console_guide.md)
-
----
-
-## 1. 功能定位
-
-该功能主要用于“调试与验证”：
-
-- 快速查看当前智能体/设备暴露了哪些 MCP 工具
-- 在控制台中直接构造参数并调用工具
-- 获取智能体维度 MCP endpoint，供外部 MCP 客户端接入测试
-
-适合场景：
-
-- 验证某个远程 MCP 服务是否已生效
-- 检查工具 schema / 参数样例
-- 排查智能体与设备的 MCP 行为差异
+- [MCP Architecture Documentation](./mcp.md)
+- [MCP Market Feature Documentation](./mcp_market.md)
+- [Management Console Guide](./manager_console_guide.md)
 
 ---
 
-## 2. 两种调用维度的区别
+## 1. Feature Positioning
 
-## 2.1 智能体维度（Agent）
+This feature is mainly used for "debugging and verification":
 
-特点：
+- Quickly view what MCP tools are currently exposed by the agent/device
+- Directly construct parameters and call tools in the console
+- Get agent dimension MCP endpoint for external MCP client access testing
 
-- 面向“智能体配置”视角
-- 支持获取该智能体的 MCP endpoint（带 token）
-- 支持拉取工具列表、直接发起工具调用
-- 受智能体配置（如 `mcp_service_names`）影响
+Suitable scenarios:
 
-常见用途：
-
-- 验证智能体筛选后的可用 MCP 工具集合
-- 复制 endpoint 给外部调试客户端使用
-
-## 2.2 设备维度（Device）
-
-特点：
-
-- 面向“具体设备连接”视角
-- 直接通过设备当前连接上下文请求工具详情/调用工具
-- 通常依赖设备在线与 WebSocket 控制器可用
-
-常见用途：
-
-- 排查“同一个智能体在不同设备上工具表现不一致”
-- 验证设备当前在线会话侧的 MCP 能力
+- Verify if a remote MCP service is effective
+- Check tool schema / parameter examples
+- Troubleshoot differences in MCP behavior between agents and devices
 
 ---
 
-## 3. 页面入口（管理员 / 普通用户）
+## 2. Differences Between Two Call Dimensions
 
-### 3.1 管理员
+## 2.1 Agent Dimension (Agent)
 
-- `管理员 -> 智能体管理`（智能体维度 endpoint / tools / call）
-- `管理员 -> 设备管理`（设备维度 tools / call）
+Features:
 
-### 3.2 普通用户
+- From the "agent configuration" perspective
+- Supports getting the agent's MCP endpoint (with token)
+- Supports pulling tool list, directly initiating tool calls
+- Affected by agent configuration (e.g., `mcp_service_names`)
 
-- `我的智能体`（智能体维度 tools / call）
-- `我的设备` / `智能体设备`（设备维度 tools / call）
-- `智能体编辑`（配置 `mcp_service_names`，影响智能体维度可见服务范围）
+Common uses:
+
+- Verify available MCP tool set after agent filtering
+- Copy endpoint for external debugging client use
+
+## 2.2 Device Dimension (Device)
+
+Features:
+
+- From the "specific device connection" perspective
+- Directly requests tool details/calls through device current connection context
+- Usually depends on device being online and WebSocket controller being available
+
+Common uses:
+
+- Troubleshoot "inconsistent tool behavior on different devices with same agent"
+- Verify device current online session side MCP capability
 
 ---
 
-## 4. 智能体维度：完整调试流程
+## 3. Page Entry Points (Administrator / Regular User)
 
-## 4.1 配置智能体可用 MCP 服务（可选但推荐）
+### 3.1 Administrator
 
-在智能体编辑页可设置 `mcp_service_names`（服务名列表，逗号分隔）：
+- `Administrator -> Agent Management` (agent dimension endpoint / tools / call)
+- `Administrator -> Device Management` (device dimension tools / call)
 
-- 留空：使用全部已启用的全局 MCP 服务
-- 填写：仅使用指定服务名（必须是系统中已启用且存在的服务）
+### 3.2 Regular User
 
-系统会对该字段做：
+- `My Agents` (agent dimension tools / call)
+- `My Devices` / `Agent Devices` (device dimension tools / call)
+- `Agent Edit` (configure `mcp_service_names`, affects agent dimension visible service scope)
 
-- 去重
-- 去空格
-- 合法性校验（服务名必须存在于已启用全局服务集合）
+---
 
-## 4.2 获取智能体 MCP Endpoint
+## 4. Agent Dimension: Complete Debugging Flow
 
-控制台可获取智能体专属 MCP 接入点 URL，格式类似：
+## 4.1 Configure Agent Available MCP Services (Optional but Recommended)
+
+On the agent edit page, you can set `mcp_service_names` (service name list, comma-separated):
+
+- Empty: Use all enabled global MCP services
+- Filled: Only use specified service names (must be services that exist and are enabled in the system)
+
+The system will perform the following on this field:
+
+- Deduplication
+- Trim spaces
+- Legitimacy validation (service name must exist in enabled global service set)
+
+## 4.2 Get Agent MCP Endpoint
+
+The console can get the agent-specific MCP access point URL, format similar to:
 
 ```text
 ws(s)://<host>/mcp?token=<jwt>
 ```
 
-说明：
+Description:
 
-- endpoint 基于默认 OTA 配置中的 `external.websocket.url` 推导域名与协议
-- token 中包含当前用户与智能体上下文（用于权限校验/绑定用途）
-- 适合外部 MCP 客户端临时调试，不建议公开分享
+- Endpoint is derived based on default OTA configuration `external.websocket.url` for domain and protocol
+- Token contains current user and agent context (used for permission verification/binding)
+- Suitable for external MCP client temporary debugging, not recommended for public sharing
 
-## 4.3 获取工具列表
+## 4.3 Get Tool List
 
-控制台会请求智能体维度 MCP 工具详情，返回内容通常包含：
+The console will request agent dimension MCP tool details, returned content usually includes:
 
 - `name`
-- 工具描述
-- 参数 schema
-- 参数样例（若设备端/服务端提供）
+- Tool description
+- Parameter schema
+- Parameter examples (if provided by device side/server side)
 
-如果无法获取（例如控制器未初始化或客户端暂不可达），后端会返回空列表而不是报错，便于页面继续操作。
+If unable to get (e.g., controller not initialized or client temporarily unreachable), backend will return empty list instead of error, allowing page to continue operation.
 
-## 4.4 直接调用工具
+## 4.4 Direct Tool Call
 
-在控制台中填写：
+Fill in the console:
 
 - `tool_name`
-- `arguments`（JSON）
+- `arguments` (JSON)
 
-发起调用后可在结果框查看完整返回体（JSON 格式）。
+After initiating the call, you can view the complete return body (JSON format) in the result box.
 
 ---
 
-## 5. 设备维度：完整调试流程
+## 5. Device Dimension: Complete Debugging Flow
 
-## 5.1 获取设备工具列表
+## 5.1 Get Device Tool List
 
-选择设备后，控制台会使用设备标识（内部会映射到设备名）向 WebSocket 控制器请求 MCP 工具详情。
+After selecting a device, the console will use device identifier (internally mapped to device name) to request MCP tool details from WebSocket controller.
 
-常见失败情况：
+Common failure situations:
 
-- 设备不在线
-- 设备不属于当前用户（用户视角）
-- WebSocket 控制器暂不可用
+- Device not online
+- Device does not belong to current user (user perspective)
+- WebSocket controller temporarily unavailable
 
-在这些情况下，接口通常返回空工具列表或权限错误。
+In these cases, the interface usually returns empty tool list or permission error.
 
-## 5.2 调用设备 MCP 工具
+## 5.2 Call Device MCP Tool
 
-与智能体维度类似，填写：
+Similar to agent dimension, fill in:
 
 - `tool_name`
-- `arguments`（JSON）
+- `arguments` (JSON)
 
-区别在于调用体使用的是 `device_id`（实际后端会传设备名）上下文，因此更接近“当前设备会话”的真实执行环境。
+The difference is that the call body uses `device_id` (actual backend will pass device name) context, so it's closer to the "current device session" real execution environment.
 
 ---
 
-## 6. 权限与接口差异（管理员 vs 普通用户）
+## 6. Permissions and Interface Differences (Administrator vs Regular User)
 
-### 6.1 普通用户接口
+### 6.1 Regular User Interfaces
 
-智能体维度：
+Agent dimension:
 
 - `GET /user/agents/:id/mcp-endpoint`
 - `GET /user/agents/:id/mcp-tools`
 - `POST /user/agents/:id/mcp-call`
 
-设备维度：
+Device dimension:
 
 - `GET /user/devices/:id/mcp-tools`
 - `POST /user/devices/:id/mcp-call`
 
-智能体服务筛选辅助：
+Agent service filtering auxiliary:
 
 - `GET /user/agents/:id/mcp-services/options`
 
-普通用户仅能操作属于自己的智能体/设备。
+Regular users can only operate their own agents/devices.
 
-### 6.2 管理员接口
+### 6.2 Administrator Interfaces
 
-智能体维度：
+Agent dimension:
 
 - `GET /admin/agents/:id/mcp-endpoint`
 - `GET /admin/agents/:id/mcp-tools`
 - `POST /admin/agents/:id/mcp-call`
 
-设备维度：
+Device dimension:
 
 - `GET /admin/devices/:id/mcp-tools`
 - `POST /admin/devices/:id/mcp-call`
 
-管理员可跨用户调试任意智能体/设备（前提是记录存在且连接链路正常）。
+Administrators can debug any agent/device across users (provided the record exists and connection link is normal).
 
 ---
 
-## 7. Endpoint 生成逻辑（智能体维度）
+## 7. Endpoint Generation Logic (Agent Dimension)
 
-智能体 endpoint 生成依赖：
+Agent endpoint generation depends on:
 
-1. 默认 OTA 配置（`type=ota` 且 `is_default=true`）
-2. OTA 配置中的 `external.websocket.url`
-3. 基于当前用户 ID + 智能体 ID 生成的稳定 token
+1. Default OTA configuration (`type=ota` and `is_default=true`)
+2. `external.websocket.url` in OTA configuration
+3. Stable token generated based on current user ID + agent ID
 
-生成结果会使用：
+Generation result will use:
 
-- 同协议（`ws` / `wss`）
-- 同 host（域名/IP + 端口）
-- 固定路径 `/mcp`
+- Same protocol (`ws` / `wss`)
+- Same host (domain/IP + port)
+- Fixed path `/mcp`
 
-因此如果无法生成 endpoint，请优先检查 OTA 外网 WebSocket 配置。
+Therefore, if unable to generate endpoint, please first check OTA external network WebSocket configuration.
 
 ---
 
-## 8. 常见问题与排查
+## 8. FAQ and Troubleshooting
 
-### 8.1 工具列表为空
+### 8.1 Tool list is empty
 
-可能原因：
+Possible causes:
 
-- 设备不在线（设备维度）
-- WebSocket 控制器未初始化
-- 客户端未返回工具详情
-- 智能体维度被 `mcp_service_names` 过滤后无可用服务
+- Device not online (device dimension)
+- WebSocket controller not initialized
+- Client did not return tool details
+- Agent dimension has no available services after `mcp_service_names` filtering
 
-建议排查顺序：
+Suggested troubleshooting order:
 
-1. 确认设备在线状态
-2. 检查全局 MCP 服务是否启用
-3. 检查智能体 `mcp_service_names` 配置
-4. 在控制台重试获取工具
+1. Confirm device online status
+2. Check if global MCP service is enabled
+3. Check agent `mcp_service_names` configuration
+4. Retry getting tools in console
 
-### 8.2 调用时报参数 JSON 错误
+### 8.2 Call reports parameter JSON error
 
-控制台参数区要求合法 JSON 对象，例如：
+Console parameter area requires valid JSON object, for example:
 
 ```json
 {
@@ -237,29 +237,28 @@ ws(s)://<host>/mcp?token=<jwt>
 }
 ```
 
-常见错误：
+Common errors:
 
-- 单引号
-- 尾逗号
-- 顶层不是对象
+- Single quotes
+- Trailing commas
+- Top level is not an object
 
-### 8.3 获取智能体 endpoint 失败
+### 8.3 Failed to get agent endpoint
 
-通常是 OTA 默认配置缺失或 `external.websocket.url` 未配置。
+Usually due to missing OTA default configuration or `external.websocket.url` not configured.
 
-### 8.4 明明导入了 MCP 服务，但智能体调用看不到
+### 8.4 MCP service imported but not visible in agent call
 
-检查：
+Check:
 
-1. 导入服务是否启用
-2. 全局 MCP 配置总开关与服务启用状态
-3. 智能体是否通过 `mcp_service_names` 排除了该服务
+1. Whether imported service is enabled
+2. Global MCP configuration master switch and service enable status
+3. Whether agent excluded this service through `mcp_service_names`
 
 ---
 
-## 9. 最佳实践
+## 9. Best Practices
 
-- 先在管理员侧验证“设备维度”工具可用，再验证“智能体维度”工具筛选结果
-- 对生产智能体建议显式配置 `mcp_service_names`，避免无关工具暴露给模型
-- 将 endpoint 视为敏感调试入口，避免在公共渠道传播带 token 的 URL
-
+- First verify "device dimension" tool availability on administrator side, then verify "agent dimension" tool filtering results
+- For production agents, it is recommended to explicitly configure `mcp_service_names` to avoid unrelated tools being exposed to the model
+- Treat endpoint as a sensitive debugging entry point, avoid spreading URLs with tokens in public channels

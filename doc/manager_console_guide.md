@@ -1,179 +1,179 @@
-# 管理后台使用指南
+# Management Console Guide
 
-## 访问管理后台
+## Access Management Console
 
-- 地址：http://<服务器IP或域名>:8080
+- Address: http://<Server IP or Domain>:8080
 
 ---
 
-## 一、配置向导
+## 1. Configuration Wizard
 
-首次登录后自动进入配置向导，共5个步骤。
+Automatically enters configuration wizard after first login, total of 5 steps.
 
-### Step 1: OTA 配置
+### Step 1: OTA Configuration
 
-配置OTA服务器信息，用于配置下发给小智硬件的 websocket和mqtt地址。
+Configure OTA server information, used to configure websocket and mqtt addresses issued to Xiaozhi hardware.
 
-<!-- 截图位置：OTA配置界面 -->
-> 图：OTA配置向导界面
+<!-- Screenshot position: OTA configuration interface -->
+> Figure: OTA configuration wizard interface
 
-| 配置项 | 说明 |
+| Configuration Item | Description |
 |-------|------|
-| MQTT Broker | MQTT服务器地址 |
-| MQTT Port | MQTT端口（默认1883） |
-| UDP Port | UDP端口 |
+| MQTT Broker | MQTT server address |
+| MQTT Port | MQTT port (default 1883) |
+| UDP Port | UDP port |
 | ... | ... |
 
-**测试连通性**：点击「测试当前配置」验证MQTT/UDP连接。
+**Test Connectivity**: Click "Test Current Configuration" to verify MQTT/UDP connection.
 
 ---
 
-### Step 2: VAD 配置
+### Step 2: VAD Configuration
 
-选择语音活动检测引擎：
+Select voice activity detection engine:
 
-<!-- 截图位置：VAD配置界面 -->
-> 图：VAD配置向导界面
+<!-- Screenshot position: VAD configuration interface -->
+> Figure: VAD configuration wizard interface
 
-| 引擎 | 说明 | 推荐场景 |
+| Engine | Description | Recommended Scenario |
 |-----|------|---------|
-| Silero VAD | 高精度 | 生产环境 |
-| WebRTC VAD | 轻量级 | 资源受限 |
-| ten_vad | 本地C++版本 | 高性能需求 |
+| Silero VAD | High precision | Production environment |
+| WebRTC VAD | Lightweight | Resource constrained |
+| ten_vad | Local C++ version | High performance requirements |
 
 ---
 
-### Step 3: ASR 配置
+### Step 3: ASR Configuration
 
-选择语音识别引擎：
+Select speech recognition engine:
 
-<!-- 截图位置：ASR配置界面 -->
-> 图：ASR配置向导界面
+<!-- Screenshot position: ASR configuration interface -->
+> Figure: ASR configuration wizard interface
 
-| 引擎 | 说明 |
+| Engine | Description |
 |-----|------|
-| FunASR | 本地识别，需下载模型 |
-| Doubao ASR | 云端API |
+| FunASR | Local recognition, requires model download |
+| Doubao ASR | Cloud API |
 
 ---
 
-### Step 4: LLM 配置
+### Step 4: LLM Configuration
 
-选择大语言模型：
+Select large language model:
 
-<!-- 截图位置：LLM配置界面 -->
-> 图：LLM配置向导界面
+<!-- Screenshot position: LLM configuration interface -->
+> Figure: LLM configuration wizard interface
 
-| 引擎 | 说明 |
+| Engine | Description |
 |-----|------|
-| OpenAI兼容 | 支持各类API |
-| Ollama | 本地部署 |
-| Doubao | 字节豆包 |
+| OpenAI compatible | Supports various APIs |
+| Ollama | Local deployment |
+| Doubao | ByteDance Doubao |
 
 ---
 
-### Step 5: TTS 配置
+### Step 5: TTS Configuration
 
-选择语音合成引擎：
+Select text-to-speech engine:
 
-<!-- 截图位置：TTS配置界面 -->
-> 图：TTS配置向导界面
+<!-- Screenshot position: TTS configuration interface -->
+> Figure: TTS configuration wizard interface
 
-| 引擎 | 说明 |
+| Engine | Description |
 |-----|------|
-| Doubao TTS | 云端API |
-| EdgeTTS | 微软免费TTS |
-| CosyVoice | 本地高质量 |
+| Doubao TTS | Cloud API |
+| EdgeTTS | Microsoft free TTS |
+| CosyVoice | Local high quality |
 
 ---
 
-## 二、配置测试
+## 2. Configuration Testing
 
-### 测试单个配置
+### Test Single Configuration
 
-在各配置页面，点击配置项右侧的「测试」按钮：
+On each configuration page, click the "Test" button on the right side of the configuration item:
 
-<!-- 截图位置：单个配置测试按钮 -->
-> 图：配置测试按钮
+<!-- Screenshot position: Single configuration test button -->
+> Figure: Configuration test button
 
-测试结果说明：
+Test result description:
 
-| 字段 | 说明 |
+| Field | Description |
 |-----|------|
-| 状态 | 成功/失败 |
-| 首包延迟 | 毫秒级响应时间 |
-| 消息 | 错误详情（如失败） |
+| Status | Success/Failure |
+| First Packet Latency | Millisecond-level response time |
+| Message | Error details (if failed) |
 
-<!-- 截图位置：测试结果弹窗 -->
-> 图：配置测试结果弹窗
+<!-- Screenshot position: Test result popup -->
+> Figure: Configuration test result popup
 
-### 批量测试
+### Batch Testing
 
-在配置管理页面，点击「测试全部」批量测试所有配置：
+On the configuration management page, click "Test All" to batch test all configurations:
 
-<!-- 截图位置：批量测试界面 -->
-> 图：批量测试界面
+<!-- Screenshot position: Batch test interface -->
+> Figure: Batch test interface
 
-### 测试类型支持
+### Supported Test Types
 
-| 测试类型 | 说明 |
+| Test Type | Description |
 |---------|------|
-| VAD | 语音活动检测连通性与响应时间 |
-| ASR | 语音识别连通性与首包延迟 |
-| LLM | 大模型推理连通性与首包延迟 |
-| TTS | 语音合成连通性与首包延迟 |
-| OTA | MQTT/UDP 连通性测试 |
+| VAD | Voice activity detection connectivity and response time |
+| ASR | Speech recognition connectivity and first packet latency |
+| LLM | Large model inference connectivity and first packet latency |
+| TTS | Speech synthesis connectivity and first packet latency |
+| OTA | MQTT/UDP connectivity test |
 
 ---
 
-## 三、延迟监控
+## 3. Latency Monitoring
 
-查看系统各模块的首包延迟统计：
+View first packet latency statistics for each system module:
 
-<!-- 截图位置：延迟监控界面 -->
-> 图：延迟监控界面
+<!-- Screenshot position: Latency monitoring interface -->
+> Figure: Latency monitoring interface
 
-### 延迟优化建议
+### Latency Optimization Suggestions
 
-| 模块 | 优化方向 |
+| Module | Optimization Direction |
 |-----|---------|
-| ASR | 使用本地模型或就近的API节点 |
-| LLM | 选择更小的模型或使用流式输出 |
-| TTS | 使用边缘TTS或本地模型 |
+| ASR | Use local model or nearby API node |
+| LLM | Select smaller model or use streaming output |
+| TTS | Use edge TTS or local model |
 
 ---
 
-## 四、配置管理
+## 4. Configuration Management
 
-### 编辑配置
+### Edit Configuration
 
-进入「配置管理」→ 对应模块 → 编辑配置项
+Go to "Configuration Management" → Corresponding module → Edit configuration item
 
-<!-- 截图位置：配置管理界面 -->
-> 图：配置管理界面
+<!-- Screenshot position: Configuration management interface -->
+> Figure: Configuration management interface
 
-### 启用/禁用配置
+### Enable/Disable Configuration
 
-通过开关控制配置是否生效。
+Control whether configuration takes effect through toggle switch.
 
-### 设置默认配置
+### Set Default Configuration
 
-每个模块可设置一个默认配置，设备未指定时使用默认。
+Each module can set one default configuration, used when device does not specify.
 
 ---
 
-## 常见问题
+## FAQ
 
-### Q1: 配置测试失败？
+### Q1: Configuration test failed?
 
-1. 检查网络连接
-2. 验证API密钥是否正确
-3. 查看主程序控制台日志
+1. Check network connection
+2. Verify if API key is correct
+3. View main program console logs
 
-### Q2: 如何恢复默认配置？
+### Q2: How to restore default configuration?
 
-删除 `config/` 目录下的配置文件，重启服务。
+Delete configuration files in `config/` directory, restart service.
 
-### Q3: 配置修改后需要重启吗？
+### Q3: Need to restart after configuration modification?
 
-大部分配置修改后实时生效，部分模块配置可能需要重启设备连接。
+Most configuration modifications take effect in real-time, some module configurations may require restarting device connection.

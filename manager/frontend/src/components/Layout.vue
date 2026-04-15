@@ -3,7 +3,7 @@
   <el-container v-if="!isMobileDevice" class="layout-container">
     <el-aside width="250px" class="sidebar">
       <div class="logo">
-        <h3>小智管理系统</h3>
+        <h3>XiaoZhi Management System</h3>
       </div>
       <el-menu
         :default-active="$route.path"
@@ -15,22 +15,22 @@
       >
         <el-menu-item index="/dashboard">
           <el-icon><House /></el-icon>
-          <span>仪表板</span>
+          <span>Dashboard</span>
         </el-menu-item>
         
         <el-menu-item v-if="!authStore.isAdmin" index="/console">
           <el-icon><Monitor /></el-icon>
-          <span>用户控制台</span>
+          <span>User Console</span>
         </el-menu-item>
         
         <el-menu-item v-if="!authStore.isAdmin" index="/agents">
           <el-icon><Monitor /></el-icon>
-          <span>智能体管理</span>
+          <span>Agent Management</span>
         </el-menu-item>
 
         <el-menu-item v-if="!authStore.isAdmin" index="/user/roles">
           <el-icon><User /></el-icon>
-          <span>我的角色</span>
+          <span>My Roles</span>
         </el-menu-item>
 
 
@@ -41,7 +41,7 @@
 
         <el-menu-item v-if="!authStore.isAdmin" index="/speakers">
           <el-icon><Microphone /></el-icon>
-          <span>声纹管理</span>
+          <span>Voiceprint Management</span>
         </el-menu-item>
         <el-menu-item v-if="!authStore.isAdmin" index="/voice-clones">
           <el-icon><Microphone /></el-icon>
@@ -50,73 +50,73 @@
 
         <el-menu-item v-if="!authStore.isAdmin" index="/user/knowledge-bases">
           <el-icon><Document /></el-icon>
-          <span>我的知识库</span>
+          <span>My Knowledge Base</span>
         </el-menu-item>
         
         <!-- 服务配置 -->
         <el-sub-menu v-if="authStore.isAdmin" index="/admin/service-config">
           <template #title>
             <el-icon><Tools /></el-icon>
-            <span>服务配置</span>
+            <span>Service Configuration</span>
           </template>
-          <el-menu-item index="/admin/ota-config">OTA配置</el-menu-item>
-          <el-menu-item index="/admin/mqtt-config">MQTT配置</el-menu-item>
-          <el-menu-item index="/admin/mqtt-server-config">MQTT Server配置</el-menu-item>
-          <el-menu-item index="/admin/udp-config">UDP配置</el-menu-item>
+          <el-menu-item index="/admin/ota-config">OTA Config</el-menu-item>
+          <el-menu-item index="/admin/mqtt-config">MQTT Config</el-menu-item>
+          <el-menu-item index="/admin/mqtt-server-config">MQTT Server Config</el-menu-item>
+          <el-menu-item index="/admin/udp-config">UDP Config</el-menu-item>
           <el-sub-menu index="/admin/mcp-config-group">
-            <template #title>MCP配置</template>
-            <el-menu-item index="/admin/mcp-config">配置</el-menu-item>
-            <el-menu-item index="/admin/mcp-market">MCP市场</el-menu-item>
+            <template #title>MCP Config</template>
+            <el-menu-item index="/admin/mcp-config">Configuration</el-menu-item>
+            <el-menu-item index="/admin/mcp-market">MCP Market</el-menu-item>
           </el-sub-menu>
-          <el-menu-item index="/admin/speaker-config">声纹识别配置</el-menu-item>
-          <el-menu-item index="/admin/chat-settings">聊天设置</el-menu-item>
+          <el-menu-item index="/admin/speaker-config">Voiceprint Config</el-menu-item>
+          <el-menu-item index="/admin/chat-settings">Chat Settings</el-menu-item>
         </el-sub-menu>
         
         <!-- AI配置 -->
         <el-sub-menu v-if="authStore.isAdmin" index="/admin/ai-config">
           <template #title>
             <el-icon><Cpu /></el-icon>
-            <span>AI配置</span>
+            <span>AI Configuration</span>
           </template>
-          <el-menu-item index="/admin/vad-config">VAD配置</el-menu-item>
-          <el-menu-item index="/admin/asr-config">ASR配置</el-menu-item>
-          <el-menu-item index="/admin/llm-config">LLM配置</el-menu-item>
-          <el-menu-item index="/admin/tts-config">TTS配置</el-menu-item>
-          <el-menu-item index="/admin/vision-config">Vision配置</el-menu-item>
-          <el-menu-item index="/admin/memory-config">Memory配置</el-menu-item>
-          <el-menu-item index="/admin/knowledge-search-config">知识库检索配置</el-menu-item>
+          <el-menu-item index="/admin/vad-config">VAD Config</el-menu-item>
+          <el-menu-item index="/admin/asr-config">ASR Config</el-menu-item>
+          <el-menu-item index="/admin/llm-config">LLM Config</el-menu-item>
+          <el-menu-item index="/admin/tts-config">TTS Config</el-menu-item>
+          <el-menu-item index="/admin/vision-config">Vision Config</el-menu-item>
+          <el-menu-item index="/admin/memory-config">Memory Config</el-menu-item>
+          <el-menu-item index="/admin/knowledge-search-config">Knowledge Search Config</el-menu-item>
         </el-sub-menu>
 
         <el-menu-item v-if="authStore.isAdmin" index="/voice-clones">
           <el-icon><Microphone /></el-icon>
-          <span>声音复刻</span>
+          <span>Voice Cloning</span>
         </el-menu-item>
         
         <!-- 系统监控 -->
         <el-menu-item v-if="authStore.isAdmin" index="/admin/pool-stats">
           <el-icon><DataAnalysis /></el-icon>
-          <span>资源池统计</span>
+          <span>Resource Pool Stats</span>
         </el-menu-item>
         
         <!-- 系统管理 -->
         <el-menu-item v-if="authStore.isAdmin" index="/admin/global-roles">
           <el-icon><Setting /></el-icon>
-          <span>全局角色</span>
+          <span>Global Roles</span>
         </el-menu-item>
         
         <el-menu-item v-if="authStore.isAdmin" index="/admin/users">
           <el-icon><UserFilled /></el-icon>
-          <span>用户管理</span>
+          <span>User Management</span>
         </el-menu-item>
         
         <el-menu-item v-if="authStore.isAdmin" index="/admin/devices">
           <el-icon><Iphone /></el-icon>
-          <span>设备管理</span>
+          <span>Device Management</span>
         </el-menu-item>
         
         <el-menu-item v-if="authStore.isAdmin" index="/admin/agents">
           <el-icon><Connection /></el-icon>
-          <span>智能体管理</span>
+          <span>Agent Management</span>
         </el-menu-item>
       </el-menu>
     </el-aside>
@@ -135,7 +135,7 @@
                 @click="navigate"
               >
                 <el-icon class="header-nav-icon"><Guide /></el-icon>
-                <span>配置向导</span>
+                <span>Config Wizard</span>
               </el-button>
             </router-link>
             <router-link to="/admin/ota-config" custom v-slot="{ navigate, isActive }">
@@ -146,7 +146,7 @@
                 @click="navigate"
               >
                 <el-icon class="header-nav-icon"><Upload /></el-icon>
-                <span>OTA配置</span>
+                <span>OTA Config</span>
               </el-button>
             </router-link>
           </template>
@@ -160,7 +160,7 @@
             </span>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="logout">退出登录</el-dropdown-item>
+                <el-dropdown-item command="logout">Logout</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -211,23 +211,23 @@ const authStore = useAuthStore()
 const isMobileDevice = computed(() => isMobile())
 
 const currentPageTitle = computed(() => {
-  return route.meta?.title || '仪表板'
+  return route.meta?.title || 'Dashboard'
 })
 
 const handleCommand = async (command) => {
   if (command === 'logout') {
     try {
-      await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
+      await ElMessageBox.confirm('Are you sure you want to logout?', 'Confirm', {
+        confirmButtonText: 'Confirm',
+        cancelButtonText: 'Cancel',
         type: 'warning'
       })
       
       authStore.logout()
-      ElMessage.success('已退出登录')
+      ElMessage.success('Logged out successfully')
       router.push('/login')
     } catch {
-      // 用户取消
+      // User cancelled
     }
   }
 }

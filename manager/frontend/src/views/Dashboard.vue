@@ -9,7 +9,7 @@
             </div>
             <div class="stat-info">
               <div class="stat-number">{{ stats.totalUsers }}</div>
-              <div class="stat-label">总用户数</div>
+              <div class="stat-label">Total Users</div>
             </div>
           </div>
         </el-card>
@@ -23,7 +23,7 @@
             </div>
             <div class="stat-info">
               <div class="stat-number">{{ stats.totalDevices }}</div>
-              <div class="stat-label">{{ authStore.isAdmin ? '设备总数' : '我的设备' }}</div>
+              <div class="stat-label">{{ authStore.isAdmin ? 'Total Devices' : 'My Devices' }}</div>
             </div>
           </div>
         </el-card>
@@ -37,7 +37,7 @@
             </div>
             <div class="stat-info">
               <div class="stat-number">{{ stats.totalAgents }}</div>
-              <div class="stat-label">{{ authStore.isAdmin ? '智能体数量' : '我的智能体' }}</div>
+              <div class="stat-label">{{ authStore.isAdmin ? 'Total Agents' : 'My Agents' }}</div>
             </div>
           </div>
         </el-card>
@@ -51,7 +51,7 @@
             </div>
             <div class="stat-info">
               <div class="stat-number">{{ stats.onlineDevices }}</div>
-              <div class="stat-label">在线设备</div>
+              <div class="stat-label">Online Devices</div>
             </div>
           </div>
         </el-card>
@@ -64,10 +64,10 @@
         <div class="config-header address-card-header">
           <span>
             <el-icon size="16" color="#409EFF"><Link /></el-icon>
-            服务地址
+            Service Address
           </span>
           <el-button type="warning" size="small" :loading="otaTestLoading" @click="runOtaTest">
-            OTA 测试
+            OTA Test
           </el-button>
         </div>
       </template>
@@ -102,7 +102,7 @@
             <pre class="ota-test-pre">{{ otaTestResult }}</pre>
           </div>
         </template>
-        <div v-else-if="!addressLoading" class="address-empty">暂无 OTA 配置</div>
+          <div v-else-if="!addressLoading" class="address-empty">No OTA configuration</div>
       </div>
     </el-card>
 
@@ -111,7 +111,7 @@
       <template #header>
         <div class="config-header">
           <el-icon size="18" color="#409EFF"><Setting /></el-icon>
-          <span>配置管理</span>
+            <span>Configuration Management</span>
         </div>
       </template>
       <div class="config-actions">
@@ -121,7 +121,7 @@
           class="config-btn"
         >
           <el-icon><Guide /></el-icon>
-          配置向导
+          Configuration Wizard
         </el-button>
         <el-button 
           type="primary" 
@@ -129,7 +129,7 @@
           class="config-btn"
         >
           <el-icon><Download /></el-icon>
-          导出配置
+          Export Config
         </el-button>
         <el-button 
           type="success" 
@@ -137,8 +137,8 @@
           class="config-btn"
         >
            <el-icon><Upload /></el-icon>
-           导入配置
-           <div class="btn-tip">支持YAML/JSON</div>
+           Import Config
+           <div class="btn-tip">Supports YAML/JSON</div>
          </el-button>
       </div>
       <input
@@ -155,26 +155,26 @@
         <el-card>
           <template #header>
             <div class="card-header">
-              <span>系统信息</span>
+              <span>System Information</span>
             </div>
           </template>
           <div class="system-info">
             <div class="info-item">
-              <span class="info-label">系统版本：</span>
+              <span class="info-label">System Version:</span>
               <span class="info-value">v1.0.0</span>
             </div>
             <div class="info-item">
-              <span class="info-label">运行时间：</span>
+              <span class="info-label">Uptime:</span>
               <span class="info-value">{{ uptime }}</span>
             </div>
             <div class="info-item">
-              <span class="info-label">当前用户：</span>
+              <span class="info-label">Current User:</span>
               <span class="info-value">{{ authStore.user?.username }}</span>
             </div>
             <div class="info-item">
-              <span class="info-label">用户角色：</span>
+              <span class="info-label">User Role:</span>
               <el-tag :type="authStore.isAdmin ? 'danger' : 'primary'">
-                {{ authStore.isAdmin ? '管理员' : '普通用户' }}
+                {{ authStore.isAdmin ? 'Administrator' : 'Regular User' }}
               </el-tag>
             </div>
           </div>
@@ -185,31 +185,31 @@
         <el-card>
           <template #header>
             <div class="card-header">
-              <span>快速操作</span>
+              <span>Quick Actions</span>
             </div>
           </template>
           <div class="quick-actions">
             <template v-if="authStore.isAdmin">
               <el-button type="primary" @click="$router.push('/admin/users')">
                 <el-icon><User /></el-icon>
-                用户管理
+                User Management
               </el-button>
               <el-button type="success" @click="$router.push('/admin/llm-config')">
                 <el-icon><Setting /></el-icon>
-                LLM配置
+                LLM Config
               </el-button>
               <el-button type="warning" @click="$router.push('/admin/vad-config')">
                 <el-icon><Setting /></el-icon>
-                VAD配置
+                VAD Config
               </el-button>
             </template>
             <template v-else>
               <el-button type="primary" @click="$router.push('/agents')">
                 <el-icon><Monitor /></el-icon>
-                智能体管理
+                Agent Management
               </el-button>
               <el-text type="info">
-                普通用户主要功能在智能体管理页面
+                Regular users' main features are on the Agent Management page
               </el-text>
             </template>
           </div>
@@ -308,7 +308,7 @@ async function loadServiceAddress() {
       }
     }
   } catch (err) {
-    console.error('加载服务地址失败:', err)
+      console.error('Failed to load service address:', err)
   } finally {
     addressLoading.value = false
   }
@@ -317,9 +317,9 @@ async function loadServiceAddress() {
 function copyAddress(text) {
   if (!text) return
   navigator.clipboard.writeText(text).then(() => {
-    ElMessage.success('已复制到剪贴板')
+    ElMessage.success('Copied to clipboard')
   }).catch(() => {
-    ElMessage.error('复制失败')
+    ElMessage.error('Copy failed')
   })
 }
 
@@ -350,10 +350,10 @@ async function runOtaTest() {
       if (entry) {
         const [, v] = entry
 
-        // 格式化显示结果
+        // Format display result
         let displayText = ''
 
-        // WebSocket 结果
+        // WebSocket result
         if (v.websocket) {
           const ws = v.websocket
           displayText += `WebSocket: ${ws.ok ? '✓' : '✗'} ${ws.message}`
@@ -364,7 +364,7 @@ async function runOtaTest() {
           }
         }
 
-        // MQTT UDP 结果
+        // MQTT UDP result
         if (v.mqtt_udp) {
           const mqtt = v.mqtt_udp
           displayText += `MQTT UDP: ${mqtt.ok ? '✓' : '✗'} ${mqtt.message}`
@@ -375,22 +375,22 @@ async function runOtaTest() {
           }
         }
 
-        // OTA 响应内容（如果有）
+        // OTA response content (if available)
         if (v.ota_response !== undefined && v.ota_response !== '') {
-          displayText += `\n--- OTA 响应 ---\n${formatOtaResponseDisplay(v.ota_response)}`
+          displayText += `\n--- OTA Response ---\n${formatOtaResponseDisplay(v.ota_response)}`
         }
 
-        otaTestResult.value = displayText.trim() || '未获取到详细信息'
+        otaTestResult.value = displayText.trim() || 'No detailed information available'
 
-        // 根据整体结果显示消息
+        // Show message based on overall result
         const overallOk = v.ok
         if (overallOk) {
-          ElMessage.success(v.message || 'OTA 测试通过')
+          ElMessage.success(v.message || 'OTA test passed')
         } else {
-          ElMessage.warning(v.message || 'OTA 测试未通过')
+          ElMessage.warning(v.message || 'OTA test failed')
         }
       } else {
-        otaTestResult.value = '未获取到 OTA 测试结果'
+        otaTestResult.value = 'No OTA test results available'
       }
     } else {
       otaTestResult.value = typeof data === 'string' ? data : JSON.stringify(data || {}, null, 2)
@@ -398,9 +398,9 @@ async function runOtaTest() {
   } catch (e) {
     const errorMsg = (e.response?.data && typeof e.response.data === 'object')
       ? JSON.stringify(e.response.data, null, 2)
-      : (e.response?.data?.message || e.message || '请求失败')
+      : (e.response?.data?.message || e.message || 'Request failed')
     otaTestResult.value = errorMsg
-    ElMessage.error('OTA 测试请求失败')
+    ElMessage.error('OTA test request failed')
   } finally {
     otaTestLoading.value = false
   }
@@ -422,14 +422,14 @@ onMounted(async () => {
     loadServiceAddress()
   }
   
-  // 模拟运行时间
+  // Simulate uptime
   const startTime = new Date('2024-01-01')
   const now = new Date()
   const diff = now - startTime
   const days = Math.floor(diff / (1000 * 60 * 60 * 24))
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-  uptime.value = `${days}天 ${hours}小时 ${minutes}分钟`
+  uptime.value = `${days}d ${hours}h ${minutes}m`
 })
 
 // 加载统计数据
@@ -443,8 +443,8 @@ const loadStats = async () => {
       onlineDevices: response.data.onlineDevices || 0
     }
   } catch (error) {
-    console.error('加载统计数据失败:', error)
-    // 使用默认值
+    console.error('Failed to load statistics:', error)
+    // Use default values
     stats.value = {
       totalUsers: 0,
       totalDevices: 0,
@@ -475,13 +475,13 @@ const exportConfig = async () => {
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
       
-      ElMessage.success('配置导出成功')
+      ElMessage.success('Configuration exported successfully')
     } else {
-      ElMessage.error('配置导出失败')
+      ElMessage.error('Configuration export failed')
     }
   } catch (error) {
-    console.error('导出配置失败:', error)
-    ElMessage.error('配置导出失败')
+    console.error('Failed to export configuration:', error)
+    ElMessage.error('Configuration export failed')
   }
 }
 
@@ -495,12 +495,12 @@ const handleFileChange = async (event) => {
   const file = event.target.files[0]
   if (!file) return
   
-  // 检查文件格式
+  // Check file format
   const validExtensions = ['.yaml', '.yml', '.json']
   const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'))
   
   if (!validExtensions.includes(fileExtension)) {
-    ElMessage.error('请选择YAML或JSON格式的文件')
+    ElMessage.error('Please select a YAML or JSON file')
     return
   }
   
@@ -517,17 +517,17 @@ const handleFileChange = async (event) => {
     })
     
     if (response.ok) {
-      ElMessage.success('配置导入成功')
+      ElMessage.success('Configuration imported successfully')
     } else {
       const error = await response.json()
-      ElMessage.error(error.error || '配置导入失败')
+      ElMessage.error(error.error || 'Configuration import failed')
     }
   } catch (error) {
-    console.error('导入配置失败:', error)
-    ElMessage.error('配置导入失败')
+    console.error('Failed to import configuration:', error)
+    ElMessage.error('Configuration import failed')
   }
   
-  // 清空文件输入
+  // Clear file input
   event.target.value = ''
 }
 </script>

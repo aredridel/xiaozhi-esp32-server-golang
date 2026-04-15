@@ -1,135 +1,135 @@
-# 小智服务 macOS 使用说明
+# Xiaozhi Service macOS Usage Instructions
 
-欢迎使用小智服务 macOS aio 包。本文档包含依赖安装、启动和配置说明。
+Welcome to use Xiaozhi Service macOS aio package. This document contains dependency installation, startup and configuration instructions.
 
-## 目录结构
+## Directory Structure
 
 ```
 xiaozhi_server-macos-<arch>-<version>/
-├── xiaozhi_server              # 主程序
+├── xiaozhi_server              # Main program
 ├── ten-vad/
 │   └── lib/macOS/
-│       ├── ten_vad.framework/  # VAD 框架
+│       ├── ten_vad.framework/  # VAD framework
 │       ├── libonnxruntime.*.dylib
 │       └── libsherpa-onnx-*.dylib
-├── main_config.yaml            # 主配置文件
-├── manager.json                # 管理后台配置
-├── asr_server.json             # ASR 服务配置
-├── models/                     # 模型文件目录
-├── data/                       # 数据目录
-└── logs/                       # 日志目录
+├── main_config.yaml            # Main configuration file
+├── manager.json                # Management backend configuration
+├── asr_server.json             # ASR service configuration
+├── models/                     # Model files directory
+├── data/                       # Data directory
+└── logs/                       # Log directory
 ```
 
-> **注意**：macOS 版本分为 **amd64** (Intel) 和 **arm64** (Apple Silicon)，请下载与您的 Mac 匹配的版本。
+> **Note**: macOS version is divided into **amd64** (Intel) and **arm64** (Apple Silicon), please download the version matching your Mac.
 
-## 运行依赖
+## Runtime Dependencies
 
-### 系统要求
+### System Requirements
 
-- **macOS 版本**：macOS 11 (Big Sur) 或更高版本
-- **架构**：Intel (x86_64) 或 Apple Silicon (arm64)
+- **macOS Version**: macOS 11 (Big Sur) or higher
+- **Architecture**: Intel (x86_64) or Apple Silicon (arm64)
 
-### 安装依赖
+### Install Dependencies
 
-使用 Homebrew 安装必要的依赖：
+Use Homebrew to install necessary dependencies:
 
 ```bash
-# 安装 Homebrew（如果尚未安装）
+# Install Homebrew (if not already installed)
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-# 安装依赖
+# Install dependencies
 brew install pkg-config
 ```
 
-## 快速启动
+## Quick Start
 
 ```bash
-# 添加执行权限
+# Add execution permission
 chmod +x xiaozhi_server
 
-# 如果这是你自己构建的发布包，先修正 rpath
+# If this is a release package you built yourself, first fix rpath
 ./build/macos/fix_rpath.sh ./xiaozhi_server
 
-# 启动服务
+# Start service
 ./xiaozhi_server
 ```
 
-说明：
+Description:
 
-- 官方发布包如果已经完成打包，一般不需要再次执行 `fix_rpath.sh`
-- 只有你在源码仓库里自行构建 macOS 分发包时，才需要补这一步
-- 这一步会把二进制里的开发机绝对路径 `rpath` 改成 `@executable_path/ten-vad/lib/macOS`
+- Official release packages generally do not need to execute `fix_rpath.sh` again if packaging is complete
+- Only need to add this step when building macOS distribution package yourself from source repository
+- This step will change the development machine absolute path `rpath` in the binary to `@executable_path/ten-vad/lib/macOS`
 
-### 首次运行安全提示
+### First Run Security Prompt
 
-首次运行时，macOS 可能会弹出安全提示，因为程序未经过 Apple 认证。请：
+On first run, macOS may pop up a security prompt because the program is not Apple certified. Please:
 
-1. 打开「系统设置」→「隐私与安全性」
-2. 找到关于 `xiaozhi_server` 的提示
-3. 点击「仍要打开」或「允许」
+1. Open "System Settings" → "Privacy & Security"
+2. Find the prompt about `xiaozhi_server`
+3. Click "Open Anyway" or "Allow"
 
-或使用以下命令解除隔离：
+Or use the following command to remove quarantine:
 
 ```bash
 xattr -cr xiaozhi_server
 ```
 
-## 端口与服务
+## Ports and Services
 
-| 端口 | 配置来源 | 说明 |
+| Port | Configuration Source | Description |
 |------|----------|------|
-| **8080** | `manager.json` → `server.port` | **管理后台**：Web 控制台 + HTTP API |
-| **8989** | `main_config.yaml` → `websocket.port` | **主服务 WebSocket**：设备/客户端连接 |
-| **9000** | `asr_server.json` → `server.port` | **ASR/声纹服务**：语音识别内部接口 |
-| **2883** | 控制台配置 | **MQTT 服务**：设备 MQTT 连接 |
-| **8990** | 控制台配置 | **UDP 服务**：设备 UDP 通信 |
-| **6060** | 控制台配置 | **pprof**：性能分析（默认关闭） |
+| **8080** | `manager.json` → `server.port` | **Management Backend**: Web console + HTTP API |
+| **8989** | `main_config.yaml` → `websocket.port` | **Main Service WebSocket**: Device/Client connection |
+| **9000** | `asr_server.json` → `server.port` | **ASR/Speaker ID Service**: Speech recognition internal interface |
+| **2883** | Console configuration | **MQTT Service**: Device MQTT connection |
+| **8990** | Console configuration | **UDP Service**: Device UDP communication |
+| **6060** | Console configuration | **pprof**: Performance analysis (default off) |
 
-## 访问地址
+## Access Addresses
 
-### 管理后台
+### Management Backend
 
-- **本地访问**：`http://localhost:8080/`
-- **局域网访问**：`http://<本机IP>:8080/`
+- **Local Access**: `http://localhost:8080/`
+- **LAN Access**: `http://<Local IP>:8080/`
 
-### 设备/客户端连接
+### Device/Client Connection
 
-- **WebSocket**：`ws://<服务器IP>:8989/`
-- **MQTT**：`<服务器IP>:2883`
-- **UDP**：`<服务器IP>:8990`
+- **WebSocket**: `ws://<Server IP>:8989/`
+- **MQTT**: `<Server IP>:2883`
+- **UDP**: `<Server IP>:8990`
 
-## 修改配置
+## Modify Configuration
 
-### 需在配置文件中修改的端口
+### Ports to Modify in Configuration Files
 
-以下端口修改后需重启服务生效：
+The following ports take effect after service restart:
 
-| 端口 | 配置文件 | 配置项 |
+| Port | Configuration File | Configuration Item |
 |------|----------|--------|
 | 8080 | `manager.json` | `server.port` |
 | 8989 | `main_config.yaml` | `websocket.port` |
 | 9000 | `asr_server.json` | `server.port` |
 
-### 控制台配置
+### Console Configuration
 
-以下端口及所有其他配置通过管理后台控制台进行变更：
+The following ports and all other configurations are changed through the management backend console:
 
-- **端口配置**：MQTT (2883)、UDP (8990)、pprof (6060)
-- **功能配置**：LLM、TTS、ASR、声纹识别等
-- 访问 `http://localhost:8080/` 进入管理后台
-- 配置变更实时生效，无需重启服务
+- **Port Configuration**: MQTT (2883), UDP (8990), pprof (6060)
+- **Function Configuration**: LLM, TTS, ASR, Speaker Identification, etc.
+- Access `http://localhost:8080/` to enter management backend
+- Configuration changes take effect in real-time, no service restart needed
 
-## 后台运行
+## Background Run
 
-### 使用 nohup
+### Use nohup
 
 ```bash
 nohup ./xiaozhi_server > logs/output.log 2>&1 &
 ```
 
-### 创建 launchd 服务（推荐）
+### Create launchd Service (Recommended)
 
-创建 `~/Library/LaunchAgents/com.xiaozhi.server.plist`：
+Create `~/Library/LaunchAgents/com.xiaozhi.server.plist`:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -156,94 +156,94 @@ nohup ./xiaozhi_server > logs/output.log 2>&1 &
 </plist>
 ```
 
-加载服务：
+Load service:
 
 ```bash
-# 加载服务
+# Load service
 launchctl load ~/Library/LaunchAgents/com.xiaozhi.server.plist
 
-# 启动服务
+# Start service
 launchctl start com.xiaozhi.server
 
-# 查看状态
+# View status
 launchctl list | grep xiaozhi
 
-# 停止服务
+# Stop service
 launchctl stop com.xiaozhi.server
 
-# 卸载服务
+# Unload service
 launchctl unload ~/Library/LaunchAgents/com.xiaozhi.server.plist
 ```
 
-## 防火墙配置
+## Firewall Configuration
 
-如果启用了防火墙，需要允许 `xiaozhi_server` 接受入站连接：
+If firewall is enabled, need to allow `xiaozhi_server` to accept incoming connections:
 
-1. 打开「系统设置」→「网络」→「防火墙」
-2. 点击「选项」
-3. 找到 `xiaozhi_server`，设置为「允许入站连接」
+1. Open "System Settings" → "Network" → "Firewall"
+2. Click "Options"
+3. Find `xiaozhi_server`, set to "Allow incoming connections"
 
-或在终端中使用命令：
+Or use commands in terminal:
 
 ```bash
-# 添加防火墙例外（需要 sudo）
+# Add firewall exception (requires sudo)
 sudo /usr/libexec/ApplicationFirewall/socketfilterfw --add /path/to/xiaozhi_server
 sudo /usr/libexec/ApplicationFirewall/socketfilterfw --unblock /path/to/xiaozhi_server
 ```
 
-## 常见问题
+## FAQ
 
-### 安全提示"已损坏"
+### Security Prompt "Damaged"
 
-如果提示应用已损坏，运行以下命令：
+If prompted that the application is damaged, run the following command:
 
 ```bash
 xattr -cr xiaozhi_server
 ```
 
-### 动态库加载失败
+### Dynamic Library Loading Failure
 
-如果出现 `dylib` 加载失败，检查：
+If `dylib` loading failure occurs, check:
 
 ```bash
-# 查看依赖
+# View dependencies
 otool -L xiaozhi_server
 
-# 查看 rpath
+# View rpath
 otool -l xiaozhi_server | grep -A2 LC_RPATH
 
-# 确保动态库在正确位置
+# Ensure dynamic libraries are in correct location
 ls -la ten-vad/lib/macOS/
 ```
 
-如果 `LC_RPATH` 仍然是开发机源码绝对路径，而不是 `@executable_path/ten-vad/lib/macOS`，请执行：
+If `LC_RPATH` is still the development machine source code absolute path, instead of `@executable_path/ten-vad/lib/macOS`, please execute:
 
 ```bash
 ./build/macos/fix_rpath.sh ./xiaozhi_server
 ```
 
-如果你是在 IDE 临时目录调试，或手动移动了二进制导致目录结构不一致，可临时使用：
+If you are debugging from an IDE temporary directory, or manually moved the binary causing directory structure inconsistency, you can temporarily use:
 
 ```bash
 DYLD_FRAMEWORK_PATH="$PWD/ten-vad/lib/macOS" ./xiaozhi_server
 ```
 
-### 端口被占用
+### Port Occupied
 
 ```bash
-# 查看端口占用
-lsof -i :端口号
+# View port occupancy
+lsof -i :port_number
 
-# 结束占用进程或修改配置文件中的端口
+# End occupying process or modify port in configuration file
 ```
 
-### Apple Silicon (M1/M2/M3) 运行 Intel 版本
+### Apple Silicon (M1/M2/M3) Running Intel Version
 
-在 Apple Silicon Mac 上运行 Intel 版本需要 Rosetta 2：
+Running Intel version on Apple Silicon Mac requires Rosetta 2:
 
 ```bash
-# 安装 Rosetta 2
+# Install Rosetta 2
 softwareupdate --install-rosetta
 ```
 
-但建议下载对应的 arm64 版本以获得最佳性能。
+But it is recommended to download the corresponding arm64 version for best performance.

@@ -16,18 +16,18 @@ export default {
 
     const checkSystemStatus = async () => {
       try {
-        // 检查系统是否需要初始化
+        // Check if system needs initialization
         const response = await api.get('/setup/status')
         
         if (response.data.needs_setup) {
-          // 如果需要初始化且当前不在引导页面，则跳转到引导页面
+          // If setup needed and not on setup page, redirect to setup
           if (router.currentRoute.value.path !== '/setup') {
             router.push('/setup')
           }
         }
       } catch (error) {
-        console.error('检查系统状态失败:', error)
-        // 如果检查失败，可能是网络问题，不强制跳转
+        console.error('Failed to check system status:', error)
+        // If check fails, might be network issue, don't force redirect
       }
     }
 
@@ -59,34 +59,34 @@ body {
 }
 
 
-/* 移动端样式优化 */
+/* Mobile styles optimization */
 @media (max-width: 767px) {
-  /* 移动端字体大小优化 */
+  /* Mobile font size optimization */
   body {
     font-size: 14px;
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
   }
   
-  /* 移动端滚动优化 */
+  /* Mobile scroll optimization */
   * {
     -webkit-overflow-scrolling: touch;
   }
   
-  /* 移动端点击延迟优化 */
+  /* Mobile touch delay optimization */
   a, button, input, textarea {
     touch-action: manipulation;
   }
   
-  /* 隐藏桌面端元素 */
+  /* Hide desktop-only elements */
   .desktop-only {
     display: none !important;
   }
 }
 
-/* 桌面端样式 */
+/* Desktop styles */
 @media (min-width: 768px) {
-  /* 隐藏移动端元素 */
+  /* Hide mobile-only elements */
   .mobile-only {
     display: none !important;
   }
@@ -103,7 +103,7 @@ body {
   opacity: 0;
 }
 
-/* 移动端安全区域适配 */
+/* Mobile safe area adaptation */
 @supports (padding: max(0px)) {
   .mobile-safe-top {
     padding-top: max(20px, env(safe-area-inset-top));

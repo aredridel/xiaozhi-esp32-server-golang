@@ -10,8 +10,8 @@
               <el-icon><Avatar /></el-icon>
             </div>
             <div class="welcome-text">
-              <h1 class="welcome-title">欢迎回来！</h1>
-              <p class="welcome-subtitle">管理您的智能设备和AI助手</p>
+              <h1 class="welcome-title">Welcome Back!</h1>
+              <p class="welcome-subtitle">Manage your smart devices and AI assistants</p>
             </div>
           </div>
           <div class="quick-stats">
@@ -21,7 +21,7 @@
               </div>
               <div class="stat-info">
                 <div class="stat-number">{{ onlineDevicesCount }}</div>
-                <div class="stat-label">在线设备</div>
+                <div class="stat-label">Online Devices</div>
               </div>
             </div>
             <div class="stat-item agents">
@@ -30,7 +30,7 @@
               </div>
               <div class="stat-info">
                 <div class="stat-number">{{ agents.length }}</div>
-                <div class="stat-label">智能体</div>
+                <div class="stat-label">Agents</div>
               </div>
             </div>
             <div class="stat-item active">
@@ -39,7 +39,7 @@
               </div>
               <div class="stat-info">
                 <div class="stat-number">{{ activeAgentsCount }}</div>
-                <div class="stat-label">活跃助手</div>
+                <div class="stat-label">Active Assistants</div>
               </div>
             </div>
           </div>
@@ -54,13 +54,13 @@
         <div class="section-header">
           <div class="section-title">
             <el-icon class="title-icon"><Cpu /></el-icon>
-            <span>智能设备</span>
+            <span>Smart Devices</span>
             <span class="device-count">{{ allDevicesData.length }}</span>
           </div>
           <div class="action-buttons">
             <el-button type="success" @click="openInjectMessageDialog" class="add-btn">
               <el-icon><ChatDotRound /></el-icon>
-              消息注入
+              Message Injection
             </el-button>
             <el-button type="primary" @click="addDevice" class="add-btn">
               <el-icon><Plus /></el-icon>
@@ -74,11 +74,11 @@
             <div class="empty-icon">
               <el-icon><Monitor /></el-icon>
             </div>
-            <h3>还没有设备</h3>
-            <p>添加您的第一个智能设备，开始AI交互之旅</p>
+            <h3>No devices yet</h3>
+            <p>Add your first smart device to start your AI interaction journey</p>
             <el-button type="primary" size="large" @click="addDevice">
               <el-icon><Plus /></el-icon>
-              添加设备
+              Add Device
             </el-button>
           </div>
         </div>
@@ -88,7 +88,7 @@
             <div class="device-card">
               <div class="device-status">
                 <div class="status-indicator" :class="isDeviceOnline(device.last_active_at) ? 'online' : 'offline'"></div>
-                <span class="status-text">{{ isDeviceOnline(device.last_active_at) ? '在线' : '离线' }}</span>
+                <span class="status-text">{{ isDeviceOnline(device.last_active_at) ? 'Online' : 'Offline' }}</span>
               </div>
               
               <div class="device-info">
@@ -96,7 +96,7 @@
                   <el-icon><Monitor /></el-icon>
                 </div>
                 <div class="device-details">
-                  <h3 class="device-name">{{ device.device_name || '未命名设备' }}</h3>
+                  <h3 class="device-name">{{ device.device_name || 'Unnamed Device' }}</h3>
                   <p class="device-desc">{{ device.device_code }}</p>
                 </div>
               </div>

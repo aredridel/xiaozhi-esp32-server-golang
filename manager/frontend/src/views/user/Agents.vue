@@ -2,13 +2,13 @@
   <div class="agents-page">
     <div class="page-header">
       <div class="header-left">
-        <h2>我的智能体</h2>
-        <p class="page-subtitle">管理您的智能体配置</p>
+        <h2>My Agents</h2>
+        <p class="page-subtitle">Manage your agent configurations</p>
       </div>
       <div class="header-right">
         <el-button type="primary" @click="showAddAgentDialog = true">
               <el-icon><Plus /></el-icon>
-              添加智能体
+              Add Agent
             </el-button>
       </div>
     </div>
@@ -17,12 +17,12 @@
       <el-card class="welcome-card">
         <div class="welcome-content">
           <el-icon size="64" color="#409EFF"><Monitor /></el-icon>
-          <h3>欢迎使用智能体管理</h3>
-          <p>您还没有创建任何智能体。智能体是您的AI助手，可以帮助您处理各种任务。</p>
+          <h3>Welcome to Agent Management</h3>
+          <p>You haven't created any agents yet. Agents are your AI assistants that can help you with various tasks.</p>
           <div class="welcome-actions">
             <el-button type="primary" size="large" @click="showAddAgentDialog = true">
               <el-icon><Plus /></el-icon>
-              创建第一个智能体
+              Create First Agent
             </el-button>
           </div>
         </div>
@@ -38,25 +38,25 @@
             </div>
             <div class="agent-info">
               <h3 class="agent-name">{{ agent.name }}</h3>
-              <p class="agent-desc">智能助手</p>
+              <p class="agent-desc">AI Assistant</p>
             </div>
             <div class="agent-status">
               <span class="status-dot active"></span>
-              <span class="status-text">在线</span>
+              <span class="status-text">Online</span>
             </div>
           </div>
           
           <div class="agent-meta">
             <div class="meta-row">
-              <span class="meta-label">TTS配置</span>
+              <span class="meta-label">TTS Config</span>
               <span class="meta-value">{{ getVoiceType(agent) }}</span>
             </div>
             <div class="meta-row">
-              <span class="meta-label">语言模型</span>
+              <span class="meta-label">Language Model</span>
               <span class="meta-value">{{ getLLMProvider(agent) }}</span>
             </div>
             <div class="meta-row">
-              <span class="meta-label">最近对话</span>
+              <span class="meta-label">Last Conversation</span>
               <span class="meta-value">{{ formatDate(agent.updated_at) }}</span>
             </div>
           </div>
@@ -64,25 +64,25 @@
           <div class="agent-actions">
             <el-button type="primary" size="small" @click="editAgent(agent.id)">
               <el-icon><Setting /></el-icon>
-              配置
+              Config
             </el-button>
             <el-button size="small" @click="handleChatHistory(agent.id)">
               <el-icon><ChatDotRound /></el-icon>
-              对话
+              Chat
             </el-button>
             <el-button size="small" @click="handleManageDevices(agent.id)">
               <el-icon><Monitor /></el-icon>
-              设备
+              Devices
             </el-button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 添加设备弹窗 -->
+    <!-- Add Device Dialog -->
     <el-dialog
       v-model="showAddDeviceDialog"
-      title="添加设备"
+      title="Add Device"
       width="500px"
       class="device-dialog"
     >
@@ -92,30 +92,30 @@
         :rules="deviceRules"
         label-width="100px"
       >
-        <el-form-item label="设备激活码" prop="device_code">
+        <el-form-item label="Device Activation Code" prop="device_code">
           <el-input
             v-model="deviceForm.device_code"
-            placeholder="请输入设备激活码"
+            placeholder="Please enter device activation code"
           />
         </el-form-item>
-        <el-form-item label="设备名称" prop="device_name">
+        <el-form-item label="Device Name" prop="device_name">
           <el-input
             v-model="deviceForm.device_name"
-            placeholder="请输入设备名称"
+            placeholder="Please enter device name"
           />
         </el-form-item>
       </el-form>
       
       <template #footer>
-        <el-button @click="showAddDeviceDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleAddDevice">确定</el-button>
+        <el-button @click="showAddDeviceDialog = false">Cancel</el-button>
+        <el-button type="primary" @click="handleAddDevice">Confirm</el-button>
       </template>
     </el-dialog>
 
-    <!-- 添加智能体弹窗 -->
+    <!-- Add Agent Dialog -->
     <el-dialog
       v-model="showAddAgentDialog"
-      title="添加智能体"
+      title="Add Agent"
       width="500px"
       class="agent-dialog"
       :before-close="handleCloseAddAgent"
@@ -127,54 +127,54 @@
         size="large"
         label-width="100px"
       >
-        <el-form-item label="智能体名称" prop="name">
+        <el-form-item label="Agent Name" prop="name">
           <el-input
             v-model="agentForm.name"
-            placeholder="请输入智能体名称"
+            placeholder="Please enter agent name"
             size="large"
             :maxlength="50"
             show-word-limit
           />
         </el-form-item>
-        <el-form-item label="角色介绍" prop="custom_prompt">
+        <el-form-item label="Role Introduction" prop="custom_prompt">
           <el-input
             v-model="agentForm.custom_prompt"
             type="textarea"
             :rows="4"
-            placeholder="请输入角色介绍/系统提示词，这将影响AI的回答风格和个性"
+            placeholder="Please enter role introduction/system prompt, this will affect the AI's response style and personality"
             :maxlength="10000"
             show-word-limit
           />
         </el-form-item>
-        <el-form-item label="记忆模式" prop="memory_mode">
-          <el-select v-model="agentForm.memory_mode" placeholder="请选择记忆模式" style="width: 100%">
-            <el-option label="无记忆" value="none" />
-            <el-option label="短记忆" value="short" />
-            <el-option label="长记忆" value="long" />
+        <el-form-item label="Memory Mode" prop="memory_mode">
+          <el-select v-model="agentForm.memory_mode" placeholder="Please select memory mode" style="width: 100%">
+            <el-option label="No Memory" value="none" />
+            <el-option label="Short Memory" value="short" />
+            <el-option label="Long Memory" value="long" />
           </el-select>
         </el-form-item>
-        <el-form-item label="只允许声纹聊天" prop="speaker_chat_mode">
-          <el-select v-model="agentForm.speaker_chat_mode" placeholder="请选择声纹聊天限制" style="width: 100%">
-            <el-option label="关闭" value="off" />
-            <el-option label="仅命中声纹时允许聊天" value="identified_only" />
+        <el-form-item label="Voiceprint Chat Only" prop="speaker_chat_mode">
+          <el-select v-model="agentForm.speaker_chat_mode" placeholder="Please select voiceprint chat restriction" style="width: 100%">
+            <el-option label="Off" value="off" />
+            <el-option label="Only when voiceprint matched" value="identified_only" />
           </el-select>
         </el-form-item>
       </el-form>
       
       <template #footer>
         <div class="dialog-footer">
-          <el-button @click="handleCloseAddAgent" size="large">取消</el-button>
+          <el-button @click="handleCloseAddAgent" size="large">Cancel</el-button>
           <el-button type="primary" @click="handleAddAgent" :loading="adding" size="large">
-            确定
+            Confirm
           </el-button>
         </div>
       </template>
     </el-dialog>
 
-    <!-- 添加设备弹窗 -->
+    <!-- Add Device Dialog -->
     <el-dialog
       v-model="showAddDeviceDialog"
-      title="添加设备"
+      title="Add Device"
       width="400px"
       class="device-dialog"
       :before-close="handleCloseAddDevice"
@@ -183,7 +183,7 @@
         <div class="device-icon">
           <el-icon size="48"><Monitor /></el-icon>
         </div>
-        <p class="device-tip">请输入设备验证码</p>
+        <p class="device-tip">Please enter device verification code</p>
         <el-form
           ref="deviceFormRef"
           :model="deviceForm"
@@ -192,7 +192,7 @@
           <el-form-item prop="code">
             <el-input
               v-model="deviceForm.code"
-              placeholder="请输入6位验证码"
+              placeholder="Please enter 6-digit verification code"
               size="large"
               :maxlength="6"
               style="text-align: center; font-size: 18px; letter-spacing: 4px;"
@@ -203,26 +203,26 @@
       
       <template #footer>
         <div class="dialog-footer">
-          <el-button @click="handleCloseAddDevice" size="large">取消</el-button>
+          <el-button @click="handleCloseAddDevice" size="large">Cancel</el-button>
           <el-button type="primary" @click="handleAddDevice" :loading="addingDevice" size="large">
-            确定
+            Confirm
           </el-button>
         </div>
       </template>
     </el-dialog>
 
-    <!-- MCP接入点对话框 -->
+    <!-- MCP Endpoint Dialog -->
     <el-dialog
       v-model="showMCPDialog"
-      title="MCP接入点"
+      title="MCP Endpoint"
       width="700px"
       class="mcp-dialog"
     >
       <div v-loading="mcpLoading">
-        <!-- 工具列表区域 -->
+        <!-- Tools List Section -->
         <div class="mcp-tools-section">
           <div class="tools-header">
-            <div class="tools-title">MCP工具列表</div>
+            <div class="tools-title">MCP Tools List</div>
             <el-button 
               size="small" 
               type="primary" 
@@ -230,14 +230,14 @@
               :loading="toolsLoading"
             >
               <el-icon><Refresh /></el-icon>
-              刷新工具列表
+              Refresh Tools List
             </el-button>
           </div>
           
           <div class="tools-list">
             <div v-if="mcpTools.length === 0" class="tools-empty">
               <el-tag type="info" size="large" class="tool-tag">
-                暂无工具数据
+                No tools data available
               </el-tag>
             </div>
             
@@ -265,8 +265,8 @@
         </div>
 
         <el-alert
-          title="接入点信息"
-          description="这是智能体的MCP WebSocket接入点URL，可用于设备连接"
+          title="Endpoint Information"
+          description="This is the agent's MCP WebSocket endpoint URL, which can be used for device connections"
           type="info"
           :closable="false"
           show-icon
@@ -275,8 +275,8 @@
         
         <div class="mcp-endpoint-display">
           <div class="endpoint-header">
-            <div class="endpoint-label">MCP接入点URL：</div>
-            <el-button size="small" type="primary" @click="copyMCPEndpoint">复制URL</el-button>
+            <div class="endpoint-label">MCP Endpoint URL:</div>
+            <el-button size="small" type="primary" @click="copyMCPEndpoint">Copy URL</el-button>
           </div>
           <div class="endpoint-content">
             {{ mcpEndpointData.endpoint }}
@@ -285,21 +285,21 @@
 
         <el-divider />
         <el-form :model="mcpCallForm" label-width="90px">
-          <el-form-item label="工具">
-            <el-select v-model="mcpCallForm.tool_name" placeholder="请选择工具" style="width: 100%" @change="handleMcpToolChange">
+          <el-form-item label="Tool">
+            <el-select v-model="mcpCallForm.tool_name" placeholder="Please select tool" style="width: 100%" @change="handleMcpToolChange">
               <el-option v-for="tool in mcpTools" :key="tool.name" :label="tool.name" :value="tool.name" />
             </el-select>
           </el-form-item>
-          <el-form-item label="参数JSON">
-            <el-input v-model="mcpCallForm.argumentsText" type="textarea" :rows="6" placeholder='例如: {"query":"hello"}' />
+          <el-form-item label="Parameters JSON">
+            <el-input v-model="mcpCallForm.argumentsText" type="textarea" :rows="6" placeholder='e.g.: {"query":"hello"}' />
           </el-form-item>
         </el-form>
-        <el-button type="primary" @click="callAgentMcpTool" :loading="callingTool">调用工具</el-button>
-        <div class="mcp-result-box">{{ mcpCallResult || '暂无调用结果' }}</div>
+        <el-button type="primary" @click="callAgentMcpTool" :loading="callingTool">Call Tool</el-button>
+        <div class="mcp-result-box">{{ mcpCallResult || 'No call results yet' }}</div>
       </div>
       
       <template #footer>
-        <el-button @click="showMCPDialog = false">关闭</el-button>
+        <el-button @click="showMCPDialog = false">Close</el-button>
       </template>
     </el-dialog>
   </div>
@@ -323,14 +323,14 @@ const addingDevice = ref(false)
 const agentFormRef = ref()
 const deviceFormRef = ref()
 
-// MCP接入点相关
+// MCP endpoint related
 const showMCPDialog = ref(false)
 const mcpLoading = ref(false)
 const mcpEndpointData = ref({
   endpoint: ''
 })
 
-// MCP工具相关
+// MCP tools related
 const toolsLoading = ref(false)
 const mcpTools = ref([])
 const currentAgentId = ref(null)
@@ -344,28 +344,28 @@ const deviceForm = reactive({
 
 const agentForm = reactive({
   name: '',
-  custom_prompt: '我是一个叫{{assistant_name}}的台湾女孩，说话机车，声音好听，习惯简短表达，爱用网络梗。\n我的男朋友是一个程序员，梦想是开发出一个机器人，能够帮助人们解决生活中的各种问题。\n我是一个喜欢哈哈大笑的女孩，爱东说西说吹牛，不合逻辑的也照吹，就要逗别人开心。',
+  custom_prompt: 'I am a Taiwanese girl named {{assistant_name}}, I speak with a cute accent, have a nice voice, prefer brief expressions, and love using internet slang.\nMy boyfriend is a programmer who dreams of developing a robot that can help people solve various problems in life.\nI am a girl who loves to laugh out loud, likes to chat and brag about anything, even illogical things, just to make others happy.',
   memory_mode: 'short',
   speaker_chat_mode: 'off'
 })
 
 const deviceRules = {
   code: [
-    { required: true, message: '请输入设备验证码', trigger: 'blur' },
-    { len: 6, message: '验证码长度为6位', trigger: 'blur' }
+    { required: true, message: 'Please enter device verification code', trigger: 'blur' },
+    { len: 6, message: 'Verification code must be 6 digits', trigger: 'blur' }
   ]
 }
 
 const agentRules = {
   name: [
-    { required: true, message: '请输入智能体名称', trigger: 'blur' },
-    { min: 2, max: 50, message: '长度在 2 到 50 个字符', trigger: 'blur' }
+    { required: true, message: 'Please enter agent name', trigger: 'blur' },
+    { min: 2, max: 50, message: 'Length must be between 2 and 50 characters', trigger: 'blur' }
   ],
   memory_mode: [
-    { required: true, message: '请选择记忆模式', trigger: 'change' }
+    { required: true, message: 'Please select memory mode', trigger: 'change' }
   ],
   speaker_chat_mode: [
-    { required: true, message: '请选择声纹聊天限制', trigger: 'change' }
+    { required: true, message: 'Please select voiceprint chat restriction', trigger: 'change' }
   ]
 }
 
@@ -373,15 +373,15 @@ const loadAgents = async () => {
   try {
     const response = await api.get('/user/agents')
     agents.value = response.data.data || []
-    console.log('智能体列表数据:', agents.value)
-    // 检查第一个智能体的数据结构
+    console.log('Agent list data:', agents.value)
+    // Check the data structure of the first agent
     if (agents.value.length > 0) {
-      console.log('第一个智能体数据:', agents.value[0])
-      console.log('LLM配置:', agents.value[0].llm_config)
-      console.log('TTS配置:', agents.value[0].tts_config)
+      console.log('First agent data:', agents.value[0])
+      console.log('LLM config:', agents.value[0].llm_config)
+      console.log('TTS config:', agents.value[0].tts_config)
     }
   } catch (error) {
-    ElMessage.error('加载智能体列表失败')
+    ElMessage.error('Failed to load agent list')
   }
 }
 
@@ -392,7 +392,7 @@ const handleAddAgent = async () => {
     await agentFormRef.value.validate()
     adding.value = true
     
-    // 获取默认配置
+    // Get default configs
     const [llmResponse, ttsResponse] = await Promise.all([
       api.get('/user/llm-configs'),
       api.get('/user/tts-configs')
@@ -401,7 +401,7 @@ const handleAddAgent = async () => {
     const llmConfigs = llmResponse.data.data || []
     const ttsConfigs = ttsResponse.data.data || []
     
-    // 寻找默认配置
+    // Find default configs
     const defaultLlmConfig = llmConfigs.find(config => config.is_default)
     const defaultTtsConfig = ttsConfigs.find(config => config.is_default)
     
@@ -412,7 +412,7 @@ const handleAddAgent = async () => {
       speaker_chat_mode: agentForm.speaker_chat_mode
     }
     
-    // 如果有默认配置，自动应用
+    // Apply default configs if available
     if (defaultLlmConfig) {
       agentData.llm_config_id = defaultLlmConfig.config_id
     }
@@ -423,13 +423,13 @@ const handleAddAgent = async () => {
     const response = await api.post('/user/agents', agentData)
     
     if (response.data.success) {
-      ElMessage.success('智能体添加成功')
-      handleCloseAddAgent() // 使用统一的关闭方法
-      await loadAgents() // 等待加载完成
+      ElMessage.success('Agent added successfully')
+      handleCloseAddAgent() // Use unified close method
+      await loadAgents() // Wait for loading to complete
     }
   } catch (error) {
-    console.error('添加智能体失败:', error)
-    ElMessage.error('添加智能体失败')
+    console.error('Failed to add agent:', error)
+    ElMessage.error('Failed to add agent')
   } finally {
     adding.value = false
   }
@@ -447,14 +447,14 @@ const handleAddDevice = async () => {
     })
     
     if (response.data.success) {
-      ElMessage.success('设备添加成功')
+      ElMessage.success('Device added successfully')
       showAddDeviceDialog.value = false
       Object.assign(deviceForm, { code: '' })
-      // 可以在这里刷新设备列表或其他相关操作
+      // Can refresh device list or perform other related operations here
     }
   } catch (error) {
-    console.error('添加设备失败:', error)
-    ElMessage.error('添加设备失败')
+    console.error('Failed to add device:', error)
+    ElMessage.error('Failed to add device')
   } finally {
     addingDevice.value = false
   }
@@ -467,7 +467,7 @@ const handleCloseAddAgent = () => {
   }
   Object.assign(agentForm, { 
     name: '',
-    custom_prompt: '我是一个叫{{assistant_name}}的台湾女孩，说话机车，声音好听，习惯简短表达，爱用网络梗。\n我的男朋友是一个程序员，梦想是开发出一个机器人，能够帮助人们解决生活中的各种问题。\n我是一个喜欢哈哈大笑的女孩，爱东说西说吹牛，不合逻辑的也照吹，就要逗别人开心。',
+    custom_prompt: 'I am a Taiwanese girl named {{assistant_name}}, I speak with a cute accent, have a nice voice, prefer brief expressions, and love using internet slang.\nMy boyfriend is a programmer who dreams of developing a robot that can help people solve various problems in life.\nI am a girl who loves to laugh out loud, likes to chat and brag about anything, even illogical things, just to make others happy.',
     memory_mode: 'short',
     speaker_chat_mode: 'off'
   })
@@ -486,7 +486,7 @@ const editAgent = (id) => {
 }
 
 const handleVoiceRecognition = (id) => {
-  ElMessage.info('声效识别功能开发中')
+  ElMessage.info('Voice recognition feature is under development')
 }
 
 const handleChatHistory = (id) => {
@@ -502,7 +502,7 @@ const getVoiceType = (agent) => {
   if (agent.tts_config && agent.tts_config.name) {
     return agent.tts_config.name
   }
-  return '未设置'
+  return 'Not Set'
 }
 
 const getLLMProvider = (agent) => {
@@ -510,14 +510,14 @@ const getLLMProvider = (agent) => {
   if (agent.llm_config && agent.llm_config.name) {
     return agent.llm_config.name
   }
-  return '未设置'
+  return 'Not Set'
 }
 
 const formatDate = (dateString) => {
   return new Date(dateString).toLocaleString('zh-CN')
 }
 
-// 显示MCP接入点
+// Show MCP endpoint
 const showMCPEndpoint = async (agent) => {
   showMCPDialog.value = true
   mcpLoading.value = true
@@ -529,10 +529,10 @@ const showMCPEndpoint = async (agent) => {
     const response = await api.get(`/user/agents/${agent.id}/mcp-endpoint`)
     mcpEndpointData.value = response.data.data
     
-    // 自动刷新工具列表
+    // Auto refresh tools list
     await refreshMcpTools()
   } catch (error) {
-    ElMessage.error('获取MCP接入点失败')
+    ElMessage.error('Failed to get MCP endpoint')
     console.error('Error getting MCP endpoint:', error)
     showMCPDialog.value = false
   } finally {
@@ -540,10 +540,10 @@ const showMCPEndpoint = async (agent) => {
   }
 }
 
-// 刷新MCP工具列表
+// Refresh MCP tools list
 const refreshMcpTools = async () => {
   if (!currentAgentId.value) {
-    ElMessage.warning('未选择智能体')
+    ElMessage.warning('No agent selected')
     return
   }
   
@@ -558,13 +558,13 @@ const refreshMcpTools = async () => {
         }
         updateMcpExampleByTool(mcpCallForm.value.tool_name)
       }
-      ElMessage.success(`成功获取 ${mcpTools.value.length} 个工具`)
+      ElMessage.success(`Successfully retrieved ${mcpTools.value.length} tools`)
     } else {
       mcpTools.value = []
-      ElMessage.info('未找到工具数据')
+      ElMessage.info('No tools data found')
     }
   } catch (error) {
-    ElMessage.error('获取工具列表失败: ' + (error.response?.data?.error || error.message))
+    ElMessage.error('Failed to get tools list: ' + (error.response?.data?.error || error.message))
     console.error('Error refreshing MCP tools:', error)
     mcpTools.value = []
   } finally {
@@ -676,7 +676,7 @@ const formatMcpCallResult = (payload) => {
 
 const callAgentMcpTool = async () => {
   if (!currentAgentId.value || !mcpCallForm.value.tool_name) {
-    ElMessage.warning('请选择工具')
+    ElMessage.warning('Please select a tool')
     return
   }
 
@@ -684,7 +684,7 @@ const callAgentMcpTool = async () => {
   try {
     argumentsObj = mcpCallForm.value.argumentsText ? JSON.parse(mcpCallForm.value.argumentsText) : {}
   } catch (e) {
-    ElMessage.error('参数JSON格式错误')
+    ElMessage.error('Invalid JSON format for parameters')
     return
   }
 
@@ -695,22 +695,22 @@ const callAgentMcpTool = async () => {
       arguments: argumentsObj
     })
     mcpCallResult.value = formatMcpCallResult(response.data.data || {})
-    ElMessage.success('MCP工具调用成功')
+    ElMessage.success('MCP tool called successfully')
   } catch (error) {
     mcpCallResult.value = JSON.stringify(error.response?.data || { error: error.message }, null, 2)
-    ElMessage.error('MCP工具调用失败')
+    ElMessage.error('Failed to call MCP tool')
   } finally {
     callingTool.value = false
   }
 }
 
-// 复制MCP接入点URL
+// Copy MCP endpoint URL
 const copyMCPEndpoint = async () => {
   try {
     await navigator.clipboard.writeText(mcpEndpointData.value.endpoint)
-    ElMessage.success('MCP接入点URL已复制到剪贴板')
+    ElMessage.success('MCP endpoint URL copied to clipboard')
   } catch (error) {
-    ElMessage.error('复制失败')
+    ElMessage.error('Copy failed')
     console.error('Error copying to clipboard:', error)
   }
 }
@@ -979,7 +979,7 @@ onMounted(() => {
   justify-content: center;
 }
 
-/* MCP接入点相关样式 */
+/* MCP endpoint related styles */
 .mcp-result-box {
   margin-top: 12px;
   white-space: pre-wrap;

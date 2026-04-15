@@ -1,40 +1,40 @@
-# 小智服务 Linux 使用说明
+# Xiaozhi Service Linux Usage Instructions
 
-欢迎使用小智服务 Linux aio 包。本文档包含依赖安装、启动和配置说明。
+Welcome to use Xiaozhi Service Linux aio package. This document contains dependency installation, startup and configuration instructions.
 
-## 目录结构
+## Directory Structure
 
 ```
 xiaozhi_server-linux-amd64-<version>/
-├── xiaozhi_server              # 主程序
+├── xiaozhi_server              # Main program
 ├── ten-vad/
 │   └── lib/Linux/x64/
-│       ├── libten_vad.so       # VAD 依赖库
+│       ├── libten_vad.so       # VAD dependency library
 │       ├── libsherpa-onnx-c-api.so
 │       ├── libsherpa-onnx-cxx-api.so
-│       └── libonnxruntime.so   # ONNX Runtime 依赖库
-├── main_config.yaml            # 主配置文件
-├── manager.json                # 管理后台配置
-├── asr_server.json             # ASR 服务配置
-├── models/                     # 模型文件目录
-├── data/                       # 数据目录
-└── logs/                       # 日志目录
+│       └── libonnxruntime.so   # ONNX Runtime dependency library
+├── main_config.yaml            # Main configuration file
+├── manager.json                # Management backend configuration
+├── asr_server.json             # ASR service configuration
+├── models/                     # Model files directory
+├── data/                       # Data directory
+└── logs/                       # Log directory
 ```
 
-## 运行依赖
+## Runtime Dependencies
 
-### 系统要求
+### System Requirements
 
-| 系统 | 最低版本 | 测试状态 |
+| System | Minimum Version | Test Status |
 |------|----------|----------|
-| Ubuntu | 18.04 LTS | ✅ 已测试 |
-| Debian | 10 (Buster) | ⚠️ 预期兼容，未测试 |
-| CentOS / RHEL | 8 | ⚠️ 预期兼容，未测试 |
+| Ubuntu | 18.04 LTS | Tested |
+| Debian | 10 (Buster) | Expected compatible, not tested |
+| CentOS / RHEL | 8 | Expected compatible, not tested |
 
-**运行时要求**：
-- **架构**：x86_64 (amd64)
+**Runtime Requirements**:
+- **Architecture**: x86_64 (amd64)
 
-### 安装依赖
+### Install Dependencies
 
 #### Debian / Ubuntu
 
@@ -47,84 +47,84 @@ sudo apt install -y libc++1 libc++abi1
 
 ```bash
 sudo dnf install -y libcxx libcxxabi
-# 或
+# Or
 sudo yum install -y libcxx libcxxabi
 ```
 
-#### 其他发行版
+#### Other Distributions
 
-请安装以下库的对应包：
-- `libc++.so.1` — LLVM C++ 标准库
+Please install corresponding packages for the following libraries:
+- `libc++.so.1` — LLVM C++ Standard Library
 - `libc++abi.so.1` — LLVM C++ ABI
 
-## 快速启动
+## Quick Start
 
 ```bash
-# 添加执行权限
+# Add execution permission
 chmod +x xiaozhi_server
 
-# 启动服务
+# Start service
 ./xiaozhi_server
 ```
 
-### 后台运行
+### Background Run
 
-使用 nohup：
+Use nohup:
 
 ```bash
 nohup ./xiaozhi_server > logs/output.log 2>&1 &
 ```
 
-或使用 systemd（推荐生产环境），见下文。
+Or use systemd (recommended for production environment), see below.
 
-## 端口与服务
+## Ports and Services
 
-| 端口 | 配置来源 | 说明 |
+| Port | Configuration Source | Description |
 |------|----------|------|
-| **8080** | `manager.json` → `server.port` | **管理后台**：Web 控制台 + HTTP API |
-| **8989** | `main_config.yaml` → `websocket.port` | **主服务 WebSocket**：设备/客户端连接 |
-| **9000** | `asr_server.json` → `server.port` | **ASR/声纹服务**：语音识别内部接口 |
-| **2883** | 控制台配置 | **MQTT 服务**：设备 MQTT 连接 |
-| **8990** | 控制台配置 | **UDP 服务**：设备 UDP 通信 |
-| **6060** | 控制台配置 | **pprof**：性能分析（默认关闭） |
+| **8080** | `manager.json` → `server.port` | **Management Backend**: Web console + HTTP API |
+| **8989** | `main_config.yaml` → `websocket.port` | **Main Service WebSocket**: Device/Client connection |
+| **9000** | `asr_server.json` → `server.port` | **ASR/Speaker ID Service**: Speech recognition internal interface |
+| **2883** | Console configuration | **MQTT Service**: Device MQTT connection |
+| **8990** | Console configuration | **UDP Service**: Device UDP communication |
+| **6060** | Console configuration | **pprof**: Performance analysis (default off) |
 
-## 访问地址
+## Access Addresses
 
-### 管理后台
+### Management Backend
 
-- **本地访问**：`http://localhost:8080/`
-- **局域网访问**：`http://<服务器IP>:8080/`
+- **Local Access**: `http://localhost:8080/`
+- **LAN Access**: `http://<Server IP>:8080/`
 
-### 设备/客户端连接
+### Device/Client Connection
 
-- **WebSocket**：`ws://<服务器IP>:8989/`
-- **MQTT**：`<服务器IP>:2883`
-- **UDP**：`<服务器IP>:8990`
+- **WebSocket**: `ws://<Server IP>:8989/`
+- **MQTT**: `<Server IP>:2883`
+- **UDP**: `<Server IP>:8990`
 
-## 修改配置
+## Modify Configuration
 
-### 需在配置文件中修改的端口
+### Ports to Modify in Configuration Files
 
-以下端口修改后需重启服务生效：
+The following ports take effect after service restart:
 
-| 端口 | 配置文件 | 配置项 |
+| Port | Configuration File | Configuration Item |
 |------|----------|--------|
 | 8080 | `manager.json` | `server.port` |
 | 8989 | `main_config.yaml` | `websocket.port` |
 | 9000 | `asr_server.json` | `server.port` |
 
-### 控制台配置
+### Console Configuration
 
-以下端口及所有其他配置通过管理后台控制台进行变更：
+The following ports and all other configurations are changed through the management backend console:
 
-- **端口配置**：MQTT (2883)、UDP (8990)、pprof (6060)
-- **功能配置**：LLM、TTS、ASR、声纹识别等
-- 访问 `http://localhost:8080/` 进入管理后台
-- 配置变更实时生效，无需重启服务
+- **Port Configuration**: MQTT (2883), UDP (8990), pprof (6060)
+- **Function Configuration**: LLM, TTS, ASR, Speaker Identification, etc.
+- Access `http://localhost:8080/` to enter management backend
+- Configuration changes take effect in real-time, no service restart needed
 
-## 生产环境部署（systemd）
+## Production Environment Deployment (systemd)
 
-创建服务文件 `/etc/systemd/system/xiaozhi.service`：
+Create service file `/etc/systemd/system/xiaozhi.service`:
 
 ```ini
 [Unit]
@@ -143,32 +143,32 @@ RestartSec=3
 WantedBy=multi-user.target
 ```
 
-启动服务：
+Start service:
 
 ```bash
-# 重载配置
+# Reload configuration
 sudo systemctl daemon-reload
 
-# 启用开机自启
+# Enable auto-start on boot
 sudo systemctl enable xiaozhi
 
-# 启动服务
+# Start service
 sudo systemctl start xiaozhi
 
-# 查看状态
+# View status
 sudo systemctl status xiaozhi
 
-# 查看日志
+# View logs
 sudo journalctl -u xiaozhi -f
 ```
 
-## 防火墙配置
+## Firewall Configuration
 
-如果服务器启用了防火墙，需要开放相应端口：
+If server has firewall enabled, need to open corresponding ports:
 
 ```bash
 # Ubuntu/Debian (ufw)
-sudo ufw allow 8080/tcp  # 管理后台
+sudo ufw allow 8080/tcp  # Management backend
 sudo ufw allow 8989/tcp  # WebSocket
 sudo ufw allow 2883/tcp  # MQTT
 sudo ufw allow 8990/udp  # UDP
@@ -181,32 +181,32 @@ sudo firewall-cmd --permanent --add-port=8990/udp
 sudo firewall-cmd --reload
 ```
 
-## 常见问题
+## FAQ
 
-### 提示缺少共享库
+### Prompt for Missing Shared Library
 
-使用 `ldd` 命令检查缺失的库：
+Use `ldd` command to check missing libraries:
 
 ```bash
 ldd xiaozhi_server
 ldd ten-vad/lib/Linux/x64/libten_vad.so
 ```
 
-根据输出安装对应的系统包。
+Install corresponding system packages according to output.
 
-### glibc 版本过低
+### glibc Version Too Low
 
-如果出现 `version 'GLIBC_2.xx' not found`，说明系统 glibc 版本过旧。建议：
-- 升级系统到较新版本
-- 或使用 Docker 容器运行
+If `version 'GLIBC_2.xx' not found` appears, it means system glibc version is too old. Suggest:
+- Upgrade system to newer version
+- Or run using Docker container
 
-### 端口被占用
+### Port Occupied
 
 ```bash
-# 查看端口占用
-sudo lsof -i :端口号
-# 或
-sudo netstat -tulpn | grep 端口号
+# View port occupancy
+sudo lsof -i :port_number
+# Or
+sudo netstat -tulpn | grep port_number
 
-# 修改配置文件中的端口号或结束占用进程
+# Modify port number in configuration file or end occupying process
 ```

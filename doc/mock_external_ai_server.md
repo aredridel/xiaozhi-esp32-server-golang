@@ -1,99 +1,99 @@
-# 独立 Mock ASR/LLM/TTS 服务（不改主程序）
+# Standalone Mock ASR/LLM/TTS Service (No Main Program Changes)
 
-本方案提供一个**独立运行**的 mock 服务进程，用于在压测时替代真实 ASR/LLM/TTS 云服务。
+This solution provides a **standalone** mock service process for replacing real ASR/LLM/TTS cloud services during load testing.
 
-## 1. 启动
+## 1. Startup
 
 ```bash
 go run ./cmd/mock_ai_server \
   -addr :18080 \
-  -asr-text "你好，这是压测mock识别结果" \
-  -llm-reply "这是mock llm回复" \
+  -asr-text "Hello, this is load test mock recognition result" \
+  -llm-reply "This is mock llm reply" \
   -tts-mode silence
 ```
 
-健康检查：
+Health check:
 
 ```bash
 curl http://127.0.0.1:18080/healthz
 ```
 
-## 2. 暴露接口
+## 2. Exposed Interfaces
 
 - `ws://127.0.0.1:18080/asr/`
-  - 兼容 FunASR 风格 ws 输入（接收音频二进制帧）
-  - 收到 `{"is_speaking": false}` 后返回最终识别结果
+  - Compatible with FunASR style ws input (receives audio binary frames)
+  - Returns final recognition result after receiving `{"is_speaking": false}`
 
 - `POST http://127.0.0.1:18080/v1/chat/completions`
-  - OpenAI Chat Completions 兼容接口
-  - 支持 `stream=false/true`
+  - OpenAI Chat Completions compatible interface
+  - Supports `stream=false/true`
 
 - `POST http://127.0.0.1:18080/v1/audio/speech`
-  - OpenAI TTS 兼容接口
-  - 返回 `audio/wav`（静音或beep）
+  - OpenAI TTS compatible interface
+  - Returns `audio/wav` (silence or beep)
 
-## 3. 主程序配置建议（仅改配置，不改代码）
+## 3. Main Program Configuration Suggestions (Configuration Only, No Code Changes)
 
-### ASR（FunASR）
+### ASR (FunASR)
 
 - `host=127.0.0.1`
 - `port=18080`
-- 协议路径按当前实现使用 `ws://host:port/`，若你的配置层要求路径，请使用 `/asr/`。
+- Protocol path uses `ws://host:port/` as per current implementation. If your configuration layer requires a path, please use `/asr/`.
 
-> 如果你当前 ASR 适配器强依赖 `ws://host:port/` 根路径，也可以在网关层把 `/` 转发到 `/asr/`。
+> If your current ASR adapter strongly depends on `ws://host:port/` root path, you can also forward `/` to `/asr/` at the gateway layer.
 
-### LLM（OpenAI 兼容）
+### LLM (OpenAI Compatible)
 
-- provider 选择 `eino`（`type=openai`）
+- provider select `eino` (`type=openai`)
 - `base_url=http://127.0.0.1:18080/v1`
-- `api_key` 任意非空值
-- `model_name` 任意值（例如 `mock-gpt`）
+- `api_key` any non-empty value
+- `model_name` any value (e.g., `mock-gpt`)
 
-### TTS（OpenAI 兼容）
+### TTS (OpenAI Compatible)
 
-- provider 选择 `openai`
+- provider select `openai`
 - `api_url=http://127.0.0.1:18080/v1/audio/speech`
 - `response_format=wav`
-- `api_key` 任意非空值
+- `api_key` any non-empty value
 
-## 4. 可调参数
+## 4. Adjustable Parameters
 
 ```bash
--asr-delay-ms         # ASR最终返回延迟
--llm-first-delay-ms   # LLM首token延迟
--llm-chunk-delay-ms   # LLM流式chunk间延迟
--tts-first-delay-ms   # TTS首包延迟
+-asr-delay-ms         # ASR final return delay
+-llm-first-delay-ms   # LLM first token delay
+-llm-chunk-delay-ms   # LLM streaming chunk interval delay
+-tts-first-delay-ms   # TTS first packet delay
 -tts-mode             # silence|beep
--tts-duration-ms      # 返回音频时长
+-tts-duration-ms      # Returned audio duration
 ```
 
-## 5. 压测建议
+## 5. Load Testing Recommendations
 
-1. 先本地单连接验通（确保设备能走完整链路并收到音频）。
-2. 再用 `ws_multi` 做并发阶梯（如 50/100/200/500）。
-3. 用不同 delay 组合模拟真实外部依赖波动，观测 P95/P99 与错误率。
+1. First verify single connection locally (ensure device can go through complete chain and receive audio).
+2. Then use `ws_multi` for concurrent step testing (e.g., 50/100/200/500).
+3. Use different delay combinations to simulate real external dependency fluctuations, observe P95/P99 and error rates.
 
 
-## 6. ws_multi 是否需要更改优化（评估）
+## 6. ws_multi Optimization Assessment (Evaluation)
 
-结论：**建议做小幅优化，非必须重构**。当前可直接用于压测，但为了更真实衡量“主服务性能”而不是“压测客户端瓶颈”，建议补以下能力：
+Conclusion: **Recommend minor optimization, not mandatory refactoring**. Currently can be directly used for load testing, but to more accurately measure "main service performance" rather than "load test client bottleneck", suggest adding the following capabilities:
 
-1. **增加纯音频回放模式（推荐优先）**
-   - 现在常见做法是先本地TTS再推音频，这会把客户端TTS耗时混进结果。
-   - 建议加 `-audio_file`/`-audio_dir`，直接发送预编码opus或wav转opus后的帧。
+1. **Add pure audio playback mode (recommended priority)**
+   - Current common practice is to do local TTS first then push audio, which mixes client TTS time into results.
+   - Suggest adding `-audio_file`/`-audio_dir`, directly send pre-encoded opus or wav-to-opus frames.
 
-2. **延迟统计结构化输出**
-   - 增加首帧RT、全链路完成RT、错误码分类统计。
-   - 建议输出 JSONL，便于后处理聚合 P95/P99。
+2. **Structured latency statistics output**
+   - Add first frame RT, full chain completion RT, error code classification statistics.
+   - Suggest outputting JSONL for easy post-processing aggregation of P95/P99.
 
-3. **连接与发送节流控制**
-   - 增加分批建连（例如每秒启动N个客户端），避免瞬时建连放大客户端侧抖动。
-   - 增加发包抖动参数，模拟真实设备网络。
+3. **Connection and send throttling control**
+   - Add batch connection establishment (e.g., start N clients per second), avoid instantaneous connection amplification causing client-side jitter.
+   - Add packet sending jitter parameters to simulate real device networks.
 
-4. **失败重试与超时策略可配置**
-   - 如 `-dial_timeout`、`-read_timeout`、`-retry`，提升长压测稳定性。
+4. **Configurable failure retry and timeout strategy**
+   - Such as `-dial_timeout`, `-read_timeout`, `-retry`, improve long load test stability.
 
-5. **资源指标采集（可选）**
-   - 记录客户端自身CPU/内存，便于区分“服务端瓶颈”与“压测机瓶颈”。
+5. **Resource metrics collection (optional)**
+   - Record client-side CPU/memory, facilitate distinguishing "server bottleneck" from "load test machine bottleneck".
 
-在你这个“独立mock服务”方案下，`ws_multi` **不改也能跑**，但建议至少做第1和第2项，压测结论会明显更可信。
+Under this "standalone mock service" solution, `ws_multi` **can run without changes**, but suggest at least doing items 1 and 2, load test conclusions will be significantly more credible.

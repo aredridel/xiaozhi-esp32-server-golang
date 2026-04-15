@@ -1,48 +1,48 @@
-# IndexTTS vLLM 接口对接说明
+# IndexTTS vLLM Interface Integration Documentation
 
-本文档用于说明本项目接入 `indextts_vllm` 时对服务端接口的要求，适用于：
+This document is used to explain the interface requirements for this project's access to `indextts_vllm`, applicable to:
 
-- 主程序 TTS 推理（`/audio/speech`）
-- 管理员界面拉取音色（`/audio/voices`）
-- 用户声音复刻（`/audio/clone`，用于本项目复刻流程）
+- Main program TTS inference (`/audio/speech`)
+- Administrator interface pulling voices (`/audio/voices`)
+- User voice cloning (`/audio/clone`, used for this project's cloning process)
 
-## 1. 快速兼容清单
+## 1. Quick Compatibility Checklist
 
-你的 IndexTTS 服务至少需要满足以下三点：
+Your IndexTTS service needs to meet at least the following three points:
 
-- 提供 `POST /audio/speech`，入参兼容 OpenAI TTS 风格：`input`、`voice`、`model`
-- 提供 `GET /audio/voices`，返回可枚举音色列表（JSON 对象）
-- 若使用本项目“声音复刻”能力，提供 `POST /audio/clone`（`multipart/form-data`）
+- Provide `POST /audio/speech`, input parameters compatible with OpenAI TTS style: `input`, `voice`, `model`
+- Provide `GET /audio/voices`, return enumerable voice list (JSON object)
+- If using this project's "voice cloning" capability, provide `POST /audio/clone` (`multipart/form-data`)
 
-推荐返回音频格式：`audio/wav`（16-bit PCM）。
+Recommended return audio format: `audio/wav` (16-bit PCM).
 
-## 2. 配置项映射（管理员 -> TTS配置 -> IndexTTS(vLLM)）
+## 2. Configuration Item Mapping (Administrator -> TTS Configuration -> IndexTTS(vLLM))
 
-| 管理端字段 | 用途 | 发送位置 |
+| Admin Field | Purpose | Send Location |
 | --- | --- | --- |
-| `api_url` | IndexTTS 服务地址 | 作为基础 URL，拼接端点 |
-| `api_key` | 可选鉴权 | `Authorization: Bearer <api_key>` |
-| `model` | 模型名 | `/audio/speech` 请求体 `model` |
-| `voice` | 默认音色 | `/audio/speech` 请求体 `voice` |
-| `frame_duration` | 帧时长（ms） | 本地音频切帧参数 |
+| `api_url` | IndexTTS service address | As base URL, concatenate endpoints |
+| `api_key` | Optional auth | `Authorization: Bearer <api_key>` |
+| `model` | Model name | `/audio/speech` request body `model` |
+| `voice` | Default voice | `/audio/speech` request body `voice` |
+| `frame_duration` | Frame duration (ms) | Local audio frame segmentation parameter |
 
-说明：
+Description:
 
-- 管理员界面在点击“音色”下拉时，会使用当前输入框里的最新 `api_url` 拉取 `/audio/voices`。
-- `api_url` 支持填写基础地址（如 `http://127.0.0.1:7860`），也兼容填写到具体路径（如 `/audio/speech`）。
+- When administrator interface clicks "Voice" dropdown, it will use the latest `api_url` in the current input box to pull `/audio/voices`.
+- `api_url` supports filling in base address (e.g., `http://127.0.0.1:7860`), also compatible with filling in to specific path (e.g., `/audio/speech`).
 
-## 3. 接口要求
+## 3. Interface Requirements
 
 ### 3.1 `GET /audio/voices`
 
-用途：管理员配置页“音色”下拉、用户侧音色选项。
+Purpose: Administrator configuration page "Voice" dropdown, user-side voice options.
 
-请求头：
+Request headers:
 
 - `Accept: application/json`
-- `Authorization: Bearer <api_key>`（可选）
+- `Authorization: Bearer <api_key>` (optional)
 
-返回示例（推荐）：
+Return example (recommended):
 
 ```json
 {
@@ -51,48 +51,48 @@
 }
 ```
 
-要求：
+Requirements:
 
-- 返回类型建议为 JSON 对象（键名会被当作音色 ID）。
-- 本项目会过滤掉前缀为 `indextts_vllm` 的系统音色，再追加用户复刻音色。
+- Return type recommended to be JSON object (key names will be used as voice IDs).
+- This project will filter out system voices prefixed with `indextts_vllm`, then append user cloned voices.
 
 ### 3.2 `POST /audio/speech`
 
-用途：主程序 TTS 合成、复刻后试听。
+Purpose: Main program TTS synthesis, post-cloning preview.
 
-请求头：
+Request headers:
 
 - `Content-Type: application/json`
 - `Accept: audio/wav,application/octet-stream,*/*`
-- `Authorization: Bearer <api_key>`（可选）
+- `Authorization: Bearer <api_key>` (optional)
 
-请求体示例：
+Request body example:
 
 ```json
 {
   "model": "indextts-vllm",
-  "input": "你好，欢迎使用 IndexTTS。",
+  "input": "Hello, welcome to use IndexTTS.",
   "voice": "demo_speaker"
 }
 ```
 
-返回：
+Return:
 
-- 成功：二进制音频流（建议 `audio/wav`）
-- 失败：HTTP 4xx/5xx，并返回可读错误信息
+- Success: Binary audio stream (recommended `audio/wav`)
+- Failure: HTTP 4xx/5xx, and return readable error message
 
-### 3.3 `POST /audio/clone`（本项目复刻功能需要）
+### 3.3 `POST /audio/clone` (Required for this project's cloning feature)
 
-用途：`/user/voice-clones` 提交复刻任务时调用。
+Purpose: Called when `/user/voice-clones` submits cloning task.
 
-请求类型：`multipart/form-data`
+Request type: `multipart/form-data`
 
-表单字段：
+Form fields:
 
-- `voice`：期望生成的音色 ID
-- `audio`：参考音频文件（wav/mp3/m4a 等）
+- `voice`: Desired generated voice ID
+- `audio`: Reference audio file (wav/mp3/m4a, etc.)
 
-返回示例：
+Return example:
 
 ```json
 {
@@ -101,42 +101,42 @@
 }
 ```
 
-要求：
+Requirements:
 
-- 建议响应中包含 `voice` 字段；若缺失，本项目会回退使用请求中的 `voice` 字段值。
+- Recommended to include `voice` field in response; if missing, this project will fall back to using the `voice` field value from the request.
 
-## 4. 兼容参考（api_server.py）
+## 4. Compatibility Reference (api_server.py)
 
-可参考以下实现风格：
+Can refer to the following implementation style:
 
-- `POST /audio/speech`：读取 `input`、`voice`、`model`
-- `GET /audio/voices`：返回可用音色字典
+- `POST /audio/speech`: Read `input`, `voice`, `model`
+- `GET /audio/voices`: Return available voice dictionary
 
-参考链接：
+Reference link:
 
 - https://github.com/hackers365/index-tts-vllm/blob/master/api_server.py
 
-## 5. 常见问题排查
+## 5. FAQ Troubleshooting
 
-### 5.1 管理端点击音色下拉报错
+### 5.1 Administrator clicks voice dropdown and reports error
 
-优先检查：
+Priority check:
 
-- `api_url` 是否可达（最新输入值）
-- `/audio/voices` 是否返回 JSON 对象
-- 是否需要 `api_key`
+- Whether `api_url` is reachable (latest input value)
+- Whether `/audio/voices` returns JSON object
+- Whether `api_key` is needed
 
-### 5.2 合成成功但播放异常
+### 5.2 Synthesis successful but playback abnormal
 
-优先检查：
+Priority check:
 
-- 服务端是否返回标准 WAV（PCM16、采样率正确）
-- 中间链路是否有转码或截断
-- 响应头 `Content-Type` 是否正确
+- Whether server returns standard WAV (PCM16, correct sample rate)
+- Whether there is transcoding or truncation in intermediate link
+- Whether response header `Content-Type` is correct
 
-### 5.3 复刻任务失败
+### 5.3 Cloning task failed
 
-优先检查：
+Priority check:
 
-- `/audio/clone` 是否接受 `voice + audio` 的 multipart 请求
-- 响应 JSON 是否可解析、是否包含可用 `voice`
+- Whether `/audio/clone` accepts `voice + audio` multipart request
+- Whether response JSON is parseable, whether it contains available `voice`

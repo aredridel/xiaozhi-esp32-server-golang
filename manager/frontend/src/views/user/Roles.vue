@@ -1,14 +1,14 @@
 <template>
   <div class="roles-page">
     <div class="page-header">
-      <h2>我的角色</h2>
+      <h2>My Roles</h2>
       <el-button type="primary" @click="showCreateDialog = true">
         <el-icon><Plus /></el-icon>
-        创建角色
+        Create Role
       </el-button>
     </div>
 
-    <!-- 角色卡片列表 -->
+    <!-- Role Card List -->
     <el-row :gutter="12" class="roles-grid" v-loading="loading">
       <el-col :xs="24" :sm="12" :lg="8" v-for="role in userRoles" :key="role.id" class="role-col">
         <el-card class="role-card" shadow="hover">
@@ -21,19 +21,19 @@
                   <el-dropdown-menu>
                     <el-dropdown-item command="edit">
                       <el-icon><Edit /></el-icon>
-                      编辑
+                      Edit
                     </el-dropdown-item>
                   <el-dropdown-item command="duplicate">
                     <el-icon><CopyDocument /></el-icon>
-                    复制
+                    Duplicate
                   </el-dropdown-item>
                   <el-dropdown-item command="toggle-status">
                     <el-icon><SwitchButton /></el-icon>
-                    {{ isRoleActive(role) ? '关闭' : '开启' }}
+                    {{ isRoleActive(role) ? 'Disable' : 'Enable' }}
                   </el-dropdown-item>
                   <el-dropdown-item command="delete" divided>
                     <el-icon><Delete /></el-icon>
-                    删除
+                    Delete
                   </el-dropdown-item>
                 </el-dropdown-menu>
                 </template>
@@ -42,35 +42,35 @@
           </template>
 
           <div class="role-content">
-            <p class="description">{{ role.description || '暂无描述' }}</p>
+            <p class="description">{{ role.description || 'No description' }}</p>
 
             <div class="role-config">
               <el-tag size="small" :type="isRoleActive(role) ? 'success' : 'info'">
-                {{ isRoleActive(role) ? '开启' : '关闭' }}
+                {{ isRoleActive(role) ? 'Enabled' : 'Disabled' }}
               </el-tag>
-              <el-tag size="small" type="primary">LLM: {{ role.llm_config_id || '默认' }}</el-tag>
-              <el-tag size="small" type="success">TTS: {{ role.tts_config_id || '默认' }}</el-tag>
-              <el-tag v-if="role.voice" size="small" type="warning">音色: {{ role.voice }}</el-tag>
+              <el-tag size="small" type="primary">LLM: {{ role.llm_config_id || 'Default' }}</el-tag>
+              <el-tag size="small" type="success">TTS: {{ role.tts_config_id || 'Default' }}</el-tag>
+              <el-tag v-if="role.voice" size="small" type="warning">Voice: {{ role.voice }}</el-tag>
             </div>
 
             <div class="role-prompt">
               <p class="prompt-label">Prompt</p>
-              <p class="prompt-text">{{ role.prompt || '未设置提示词' }}</p>
+              <p class="prompt-text">{{ role.prompt || 'No prompt set' }}</p>
             </div>
           </div>
         </el-card>
       </el-col>
     </el-row>
 
-    <!-- 空状态 -->
-    <el-empty v-if="!loading && userRoles.length === 0" description="暂无角色，点击右上角创建">
-      <el-button type="primary" @click="showCreateDialog = true">创建第一个角色</el-button>
+    <!-- Empty State -->
+    <el-empty v-if="!loading && userRoles.length === 0" description="No roles yet, click the button in the top right to create">
+      <el-button type="primary" @click="showCreateDialog = true">Create First Role</el-button>
     </el-empty>
 
-    <!-- 创建/编辑角色弹窗 -->
+    <!-- Create/Edit Role Dialog -->
     <el-dialog
       v-model="showCreateDialog"
-      :title="editingRole ? '编辑角色' : '创建角色'"
+      :title="editingRole ? 'Edit Role' : 'Create Role'"
       width="800px"
       @close="handleDialogClose"
     >
@@ -82,17 +82,17 @@
       >
         <div class="dialog-sections">
           <section class="dialog-section">
-            <h4 class="dialog-section-title">基本信息</h4>
-            <el-form-item label="角色名称" prop="name">
-              <el-input v-model="form.name" placeholder="请输入角色名称" />
+            <h4 class="dialog-section-title">Basic Information</h4>
+            <el-form-item label="Role Name" prop="name">
+              <el-input v-model="form.name" placeholder="Please enter role name" />
             </el-form-item>
 
-            <el-form-item label="描述" prop="description">
+            <el-form-item label="Description" prop="description">
               <el-input
                 v-model="form.description"
                 type="textarea"
                 :rows="3"
-                placeholder="请输入角色描述"
+                placeholder="Please enter role description"
               />
             </el-form-item>
           </section>
@@ -100,17 +100,17 @@
           <el-divider />
 
           <section class="dialog-section">
-            <h4 class="dialog-section-title">Prompt配置</h4>
-            <el-form-item label="系统提示词" prop="prompt">
+            <h4 class="dialog-section-title">Prompt Configuration</h4>
+            <el-form-item label="System Prompt" prop="prompt">
               <el-input
                 v-model="form.prompt"
                 type="textarea"
                 :rows="6"
-                placeholder="请输入系统提示词，用于定义角色的行为和性格"
+                placeholder="Please enter system prompt, used to define the role's behavior and personality"
               />
               <div class="prompt-tips">
                 <el-text size="small" type="info">
-                  提示：可以使用 &#123;&#123;assistant_name&#125;&#125; 作为智能体名称的占位符
+                  Tip: You can use &#123;&#123;assistant_name&#125;&#125; as a placeholder for the agent name
                 </el-text>
               </div>
             </el-form-item>
@@ -119,9 +119,9 @@
           <el-divider />
 
           <section class="dialog-section">
-            <h4 class="dialog-section-title">模型配置</h4>
-            <el-form-item label="LLM配置">
-              <el-select v-model="form.llm_config_id" placeholder="请选择LLM配置（可选）" clearable style="width: 100%">
+            <h4 class="dialog-section-title">Model Configuration</h4>
+            <el-form-item label="LLM Configuration">
+              <el-select v-model="form.llm_config_id" placeholder="Please select LLM configuration (optional)" clearable style="width: 100%">
                 <el-option
                   v-for="config in llmConfigs"
                   :key="config.id"
@@ -130,18 +130,18 @@
                   :disabled="!config.enabled"
                 >
                   <span>{{ config.name }}</span>
-                  <el-tag v-if="config.is_default" size="small" type="success" style="margin-left: 8px">默认</el-tag>
+                  <el-tag v-if="config.is_default" size="small" type="success" style="margin-left: 8px">Default</el-tag>
                 </el-option>
               </el-select>
               <div class="form-tip">
-                <el-text size="small" type="info">留空则使用默认配置</el-text>
+                <el-text size="small" type="info">Leave empty to use default configuration</el-text>
               </div>
             </el-form-item>
 
-            <el-form-item label="TTS配置">
+            <el-form-item label="TTS Configuration">
               <el-select
                 v-model="form.tts_config_id"
-                placeholder="请选择TTS配置（可选）"
+                placeholder="Please select TTS configuration (optional)"
                 clearable
                 style="width: 100%"
                 @change="handleTtsConfigChange"
@@ -154,18 +154,18 @@
                   :disabled="!config.enabled"
                 >
                   <span>{{ config.name }}</span>
-                  <el-tag v-if="config.is_default" size="small" type="success" style="margin-left: 8px">默认</el-tag>
+                  <el-tag v-if="config.is_default" size="small" type="success" style="margin-left: 8px">Default</el-tag>
                 </el-option>
               </el-select>
               <div class="form-tip">
-                <el-text size="small" type="info">留空则使用默认配置</el-text>
+                <el-text size="small" type="info">Leave empty to use default configuration</el-text>
               </div>
             </el-form-item>
 
-            <el-form-item label="音色" v-if="form.tts_config_id">
+            <el-form-item label="Voice" v-if="form.tts_config_id">
               <el-select
                 v-model="form.voice"
-                placeholder="请选择或输入音色（支持搜索和自定义输入）"
+                placeholder="Please select or enter voice (supports search and custom input)"
                 clearable
                 filterable
                 allow-create
@@ -186,7 +186,7 @@
                 </el-option>
               </el-select>
               <div class="form-tip">
-                <el-text size="small" type="info">根据当前TTS配置自动加载音色列表，可搜索或手动输入自定义值</el-text>
+                <el-text size="small" type="info">Voice list is automatically loaded based on current TTS configuration, you can search or manually enter a custom value</el-text>
               </div>
             </el-form-item>
           </section>
@@ -194,9 +194,9 @@
       </el-form>
 
       <template #footer>
-        <el-button @click="handleDialogClose">取消</el-button>
+        <el-button @click="handleDialogClose">Cancel</el-button>
         <el-button type="primary" @click="handleSave" :loading="saving">
-          保存
+          Save
         </el-button>
       </template>
     </el-dialog>
@@ -216,7 +216,7 @@ const showCreateDialog = ref(false)
 const editingRole = ref(null)
 const formRef = ref()
 
-// 配置列表
+// Config lists
 const llmConfigs = ref([])
 const ttsConfigs = ref([])
 const availableVoices = ref([])
@@ -234,24 +234,24 @@ const form = reactive({
 })
 
 const rules = {
-  name: [{ required: true, message: '请输入角色名称', trigger: 'blur' }],
-  prompt: [{ required: true, message: '请输入系统提示词', trigger: 'blur' }]
+  name: [{ required: true, message: 'Please enter role name', trigger: 'blur' }],
+  prompt: [{ required: true, message: 'Please enter system prompt', trigger: 'blur' }]
 }
 
-// 加载角色列表
+// Load role list
 const loadRoles = async () => {
   loading.value = true
   try {
     const response = await api.get('/user/roles')
     userRoles.value = response.data.data?.user_roles || []
   } catch (error) {
-    ElMessage.error('加载角色失败')
+    ElMessage.error('Failed to load roles')
   } finally {
     loading.value = false
   }
 }
 
-// 加载配置列表
+// Load config lists
 const loadConfigs = async () => {
   try {
     const [llmRes, ttsRes] = await Promise.all([
@@ -261,11 +261,11 @@ const loadConfigs = async () => {
     llmConfigs.value = llmRes.data.data || []
     ttsConfigs.value = ttsRes.data.data || []
   } catch (error) {
-    console.error('加载配置列表失败', error)
+    console.error('Failed to load config lists', error)
   }
 }
 
-// 卡片操作
+// Card actions
 const handleCardAction = (command, role) => {
   switch (command) {
     case 'edit':
@@ -288,13 +288,13 @@ const isRoleActive = (role) => role?.status !== 'inactive'
 const toggleRoleStatus = async (role) => {
   if (!role?.id) return
 
-  const action = isRoleActive(role) ? '关闭' : '开启'
+  const action = isRoleActive(role) ? 'Disable' : 'Enable'
   try {
     await api.patch(`/user/roles/${role.id}/toggle`)
-    ElMessage.success(`角色${action}成功`)
+    ElMessage.success(`Role ${action.toLowerCase()}d successfully`)
     await loadRoles()
   } catch (error) {
-    ElMessage.error('状态切换失败: ' + (error.response?.data?.error || error.message))
+    ElMessage.error('Status toggle failed: ' + (error.response?.data?.error || error.message))
   }
 }
 
@@ -332,7 +332,7 @@ const loadVoices = async (provider) => {
     filteredVoices.value = availableVoices.value
   } catch (error) {
     clearVoiceOptions()
-    console.error('加载音色列表失败', error)
+    console.error('Failed to load voice list', error)
   } finally {
     voiceLoading.value = false
   }
@@ -394,7 +394,7 @@ const editRole = (role) => {
 const duplicateRole = (role) => {
   editingRole.value = null
   Object.assign(form, {
-    name: `${role.name} (副本)`,
+    name: `${role.name} (Copy)`,
     description: role.description || '',
     prompt: role.prompt || '',
     llm_config_id: role.llm_config_id || null,
@@ -417,16 +417,16 @@ const handleSave = async () => {
 
         if (editingRole.value) {
           await api.put(`/user/roles/${editingRole.value.id}`, data)
-          ElMessage.success('更新成功')
+          ElMessage.success('Update successful')
         } else {
           await api.post('/user/roles', data)
-          ElMessage.success('创建成功')
+          ElMessage.success('Create successful')
         }
 
         showCreateDialog.value = false
         loadRoles()
       } catch (error) {
-        ElMessage.error('保存失败: ' + (error.response?.data?.error || error.message))
+        ElMessage.error('Save failed: ' + (error.response?.data?.error || error.message))
       } finally {
         saving.value = false
       }
@@ -436,18 +436,18 @@ const handleSave = async () => {
 
 const deleteRole = async (id) => {
   try {
-    await ElMessageBox.confirm('确定要删除这个角色吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
+    await ElMessageBox.confirm('Are you sure you want to delete this role?', 'Confirm', {
+      confirmButtonText: 'Confirm',
+      cancelButtonText: 'Cancel',
       type: 'warning'
     })
 
     await api.delete(`/user/roles/${id}`)
-    ElMessage.success('删除成功')
+    ElMessage.success('Delete successful')
     loadRoles()
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('删除失败')
+      ElMessage.error('Delete failed')
     }
   }
 }

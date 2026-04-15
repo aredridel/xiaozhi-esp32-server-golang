@@ -1,121 +1,121 @@
-# 编译与部署指南
+# Compilation and Deployment Guide
 
-本文面向需要从源码编译、调试和部署本项目的开发者，整理主程序、控制台前后端、声纹服务的编译与部署方式。
+This document is for developers who need to compile, debug and deploy this project from source, organizing the compilation and deployment methods for the main program, console front and back ends, and speaker identification service.
 
-建议按下面的阅读顺序使用本文：
+It is recommended to use this document in the following reading order:
 
-- 先看整体架构，明确每个服务的位置和调用关系
-- 再按“主程序 -> 控制台后端 -> 控制台前端 -> 声纹服务”的顺序分别完成编译与部署
-- 最后如果需要制作一体化发布包，再看文末的 AIO 打包流程
+- First look at the overall architecture to clarify the location and calling relationships of each service
+- Then complete compilation and deployment in the order of "Main Program -> Console Backend -> Console Frontend -> Speaker Identification Service"
+- Finally, if you need to create an integrated release package, see the AIO packaging process at the end of the document
 
-本文优先介绍每个服务分别编译、分别部署的方式；AIO 形态放在后面单独说明。
+This document prioritizes introducing the method of compiling and deploying each service separately; the AIO form is explained separately at the end.
 
-## 1. 服务拆分说明
+## 1. Service Split Description
 
-日常开发、联调、单独替换某个服务时，建议使用分离部署形态：
+For daily development, debugging, and separately replacing a service, it is recommended to use the separated deployment form:
 
-- 主程序：`cmd/server`
-- 控制台后端：`manager/backend`
-- 控制台前端：`manager/frontend`
-- 声纹服务：`asr_server` 子模块
+- Main program: `cmd/server`
+- Console backend: `manager/backend`
+- Console frontend: `manager/frontend`
+- Speaker identification service: `asr_server` submodule
 
-这四部分分别编译、分别启动，最适合开发调试。
+These four parts are compiled and started separately, most suitable for development debugging.
 
-一体化的 AIO 打包方式放在本文后半部分，适合做发布包或交付包。
+The integrated AIO packaging method is placed in the second half of this document, suitable for release packages or delivery packages.
 
-## 2. 整体架构
+## 2. Overall Architecture
 
 ```mermaid
 flowchart LR
-    Device["ESP32 设备 / WebSocket-MQTT-UDP 客户端"] --> Main["主程序 xiaozhi_server<br/>cmd/server"]
-    Browser["浏览器"] --> Frontend["控制台前端<br/>manager/frontend"]
-    Frontend --> Backend["控制台后端<br/>manager/backend"]
-    Main <-->|配置拉取 / 历史记录 / 内部接口| Backend
-    Main -->|声纹识别请求| Voice["声纹服务<br/>asr_server / voice_server"]
-    Backend -->|声纹组管理 / 样本上传| Voice
+    Device["ESP32 Device / WebSocket-MQTT-UDP Client"] --> Main["Main Program xiaozhi_server<br/>cmd/server"]
+    Browser["Browser"] --> Frontend["Console Frontend<br/>manager/frontend"]
+    Frontend --> Backend["Console Backend<br/>manager/backend"]
+    Main <-->|Configuration Pull / History / Internal Interface| Backend
+    Main -->|Speaker Identification Request| Voice["Speaker Identification Service<br/>asr_server / voice_server"]
+    Backend -->|Speaker Group Management / Sample Upload| Voice
     Backend --> DB["MySQL / SQLite"]
-    Voice --> Qdrant["Qdrant 向量库"]
-    Main --> AI["ASR / LLM / TTS / MCP / OTA 等外部能力"]
+    Voice --> Qdrant["Qdrant Vector DB"]
+    Main --> AI["ASR / LLM / TTS / MCP / OTA and other external capabilities"]
 ```
 
-### 2.1 各服务在架构中的位置
+### 2.1 Position of Each Service in Architecture
 
-| 服务 | 代码目录 | 主要职责 | 常见端口 |
+| Service | Code Directory | Main Responsibility | Common Ports |
 | --- | --- | --- | --- |
-| 主程序 | `cmd/server` | 设备接入、会话编排、ASR/LLM/TTS 调度、OTA、WebSocket/MQTT/UDP | `8989` / `2883` / `8990` |
-| 控制台后端 | `manager/backend` | 管理 API、配置管理、历史记录、声纹组管理 | `8080` |
-| 控制台前端 | `manager/frontend` | 管理页面、配置向导、测试工具 | 开发态 `3000` |
-| 声纹服务 | `asr_server` | 声纹注册、识别、验证、流式接口 | 源码默认 `9000` |
+| Main Program | `cmd/server` | Device access, session orchestration, ASR/LLM/TTS scheduling, OTA, WebSocket/MQTT/UDP | `8989` / `2883` / `8990` |
+| Console Backend | `manager/backend` | Management API, configuration management, history, speaker group management | `8080` |
+| Console Frontend | `manager/frontend` | Management page, configuration wizard, testing tools | Development state `3000` |
+| Speaker Identification Service | `asr_server` | Speaker registration, identification, verification, streaming interface | Source code default `9000` |
 
-### 2.2 关键地址对齐关系
+### 2.2 Key Address Alignment Relationships
 
-分离部署时，下面四个地址一定要对齐：
+When deploying separately, the following four addresses must be aligned:
 
-| 调用方向 | 配置项 | 典型值 |
+| Call Direction | Configuration Item | Typical Value |
 | --- | --- | --- |
-| 前端 -> 后端 | `VITE_API_TARGET` | `http://127.0.0.1:8080` |
-| 主程序 -> 控制台后端 | `config/config.yaml` -> `manager.backend_url` | `http://127.0.0.1:8080` |
-| 控制台后端 -> 声纹服务 | `manager/backend/config/config.json` -> `speaker_service.url` 或 `SPEAKER_SERVICE_URL` | `http://127.0.0.1:9000` |
-| 主程序 -> 声纹服务 | `config/config.yaml` -> `voice_identify.base_url` | `http://127.0.0.1:9000` |
+| Frontend -> Backend | `VITE_API_TARGET` | `http://127.0.0.1:8080` |
+| Main Program -> Console Backend | `config/config.yaml` -> `manager.backend_url` | `http://127.0.0.1:8080` |
+| Console Backend -> Speaker Identification Service | `manager/backend/config/config.json` -> `speaker_service.url` or `SPEAKER_SERVICE_URL` | `http://127.0.0.1:9000` |
+| Main Program -> Speaker Identification Service | `config/config.yaml` -> `voice_identify.base_url` | `http://127.0.0.1:9000` |
 
-## 3. 环境准备
+## 3. Environment Preparation
 
-### 3.1 拉取代码与子模块
+### 3.1 Pull Code and Submodules
 
-声纹服务是 Git 子模块，首次拉取后请执行：
+Speaker identification service is a Git submodule, please execute after first pull:
 
 ```bash
 git submodule update --init --recursive
 ```
 
-如果你是新克隆仓库，推荐直接：
+If you are newly cloning the repository, it is recommended to directly:
 
 ```bash
 git clone --recursive <repo-url>
 ```
 
-### 3.2 推荐工具版本
+### 3.2 Recommended Tool Versions
 
-- Go：`1.24.x`，与 CI 中的 `1.24.4` 保持一致
-- Node.js：`20.x`
-- npm：跟随 Node 20
+- Go: `1.24.x`, consistent with `1.24.4` in CI
+- Node.js: `20.x`
+- npm: Follow Node 20
 
-### 3.3 Linux 本地编译公共依赖
+### 3.3 Linux Local Compilation Common Dependencies
 
-主程序和声纹服务都涉及 CGO、ONNX Runtime 或 ten-vad 动态库，Ubuntu 可参考：
+Both main program and speaker identification service involve CGO, ONNX Runtime or ten-vad dynamic libraries. Ubuntu can refer to:
 
 ```bash
 sudo apt-get update
 sudo apt-get install -y pkg-config libopus0 libopusfile-dev libc++1 libc++abi1
 ```
 
-主程序本地源码编译还需要安装 ONNX Runtime 1.21.0，步骤可直接参考根目录 `README.md` 中“本地编译”章节。
+Main program local source compilation also needs to install ONNX Runtime 1.21.0. Steps can directly refer to the "Local Compilation" chapter in the root directory `README.md`.
 
-### 3.4 建议先准备的基础设施
+### 3.4 Recommended Infrastructure to Prepare First
 
-- MySQL：控制台后端使用 MySQL 时需要
-- Qdrant：声纹服务使用 `qdrant` 存储时需要
+- MySQL: Used when console backend uses MySQL
+- Qdrant: Used when speaker identification service uses `qdrant` storage
 
-如果只是本地功能验证：
+If just for local functional verification:
 
-- 控制台后端可先用 SQLite
-- 声纹服务可先用 JSON 存储
+- Console backend can first use SQLite
+- Speaker identification service can first use JSON storage
 
-## 4. 分离部署：各服务编译与部署
+## 4. Separate Deployment: Compilation and Deployment of Each Service
 
-### 4.1 主程序
+### 4.1 Main Program
 
-代码目录：`cmd/server`
+Code directory: `cmd/server`
 
-### 关键配置
+### Key Configuration
 
-配置文件默认位置：
+Configuration file default location:
 
 ```text
 config/config.yaml
 ```
 
-源码部署时最常改的是：
+Most commonly changed in source code deployment:
 
 - `manager.backend_url`
 - `websocket.host` / `websocket.port`
@@ -124,7 +124,7 @@ config/config.yaml
 - `voice_identify.enable`
 - `voice_identify.base_url`
 
-如果使用分离部署，推荐先把下面两项改对：
+If using separate deployment, it is recommended to first correct the following two items:
 
 ```yaml
 manager:
@@ -135,45 +135,45 @@ voice_identify:
   base_url: "http://127.0.0.1:9000"
 ```
 
-### 编译
+### Compilation
 
 ```bash
 go mod tidy
 go build -o xiaozhi_server ./cmd/server
 ```
 
-### 启动
+### Startup
 
 ```bash
 ./xiaozhi_server -c config/config.yaml
 ```
 
-### 部署建议
+### Deployment Suggestions
 
-1. 分离部署模式下，主程序本身不负责控制台前后端和声纹服务进程管理。
-2. 主程序启动前，建议控制台后端已经可访问，否则 `manager` 配置提供者拉配置时会失败。
-3. 如果设备走 WebSocket，核心接入地址通常为 `ws://<host>:8989/xiaozhi/v1/`。
+1. In separate deployment mode, the main program itself is not responsible for managing console front and back ends and speaker identification service processes.
+2. Before main program startup, it is recommended that the console backend is already accessible, otherwise `manager` configuration provider will fail when pulling configuration.
+3. If devices go through WebSocket, the core access address is usually `ws://<host>:8989/xiaozhi/v1/`.
 
-### 4.2 控制台后端
+### 4.2 Console Backend
 
-代码目录：`manager/backend`
+Code directory: `manager/backend`
 
-### 关键配置
+### Key Configuration
 
-配置文件默认位置：
+Configuration file default location:
 
 ```text
 manager/backend/config/config.json
 ```
 
-重点关注：
+Focus on:
 
-- `database.type`：`mysql` 或 `sqlite`
+- `database.type`: `mysql` or `sqlite`
 - `database.mysql` / `database.sqlite`
 - `speaker_service.url`
 - `history.audio_base_path`
 
-支持的环境变量覆盖：
+Supported environment variable overrides:
 
 - `DB_HOST`
 - `DB_PORT`
@@ -183,7 +183,7 @@ manager/backend/config/config.json
 - `SPEAKER_SERVICE_URL`
 - `AUDIO_BASE_PATH`
 
-### 编译
+### Compilation
 
 ```bash
 cd manager/backend
@@ -191,31 +191,31 @@ go mod tidy
 go build -o main .
 ```
 
-### 启动
+### Startup
 
 ```bash
 cd manager/backend
 ./main -c config/config.json
 ```
 
-开发态也可以直接运行：
+Can also run directly in development state:
 
 ```bash
 cd manager/backend
 go run main.go -c config/config.json
 ```
 
-### 部署建议
+### Deployment Suggestions
 
-1. 本地调试优先用 SQLite，减少依赖。
-2. 联调声纹功能时，请确保 `speaker_service.url` 已指向声纹服务。
-3. 控制台后端启动后，主程序和前端都应指向这个服务。
+1. For local debugging, prioritize using SQLite to reduce dependencies.
+2. When debugging speaker identification functions, please ensure `speaker_service.url` points to the speaker identification service.
+3. After console backend startup, both main program and frontend should point to this service.
 
-### 4.3 控制台前端
+### 4.3 Console Frontend
 
-代码目录：`manager/frontend`
+Code directory: `manager/frontend`
 
-控制台前端主要用于本地开发联调，先装依赖再启动开发服务器即可：
+Console frontend is mainly used for local development debugging. First install dependencies then start the development server:
 
 ```bash
 cd manager/frontend
@@ -223,36 +223,36 @@ npm ci
 npm run dev
 ```
 
-默认开发地址：
+Default development address:
 
-- 前端页面：`http://127.0.0.1:3000`
-- API 代理目标：`http://127.0.0.1:8080`
+- Frontend page: `http://127.0.0.1:3000`
+- API proxy target: `http://127.0.0.1:8080`
 
-如需修改代理目标，可设置：
+If you need to modify the proxy target, you can set:
 
 ```bash
 VITE_API_TARGET=http://127.0.0.1:8080
 ```
 
-或修改 `manager/frontend/.env`。
+Or modify `manager/frontend/.env`.
 
-### 4.4 声纹服务
+### 4.4 Speaker Identification Service
 
-代码目录：`asr_server`
+Code directory: `asr_server`
 
-### 关键说明
+### Key Description
 
-`asr_server` 是子模块，源码单独运行时默认读取：
+`asr_server` is a submodule. When running source code separately, it defaults to reading:
 
 ```text
 asr_server/config.json
 ```
 
-默认端口在当前子模块配置里是 `9000`。实际部署时务必与主程序、控制台后端中的声纹服务地址保持一致。
+The default port in the current submodule configuration is `9000`. In actual deployment, it must be consistent with the speaker identification service address in the main program and console backend.
 
-### 关键配置
+### Key Configuration
 
-重点关注：
+Focus on:
 
 - `server.port`
 - `speaker.enabled`
@@ -262,14 +262,14 @@ asr_server/config.json
 - `speaker.qdrant.collection_name`
 - `speaker.model_path`
 
-常见选择：
+Common choices:
 
-1. 开发联调：`speaker.storage_type = "json"`
-2. 生产部署：`speaker.storage_type = "qdrant"`
+1. Development debugging: `speaker.storage_type = "json"`
+2. Production deployment: `speaker.storage_type = "qdrant"`
 
-### 源码编译
+### Source Compilation
 
-Linux / macOS：
+Linux / macOS:
 
 ```bash
 cd asr_server
@@ -277,7 +277,7 @@ go mod tidy
 CGO_ENABLED=1 go build -o voice_server main.go
 ```
 
-Windows PowerShell：
+Windows PowerShell:
 
 ```powershell
 cd asr_server
@@ -286,9 +286,9 @@ go mod tidy
 go build -o voice_server.exe main.go
 ```
 
-### 启动
+### Startup
 
-Linux / macOS：
+Linux / macOS:
 
 ```bash
 cd asr_server
@@ -296,45 +296,45 @@ export LD_LIBRARY_PATH="$PWD/lib:$PWD/lib/ten-vad/lib/Linux/x64:${LD_LIBRARY_PAT
 ./voice_server
 ```
 
-Windows：
+Windows:
 
 ```powershell
 cd asr_server
 .\voice_server.exe
 ```
 
-### 部署建议
+### Deployment Suggestions
 
-1. 本地开发先用 JSON 存储跑通接口，再切 Qdrant。
-2. 若主程序启用了 `voice_identify.enable=true`，请同步修改主程序里的 `voice_identify.base_url`。
-3. 控制台后端的 `speaker_service.url` 也必须指向同一个声纹服务地址。
+1. For local development, first use JSON storage to run through interfaces, then switch to Qdrant.
+2. If main program enables `voice_identify.enable=true`, please synchronously modify `voice_identify.base_url` in the main program.
+3. `speaker_service.url` in console backend must also point to the same speaker identification service address.
 
-### 4.5 推荐启动顺序
+### 4.5 Recommended Startup Order
 
-本文按“主程序 -> 控制台后端 -> 控制台前端 -> 声纹服务”介绍，但实际启动建议按依赖顺序执行：
+This document introduces in the order of "Main Program -> Console Backend -> Console Frontend -> Speaker Identification Service", but actual startup is recommended to follow dependency order:
 
 1. MySQL / SQLite
 2. Qdrant
-3. 声纹服务 `asr_server`
-4. 控制台后端 `manager/backend`
-5. 主程序 `cmd/server`
-6. 控制台前端 `manager/frontend`
+3. Speaker Identification Service `asr_server`
+4. Console Backend `manager/backend`
+5. Main Program `cmd/server`
+6. Console Frontend `manager/frontend`
 
-## 5. 与 Release 一致的 AIO 打包流程
+## 5. AIO Packaging Process Consistent with Release
 
-如果你的目标是复刻当前仓库的发布包，而不是分离部署，建议按 CI 思路执行。
+If your goal is to replicate the current repository's release package, rather than separate deployment, it is recommended to execute according to CI thinking.
 
-在开始 AIO 打包前，请先确认你已经理解并跑通过第 4 章中的分离部署流程。
+Before starting AIO packaging, please first confirm that you have understood and run through the separate deployment process in Chapter 4.
 
-当前仓库的 AIO 形态会先构建前端，再通过 Go build tags 把下列能力一起打进主程序：
+The current repository's AIO form will first build the frontend, then through Go build tags, bundle the following capabilities into the main program:
 
 - `manager`
 - `asr_server`
 - `embed_ui`
 
-因此，最终产物里的 `xiaozhi_server` 实际上是“主程序 + 控制台后端 + 声纹服务 + 已嵌入的控制台前端”。
+Therefore, the final product's `xiaozhi_server` is actually "Main Program + Console Backend + Speaker Identification Service + Embedded Console Frontend".
 
-### 5.1 前端先构建
+### 5.1 Frontend Build First
 
 ```bash
 cd manager/frontend
@@ -342,25 +342,25 @@ npm ci
 npm run build
 ```
 
-然后把前端产物复制到后端静态目录：
+Then copy frontend build products to the backend static directory:
 
 ```bash
 mkdir -p ../backend/static/dist
 cp -r dist/* ../backend/static/dist/
 ```
 
-### 5.2 编译带内嵌服务的主程序
+### 5.2 Compile Main Program with Embedded Services
 
-回到仓库根目录执行：
+Return to repository root directory and execute:
 
 ```bash
 go mod tidy
 go build -tags "nolibopusfile asr_server manager embed_ui" -ldflags "-s -w" -o xiaozhi_server ./cmd/server
 ```
 
-### 5.3 启动 AIO 包
+### 5.3 Start AIO Package
 
-CI 打包时会把以下文件一起放到发布目录：
+CI packaging will place the following files together in the release directory:
 
 - `main_config.yaml`
 - `manager.json`
@@ -368,7 +368,7 @@ CI 打包时会把以下文件一起放到发布目录：
 - `models/`
 - `data/`
 
-本地手动运行时可参考：
+When running manually locally, you can refer to:
 
 ```bash
 ./xiaozhi_server \
@@ -377,83 +377,83 @@ CI 打包时会把以下文件一起放到发布目录：
   -asr-config asr_server.json
 ```
 
-### 5.4 AIO 打包补充说明
+### 5.4 AIO Packaging Supplementary Description
 
-实际发布时通常还会额外完成：
+Actual release usually also additionally completes:
 
-- ten-vad / sherpa-onnx 运行库打包
-- `models/`、`data/`、示例配置复制
-- 平台目录重命名与压缩
+- ten-vad / sherpa-onnx runtime library packaging
+- `models/`, `data/`, example configuration copying
+- Platform directory renaming and compression
 
-## 6. 整体部署完成后的简单使用说明
+## 6. Simple Usage Instructions After Overall Deployment
 
-### 6.1 打开控制台
+### 6.1 Open Console
 
-部署完成后，浏览器访问：
+After deployment is complete, browser access:
 
 ```text
-http://<服务器IP或域名>:8080
+http://<Server IP or Domain>:8080
 ```
 
-如果是前后端分离且没有做统一反向代理，请按你的前端发布端口访问。
+If front and back ends are separated and no unified reverse proxy is done, please access according to your frontend publishing port.
 
-### 6.2 完成基础配置
+### 6.2 Complete Basic Configuration
 
-首次进入后，建议按控制台配置向导完成：
+After first entry, it is recommended to complete according to the console configuration wizard:
 
-1. OTA 地址
-2. VAD 配置
-3. ASR 配置
-4. LLM 配置
-5. TTS 配置
+1. OTA address
+2. VAD configuration
+3. ASR configuration
+4. LLM configuration
+5. TTS configuration
 
-### 6.3 验证声纹服务
+### 6.3 Verify Speaker Identification Service
 
-如果需要声纹识别：
+If speaker identification is needed:
 
-1. 在控制台中创建声纹组
-2. 上传样本音频
-3. 确认控制台后端能访问声纹服务
-4. 确认主程序的 `voice_identify.enable=true`
-5. 确认主程序的 `voice_identify.base_url` 指向正确地址
+1. Create speaker group in console
+2. Upload sample audio
+3. Confirm console backend can access speaker identification service
+4. Confirm main program's `voice_identify.enable=true`
+5. Confirm main program's `voice_identify.base_url` points to correct address
 
-### 6.4 连接设备
+### 6.4 Connect Device
 
-设备常见接入信息如下：
+Common device access information is as follows:
 
-- WebSocket：`ws://<host>:8989/xiaozhi/v1/`
-- OTA 接口：`http://<host>:8989/xiaozhi/ota/`
-- MQTT：`<host>:2883`
-- UDP：`<host>:8990`
+- WebSocket: `ws://<host>:8989/xiaozhi/v1/`
+- OTA interface: `http://<host>:8989/xiaozhi/ota/`
+- MQTT: `<host>:2883`
+- UDP: `<host>:8990`
 
-### 6.5 最小联调闭环
+### 6.5 Minimum Debug Loop
 
-建议按下面顺序做一次冒烟验证：
+It is recommended to do a smoke verification in the following order:
 
-1. 打开控制台，确认页面能加载。
-2. 在控制台里完成一套可用的 VAD / ASR / LLM / TTS 配置。
-3. 确认主程序日志中已经成功拉到控制台配置。
-4. 如果启用声纹，先在控制台上传样本，再测试识别。
-5. 让设备通过 OTA 拿到 WebSocket 或 MQTT/UDP 地址并连入主程序。
+1. Open console, confirm page can load.
+2. Complete a set of usable VAD / ASR / LLM / TTS configurations in the console.
+3. Confirm main program logs have successfully pulled console configuration.
+4. If speaker identification is enabled, first upload samples in console, then test identification.
+5. Let devices obtain WebSocket or MQTT/UDP addresses through OTA and connect to main program.
 
-## 7. 常见坑位
+## 7. Common Pitfalls
 
-### 7.1 声纹服务地址不一致
+### 7.1 Speaker Identification Service Address Inconsistent
 
-最常见的问题是下面两个地址没有同时改：
+The most common problem is that the following two addresses were not changed simultaneously:
 
 - `manager/backend/config/config.json` -> `speaker_service.url`
 - `config/config.yaml` -> `voice_identify.base_url`
 
-### 7.2 忘记初始化子模块
+### 7.2 Forgot to Initialize Submodule
 
-如果 `asr_server/server/setup.go` 不存在，说明子模块没有拉下来，AIO 编译和 Release 编译都会失败。
+If `asr_server/server/setup.go` does not exist, it means the submodule was not pulled down, and both AIO compilation and Release compilation will fail.
 
-### 7.3 把“分离部署”和“AIO 包”混用了
+### 7.3 Mixed "Separate Deployment" and "AIO Package"
 
-请记住：
+Please remember:
 
-- 分离部署：四个服务分别构建、分别运行
-- AIO 打包：前端、后端、声纹服务被一起编进 `xiaozhi_server`
+- Separate deployment: Four services are built and run separately
+- AIO packaging: Frontend, backend, and speaker identification service are compiled together into `xiaozhi_server`
 
-先确定目标形态，再决定构建命令和配置文件。
+First determine the target form, then decide the build command and configuration files.

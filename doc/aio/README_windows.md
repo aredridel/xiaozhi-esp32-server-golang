@@ -1,98 +1,98 @@
-# 小智服务 Windows 使用说明
+# Xiaozhi Service Windows Usage Instructions
 
-欢迎使用小智服务 Windows aio 包。本文档包含启动、配置和端口说明。
+Welcome to use Xiaozhi Service Windows aio package. This document contains startup, configuration and port descriptions.
 
-## 目录结构
+## Directory Structure
 
 ```
 xiaozhi_server-windows-amd64-<version>/
-├── xiaozhi_server.exe          # 主程序
-├── onnxruntime.dll             # ONNX Runtime 依赖库
-├── sherpa-onnx-c-api.dll       # Sherpa-ONNX 依赖库
-├── sherpa-onnx-cxx-api.dll     # Sherpa-ONNX C++ 依赖库
-├── ten_vad.dll                 # VAD 依赖库
-├── start.bat                   # 启动脚本
-├── main_config.yaml            # 主配置文件
-├── manager.json                # 管理后台配置
-├── asr_server.json             # ASR 服务配置
-├── models/                     # 模型文件目录
-├── data/                       # 数据目录
-└── logs/                       # 日志目录
+├── xiaozhi_server.exe          # Main program
+├── onnxruntime.dll             # ONNX Runtime dependency library
+├── sherpa-onnx-c-api.dll       # Sherpa-ONNX dependency library
+├── sherpa-onnx-cxx-api.dll     # Sherpa-ONNX C++ dependency library
+├── ten_vad.dll                 # VAD dependency library
+├── start.bat                   # Startup script
+├── main_config.yaml            # Main configuration file
+├── manager.json                # Management backend configuration
+├── asr_server.json             # ASR service configuration
+├── models/                     # Model files directory
+├── data/                       # Data directory
+└── logs/                       # Log directory
 ```
 
-## 快速启动
+## Quick Start
 
-双击 `start.bat` 即可启动服务。启动后可在 `logs/` 目录查看日志。
+Double-click `start.bat` to start the service. After startup, you can view logs in the `logs/` directory.
 
-> 提示：首次启动时，程序会自动下载所需的模型文件（如果 models 目录为空）。
+> Tip: On first startup, the program will automatically download required model files (if models directory is empty).
 
-## 端口与服务
+## Ports and Services
 
-| 端口 | 配置来源 | 说明 |
+| Port | Configuration Source | Description |
 |------|----------|------|
-| **8080** | `manager.json` → `server.port` | **管理后台**：Web 控制台 + HTTP API |
-| **8989** | `main_config.yaml` → `websocket.port` | **主服务 WebSocket**：设备/客户端连接 |
-| **9000** | `asr_server.json` → `server.port` | **ASR/声纹服务**：语音识别内部接口 |
-| **2883** | 控制台配置 | **MQTT 服务**：设备 MQTT 连接 |
-| **8990** | 控制台配置 | **UDP 服务**：设备 UDP 通信 |
-| **6060** | 控制台配置 | **pprof**：性能分析（默认关闭） |
+| **8080** | `manager.json` → `server.port` | **Management Backend**: Web console + HTTP API |
+| **8989** | `main_config.yaml` → `websocket.port` | **Main Service WebSocket**: Device/Client connection |
+| **9000** | `asr_server.json` → `server.port` | **ASR/Speaker ID Service**: Speech recognition internal interface |
+| **2883** | Console configuration | **MQTT Service**: Device MQTT connection |
+| **8990** | Console configuration | **UDP Service**: Device UDP communication |
+| **6060** | Console configuration | **pprof**: Performance analysis (default off) |
 
-## 访问地址
+## Access Addresses
 
-### 管理后台
+### Management Backend
 
-- **本地访问**：`http://localhost:8080/`
-- **局域网访问**：`http://<本机IP>:8080/`
+- **Local Access**: `http://localhost:8080/`
+- **LAN Access**: `http://<Local IP>:8080/`
 
-### 设备/客户端连接
+### Device/Client Connection
 
-- **WebSocket**：`ws://<服务器IP>:8989/`
-- **MQTT**：`<服务器IP>:2883`
-- **UDP**：`<服务器IP>:8990`
+- **WebSocket**: `ws://<Server IP>:8989/`
+- **MQTT**: `<Server IP>:2883`
+- **UDP**: `<Server IP>:8990`
 
-## 修改配置
+## Modify Configuration
 
-### 需在配置文件中修改的端口
+### Ports to Modify in Configuration Files
 
-以下端口修改后需重启服务生效：
+The following ports take effect after service restart:
 
-| 端口 | 配置文件 | 配置项 |
+| Port | Configuration File | Configuration Item |
 |------|----------|--------|
 | 8080 | `manager.json` | `server.port` |
 | 8989 | `main_config.yaml` | `websocket.port` |
 | 9000 | `asr_server.json` | `server.port` |
 
-### 控制台配置
+### Console Configuration
 
-以下端口及所有其他配置通过管理后台控制台进行变更：
+The following ports and all other configurations are changed through the management backend console:
 
-- **端口配置**：MQTT (2883)、UDP (8990)、pprof (6060)
-- **功能配置**：LLM、TTS、ASR、声纹识别等
-- 访问 `http://localhost:8080/` 进入管理后台
-- 配置变更实时生效，无需重启服务
+- **Port Configuration**: MQTT (2883), UDP (8990), pprof (6060)
+- **Function Configuration**: LLM, TTS, ASR, Speaker Identification, etc.
+- Access `http://localhost:8080/` to enter management backend
+- Configuration changes take effect in real-time, no service restart needed
 
-## 常见问题
+## FAQ
 
-### 防火墙提示
+### Firewall Prompt
 
-首次运行时，Windows 可能会弹出防火墙提示，请允许程序访问网络。
+On first run, Windows may pop up a firewall prompt, please allow the program to access the network.
 
-### 端口被占用
+### Port Occupied
 
-如果启动失败提示端口被占用，请：
+If startup fails with port occupied prompt, please:
 
-1. 使用 `netstat -ano | findstr :端口号` 查看占用进程
-2. 修改配置文件中的端口号
-3. 或结束占用该端口的进程
+1. Use `netstat -ano | findstr :port_number` to view occupying process
+2. Modify port number in configuration file
+3. Or end the process occupying that port
 
-### DLL 缺失
+### DLL Missing
 
-如果提示缺少 DLL 文件，请确保以下文件与 `xiaozhi_server.exe` 在同一目录：
+If prompted for missing DLL files, please ensure the following files are in the same directory as `xiaozhi_server.exe`:
 - `onnxruntime.dll`
 - `sherpa-onnx-c-api.dll`
 - `sherpa-onnx-cxx-api.dll`
 - `ten_vad.dll`
 
-## 停止服务
+## Stop Service
 
-在启动窗口按 `Ctrl + C` 或直接关闭窗口即可停止服务。
+Press `Ctrl + C` in the startup window or directly close the window to stop the service.

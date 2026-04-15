@@ -1,70 +1,70 @@
-# Docker 本地编译支持
+# Docker Local Compilation Support
 
-新增了 `docker-compose.local.yml` 文件，支持本地编译和多架构部署。
+Added `docker-compose.local.yml` file, supporting local compilation and multi-architecture deployment.
 
-## 新增文件
+## New Files
 
-- `docker/docker-composer/docker-compose.local.yml` - 本地编译配置文件
+- `docker/docker-composer/docker-compose.local.yml` - Local compilation configuration file
 
-## 编译方法
+## Compilation Methods
 
-### 默认编译（AMD64）
+### Default Compilation (AMD64)
 
 ```bash
 cd docker/docker-composer
 docker-compose -f docker-compose.local.yml up --build
 ```
 
-### ARM64 编译（Apple Silicon）
+### ARM64 Compilation (Apple Silicon)
 
 ```bash
 cd docker/docker-composer
 TARGETARCH=arm64 docker-compose -f docker-compose.local.yml up --build
 ```
 
-## 运行方法
+## Running Methods
 
-编译完成后，服务会自动启动，包括：
-- 主服务器（端口 8989）
-- 后端管理（端口 8081）
-- 前端界面（端口 8080）
-- MySQL 数据库（端口 23306）
+After compilation completes, services will automatically start, including:
+- Main server (port 8989)
+- Backend management (port 8081)
+- Frontend interface (port 8080)
+- MySQL database (port 23306)
 
-访问 http://<服务器IP或域名>:8080 查看前端界面。
+Access http://<Server IP or Domain>:8080 to view frontend interface.
 
-## 🏗️ 多架构支持
+## 🏗️ Multi-architecture Support
 
-### 自动架构检测（推荐）
+### Automatic Architecture Detection (Recommended)
 
-`docker-compose.local.yml` 支持自动检测当前系统架构：
+`docker-compose.local.yml` supports automatic detection of current system architecture:
 
 ```bash
-# 自动检测架构并构建（默认行为）
+# Automatic architecture detection and build (default behavior)
 docker-compose -f docker-compose.local.yml up --build
 ```
 
-### 手动指定架构
+### Manual Architecture Specification
 
-如果需要为特定架构构建：
+If you need to build for specific architecture:
 
 ```bash
-# 为 ARM64 架构构建
+# Build for ARM64 architecture
 TARGETARCH=arm64 docker-compose -f docker-compose.local.yml up --build
 
-# 为 AMD64 架构构建
+# Build for AMD64 architecture
 TARGETARCH=amd64 docker-compose -f docker-compose.local.yml up --build
 ```
 
-### 支持的架构
+### Supported Architectures
 
-- **AMD64/x86_64**: Intel/AMD 处理器（默认）
-- **ARM64**: Apple Silicon (M1/M2)、ARM 服务器
+- **AMD64/x86_64**: Intel/AMD processors (default)
+- **ARM64**: Apple Silicon (M1/M2), ARM servers
 
-## 📁 配置文件说明
+## 📁 Configuration File Description
 
 ### docker-compose.yml
 
-使用预构建的官方镜像，适合生产环境：
+Uses pre-built official images, suitable for production environment:
 
 ```yaml
 services:
@@ -80,7 +80,7 @@ services:
 
 ### docker-compose.local.yml
 
-本地构建版本，支持代码修改和多架构：
+Local build version, supports code modification and multi-architecture:
 
 ```yaml
 services:
@@ -92,38 +92,38 @@ services:
         TARGETARCH: ${TARGETARCH:-amd64}
 ```
 
-## 🔧 环境变量配置
+## 🔧 Environment Variable Configuration
 
-### 架构相关
+### Architecture Related
 
-| 变量名 | 默认值 | 说明 |
+| Variable Name | Default | Description |
 |-------|-------|------|
-| `TARGETARCH` | `amd64` | 目标架构（amd64/arm64） |
+| `TARGETARCH` | `amd64` | Target architecture (amd64/arm64) |
 
 
-## 🛠️ 常见操作
+## 🛠️ Common Operations
 
-### 查看服务状态
+### View Service Status
 
 ```bash
-# 查看所有服务状态
+# View all service status
 docker-compose ps
 
-# 查看服务日志
+# View service logs
 docker-compose logs -f main-server
 docker-compose logs -f backend
 docker-compose logs -f frontend
 ```
 
-### 停止和重启服务
+### Stop and Restart Services
 
 ```bash
-# 停止所有服务
+# Stop all services
 docker-compose down
 
-# 重启特定服务
+# Restart specific service
 docker-compose restart main-server
 
-# 重新构建并启动
+# Rebuild and start
 docker-compose up --build
 ```

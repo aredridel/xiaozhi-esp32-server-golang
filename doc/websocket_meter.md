@@ -1,4 +1,4 @@
-### 压测
+### Load Testing
 
 ```
 root@hackers365-System-Product-Name:~# docker run -itd --name websocket_meter docker.jsdelivr.fyi/hackers365/xiaozhi_websocket_client                      
@@ -9,44 +9,44 @@ root@87311584e5fe:/workspace#
 root@87311584e5fe:/workspace# ./ws_multi  -h
 Usage of ./ws_multi:
   -count int
-        客户端数量 (default 10)
+        Number of clients (default 10)
   -device string
-        设备ID
+        Device ID
   -server string
-        服务器地址 (default "ws://localhost:8989/xiaozhi/v1/")
+        Server address (default "ws://localhost:8989/xiaozhi/v1/")
   -text string
-        聊天内容, 多句以逗号分隔会依次发送 (default "你好")
-root@87311584e5fe:/workspace# ./ws_multi -count 1 -server wss://joeyzhou.chat/ws/xiaozhi/v1/ -text "你好,在干什么,一起出去玩吧" 
-运行小智客户端
-服务器: wss://joeyzhou.chat/ws/xiaozhi/v1/
-客户端数量: 1
-发送内容: 你好,在干什么,一起出去玩吧
-2025-05-27 09:54:51.095 [info] [audio_utils.go:199] tts云端首帧耗时: 532 ms
-2025-05-27 09:54:51.098 [info] [audio_utils.go:269] tts云端->首帧解码完成耗时: 535 ms
-2025-05-27 09:54:51.401 [info] [cosyvoice.go:306] tts耗时: 从输入至获取MP3数据结束耗时: 838 ms
-2025-05-27 09:54:51.748 [info] [audio_utils.go:199] tts云端首帧耗时: 344 ms
-2025-05-27 09:54:51.752 [info] [audio_utils.go:269] tts云端->首帧解码完成耗时: 347 ms
-2025-05-27 09:54:51.901 [info] [cosyvoice.go:306] tts耗时: 从输入至获取MP3数据结束耗时: 497 ms
-2025-05-27 09:54:52.292 [info] [audio_utils.go:199] tts云端首帧耗时: 387 ms
-2025-05-27 09:54:52.296 [info] [audio_utils.go:269] tts云端->首帧解码完成耗时: 391 ms
-2025-05-27 09:54:52.628 [info] [cosyvoice.go:306] tts耗时: 从输入至获取MP3数据结束耗时: 723 ms
-0 客户端开始运行
-0 客户端已连接到服务器: wss://joeyzhou.chat/ws/xiaozhi/v1/
-收到消息: {Type:hello Text: State: SessionID:cafd2800-1979-06d5-19cf-b8bf53bb55dc Transport:websocket AudioFormat:<nil>}
-发送Opus帧: 20
-发送Opus帧: 50
-发送Opus帧: 59
+        Chat content, multiple sentences separated by commas will be sent sequentially (default "Hello")
+root@87311584e5fe:/workspace# ./ws_multi -count 1 -server wss://joeyzhou.chat/ws/xiaozhi/v1/ -text "Hello,What are you doing,Let's go out and play" 
+Running Xiaozhi client
+Server: wss://joeyzhou.chat/ws/xiaozhi/v1/
+Number of clients: 1
+Content to send: Hello,What are you doing,Let's go out and play
+2025-05-27 09:54:51.095 [info] [audio_utils.go:199] TTS cloud first frame time: 532 ms
+2025-05-27 09:54:51.098 [info] [audio_utils.go:269] TTS cloud->first frame decode completed time: 535 ms
+2025-05-27 09:54:51.401 [info] [cosyvoice.go:306] TTS time: from input to getting MP3 data end time: 838 ms
+2025-05-27 09:54:51.748 [info] [audio_utils.go:199] TTS cloud first frame time: 344 ms
+2025-05-27 09:54:51.752 [info] [audio_utils.go:269] TTS cloud->first frame decode completed time: 347 ms
+2025-05-27 09:54:51.901 [info] [cosyvoice.go:306] TTS time: from input to getting MP3 data end time: 497 ms
+2025-05-27 09:54:52.292 [info] [audio_utils.go:199] TTS cloud first frame time: 387 ms
+2025-05-27 09:54:52.296 [info] [audio_utils.go:269] TTS cloud->first frame decode completed time: 391 ms
+2025-05-27 09:54:52.628 [info] [cosyvoice.go:306] TTS time: from input to getting MP3 data end time: 723 ms
+0 Client started running
+0 Client connected to server: wss://joeyzhou.chat/ws/xiaozhi/v1/
+Received message: {Type:hello Text: State: SessionID:cafd2800-1979-06d5-19cf-b8bf53bb55dc Transport:websocket AudioFormat:<nil>}
+Sending Opus frame: 20
+Sending Opus frame: 50
+Sending Opus frame: 59
 ```
 
-#### 整体说明
-    1. 程序会根据用户输入的文本, 调用tts接口生成音频数据，依次发送给服务器
-    2. 耗时统计从 type: listen, state: stop开始进行计时，直到收到服务器第一帧音频数据停止
+#### Overall Description
+    1. The program will call the TTS interface to generate audio data based on user input text, and send it to the server sequentially
+    2. Time statistics start from type: listen, state: stop until receiving the first frame of audio data from the server
 
-#### 参数说明：
-    -count: 并发数量
-    -device: 默认会随机生成deviceId，如果使用此参数来指定设备，-count必须为1
-    -server: websocket服务器地址
-    -text: 要发送的内容, 以“,”号分隔，循环发送
+#### Parameter Description:
+    -count: Number of concurrent connections
+    -device: By default, deviceId is randomly generated. If using this parameter to specify a device, -count must be 1
+    -server: WebSocket server address
+    -text: Content to send, separated by "," and sent in a loop
 
-#### 输出说明
-    可以将输出重定向至日志文件, 然后tail -f xx.log | grep '平均响应时间'
+#### Output Description
+    You can redirect output to a log file, then tail -f xx.log | grep 'Average response time'

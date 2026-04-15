@@ -1,34 +1,33 @@
+# Running Environment
 
-# 运行环境
+#### 1. Deploy funasr
 
-#### 一. 部署funasr
+See [funasr docker deployment documentation](https://github.com/modelscope/FunASR/blob/main/runtime/docs/SDK_advanced_guide_online_zh.md)
 
-参见 [funasr docker部署文档](https://github.com/modelscope/FunASR/blob/main/runtime/docs/SDK_advanced_guide_online_zh.md)
-
-#### 二. 克隆代码
+#### 2. Clone Code
 >git clone 'https://github.com/hackers365/xiaozhi-esp32-server-golang'
 
-#### 三. 配置config/config.yaml，详细参见 [config配置说明](config.md)
+#### 3. Configure config/config.yaml, see [config configuration description](config.md) for details
 
-主要修改项如下：
+Main modification items are as follows:
 ```yaml
-# 1. asr语音识别
+# 1. asr speech recognition
 asr:
   provider: "funasr"
   funasr:
-    host: "127.0.0.1"      # 部署的funasr websocket服务的ip
-    port: "10096"          # 部署的funasr websocket的port
-    mode: "offline"        # 模式, 使用offline即可
+    host: "127.0.0.1"      # IP of deployed funasr websocket service
+    port: "10096"          # Port of deployed funasr websocket
+    mode: "offline"        # Mode, use offline
     # ...
 
 # 2. tts
 tts:
-  provider: "xiaozhi"      # 使用tts的类型, 建议doubao_ws, 也可以选择免费的edge
+  provider: "xiaozhi"      # Type of tts to use, recommend doubao_ws, or choose free edge
   doubao_ws:
-    appid: "6886011847"                         # 你的appid
-    access_token: "access_token"                # 你的access token
+    appid: "6886011847"                         # Your appid
+    access_token: "access_token"                # Your access token
     cluster: "volcano_tts"
-    voice: "zh_female_wanwanxiaohe_moon_bigtts" # 音色，默认是湾湾小何
+    voice: "zh_female_wanwanxiaohe_moon_bigtts" # Voice, default is Wanwan Xiaohe
     ws_host: "openspeech.bytedance.com"
     use_stream: true
   edge:
@@ -40,50 +39,50 @@ tts:
     receive_timeout: 60
   # ....
 
-# 3. llm 大模型
+# 3. llm large model
 llm:
-  provider: "deepseek"                        # 提供商，对应下面的key
+  provider: "deepseek"                        # Provider, corresponds to key below
   deepseek:
-    type: "openai"                            # 服务端接口兼容的类型
-    model_name: "Pro/deepseek-ai/DeepSeek-V3" # 模型名称
+    type: "openai"                            # Type of server interface compatibility
+    model_name: "Pro/deepseek-ai/DeepSeek-V3" # Model name
     api_key: "api_key"                        # api key
-    base_url: "https://api.siliconflow.cn/v1" # 服务接口，默认硅基流动
+    base_url: "https://api.siliconflow.cn/v1" # Service interface, default SiliconFlow
     max_tokens: 500
   # ...
 
 ```
 
-#### 四. 启动docker
-在项目根目录 启动docker并挂载config目录和端口(http/websocket:8989, 其它端口按需映射)
+#### 4. Start docker
+Start docker in project root directory and mount config directory and ports (http/websocket:8989, other ports map as needed)
 
 ```
 docker run -itd --name xiaozhi_server -v $(pwd)/config:/workspace/config -p 8989:8989 hackers365/xiaozhi_server:latest
 
-国内连不上的话，使用如下源
+If domestic connection is not available, use the following source
 
 docker run -itd --name xiaozhi_server -v $(pwd)/config:/workspace/config -p 8989:8989 docker.jsdelivr.fyi/hackers365/xiaozhi_server:latest
 ```
 
-**ten_vad 支持说明：**
-- Docker 镜像已自动包含 ten_vad 库文件，无需额外挂载
-- 如果使用 ten_vad 作为 VAD 提供商，在配置文件中设置 `vad.provider: "ten_vad"` 即可
+**ten_vad support description:**
+- Docker image has automatically included ten_vad library files, no additional mount needed
+- If using ten_vad as VAD provider, just set `vad.provider: "ten_vad"` in configuration file
 
-现在应该可以连上 
->ws://机器ip:8989/xiaozhi/v1/ 
+Should be able to connect now
+>ws://machine_ip:8989/xiaozhi/v1/ 
 
-进行聊天了
+for chatting
 
 
-# 开发环境
+# Development Environment
 ```
 docker run -itd --name xiaozhi_server_golang -v $(pwd):/workspace/ -p 8989:8989 hackers365/xiaozhi_golang:0.1
-国内连不上的话，使用如下源
+If domestic connection is not available, use the following source
 docker run -itd --name xiaozhi_server_golang -v $(pwd):/workspace/ -p 8989:8989 docker.jsdelivr.fyi/hackers365/xiaozhi_golang:0.1
 
 go build -o xiaozhi_server cmd/server/*.go
 ```
 
-**开发环境 ten_vad 说明：**
-- 开发环境镜像已包含 ten_vad 编译和运行时依赖
-- 如果需要在开发环境中使用 ten_vad，确保项目根目录的 `lib/ten-vad` 目录存在
-- 编译时会自动使用 ten_vad 的头文件和库文件
+**Development environment ten_vad description:**
+- Development environment image has included ten_vad compilation and runtime dependencies
+- If you need to use ten_vad in development environment, ensure `lib/ten-vad` directory exists in project root directory
+- Will automatically use ten_vad header files and library files during compilation

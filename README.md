@@ -4,155 +4,155 @@
 
 ---
 
-## 项目简介 | Project Overview
+## Project Overview
 
-xiaozhi-esp32-server-golang 是一款高性能、全流式的 AI 后端服务，专为物联网与智能语音场景设计。项目基于 Go 语言开发，集成了 ASR（自动语音识别）、LLM（大语言模型）、TTS（语音合成）等核心能力，支持大规模并发与多协议接入，助力智能终端与边缘设备的 AI 语音交互。
-
----
-
-## ✨ 主要特性 | Key Features
-
-- ⚡ **端到端全流式 AI 语音链路**：ASR → LLM → TTS 全流程流式处理，低延迟实时交互
-- 🎙️ **声纹识别与动态TTS切换**：根据说话人身份自动切换TTS音色，个性化语音体验
-- 🔌 **Transport 接口层抽象**：WebSocket / MQTT UDP 统一抽象，灵活注入主逻辑，便于协议扩展
-- 📬 **消息队列化处理**：LLM 与 TTS 采用消息队列异步处理，支持业务逻辑灵活注入
-- 🌐 **多协议高并发接入**：支持大规模设备并发接入与消息推送
-- ♻️ **高效资源池与连接复用**：外部资源连接池机制，降低响应耗时，提升系统吞吐
-- 🤖 **多引擎AI能力集成**：基于 Eino 框架，支持 FunASR、OpenAI 兼容、Ollama、Doubao、EdgeTTS、CosyVoice 等多种引擎
-- 🧩 **模块化可扩展架构**：VAD/ASR/LLM/TTS/MCP/视觉等核心模块独立可插拔
-- 🎵 **MCP Audio Server**：音频资源分页获取与流式处理，音乐播放与音量控制
-- 🦞 **OpenClaw 智能体接入**：按智能体生成专属 OpenClaw Endpoint，支持连接状态查看、会话测试、进入/退出关键词路由（默认“打开龙虾/进入龙虾”与“关闭龙虾/退出龙虾”）
-- 🖥️ **全功能Web管理控制台**：可视化配置向导、VAD/ASR/LLM/TTS全链路可用性测试、设备管理与消息注入、实时延迟监控与OTA验证
-- 🧠 **高级业务功能**：MCP 市场聚合与导入、声音复刻、知识库（Dify/RAGFlow/WeKnora）、设备/智能体维度 MCP 远程调用调试
-- 📦 **易用的一键部署方案**：预编译 aio 包开箱即用（主程序+控制台+声纹服务）、Docker 一键部署、支持 Linux/Windows/macOS 本地编译
-- 🔐 **安全与权限体系**（规划中）：预留用户认证与权限管理接口
+xiaozhi-esp32-server-golang is a high-performance, fully streaming AI backend service designed for IoT and intelligent voice scenarios. Built with Go, it integrates core capabilities including ASR (Automatic Speech Recognition), LLM (Large Language Model), and TTS (Text-to-Speech), supporting large-scale concurrency and multi-protocol access to enable AI voice interaction for smart terminals and edge devices.
 
 ---
 
-[deepwiki 架构分析](https://deepwiki.com/hackers365/xiaozhi-esp32-server-golang)
+## ✨ Key Features
 
-## 🚀 快速开始 | Quick Start
+- ⚡ **End-to-End Streaming AI Voice Pipeline**: Full streaming processing from ASR → LLM → TTS for low-latency real-time interaction
+- 🎙️ **Voiceprint Recognition & Dynamic TTS Switching**: Automatically switch TTS voices based on speaker identity for personalized voice experience
+- 🔌 **Transport Interface Abstraction**: Unified abstraction for WebSocket / MQTT UDP, flexible injection into main logic for easy protocol extension
+- 📬 **Message Queue Processing**: Asynchronous message queue processing for LLM and TTS, supporting flexible business logic injection
+- 🌐 **Multi-Protocol High-Concurrency Access**: Supports large-scale device concurrent access and message push
+- ♻️ **Efficient Resource Pool & Connection Reuse**: External resource connection pool mechanism to reduce response time and improve system throughput
+- 🤖 **Multi-Engine AI Capability Integration**: Based on the Eino framework, supports FunASR, OpenAI-compatible, Ollama, Doubao, EdgeTTS, CosyVoice, and more
+- 🧩 **Modular Extensible Architecture**: VAD/ASR/LLM/TTS/MCP/Vision and other core modules are independently pluggable
+- 🎵 **MCP Audio Server**: Paginated audio resource retrieval and streaming processing, music playback and volume control
+- 🦞 **OpenClaw Agent Integration**: Generate dedicated OpenClaw Endpoints per agent, supporting connection status viewing, session testing, and enter/exit keyword routing (default: "open lobster/enter lobster" and "close lobster/exit lobster")
+- 🖥️ **Full-Featured Web Management Console**: Visual configuration wizard, VAD/ASR/LLM/TTS availability and latency testing, device management and message injection, real-time latency monitoring and OTA verification
+- 🧠 **Advanced Business Features**: MCP market aggregation and import, voice cloning, knowledge base (Dify/RAGFlow/WeKnora), device/agent-level MCP remote call debugging
+- 📦 **Easy One-Click Deployment**: Pre-compiled aio packages ready to use out-of-the-box (main program + console + voiceprint service), Docker one-click deployment, supports Linux/Windows/macOS local compilation
+- 🔐 **Security & Permission System** (planned): Reserved user authentication and permission management interfaces
 
-### 方式一：一键启动包（推荐）
+---
 
-下载对应平台的压缩包，解压后运行即可：
+[deepwiki Architecture Analysis](https://deepwiki.com/hackers365/xiaozhi-esp32-server-golang)
 
-- **Release 页面**：<https://github.com/hackers365/xiaozhi-esp32-server-golang/releases>
-- **使用教程**：[doc/quickstart_bundle_tutorial.md](doc/quickstart_bundle_tutorial.md)
+## 🚀 Quick Start
 
-启动后访问 **http://<服务器IP或域名>:8080** 进入 Web 控制台进行配置。
+### Method 1: One-Click Bundle (Recommended)
 
-### 方式二：Docker 部署
+Download the compressed package for your platform, extract and run:
 
-- [Docker Compose（带控制台）](doc/docker_compose.md)
-- [Docker（无控制台）](doc/docker.md)
+- **Release Page**: <https://github.com/hackers365/xiaozhi-esp32-server-golang/releases>
+- **Tutorial**: [doc/quickstart_bundle_tutorial.md](doc/quickstart_bundle_tutorial.md)
 
-### 方式三：本地编译
+After starting, visit **http://<server-ip-or-domain>:8080** to enter the Web Console for configuration.
 
-适用于开发环境或需要定制编译的场景。
+### Method 2: Docker Deployment
 
-**安装依赖**（以 Ubuntu 为例）
+- [Docker Compose (with console)](doc/docker_compose.md)
+- [Docker (without console)](doc/docker.md)
+
+### Method 3: Local Compilation
+
+For development environments or custom compilation scenarios.
+
+**Install Dependencies** (Ubuntu example)
 
 ```bash
 # Go 1.20+
-# Opus 编解码
+# Opus codec
 sudo apt-get install -y pkg-config libopus0 libopusfile-dev
 
-# ONNX Runtime（1.21.0）
+# ONNX Runtime (1.21.0)
 wget https://github.com/microsoft/onnxruntime/releases/download/v1.21.0/onnxruntime-linux-x64-1.21.0.tgz
 tar -xzf onnxruntime-linux-x64-1.21.0.tgz
 sudo cp -r onnxruntime-linux-x64-1.21.0/include/* /usr/local/include/onnxruntime/
 sudo cp -r onnxruntime-linux-x64-1.21.0/lib/* /usr/local/lib/
 sudo ldconfig
 
-# ten_vad 运行时依赖
+# ten_vad runtime dependencies
 sudo apt install -y libc++1 libc++abi1
 ```
 
-> 📖 完整依赖说明与 Windows/macOS 配置请参考 [config.md](doc/config.md)
+> 📖 For complete dependency instructions and Windows/macOS configuration, see [config.md](doc/config.md)
 
-主程序、控制台前后端、声纹服务的分离编译与 AIO 打包流程请参考 [doc/compile_deploy.md](doc/compile_deploy.md)
+For separate compilation of main program, console frontend/backend, and voiceprint service, and AIO packaging process, see [doc/compile_deploy.md](doc/compile_deploy.md)
 
-参考 [FunASR 官方文档](https://github.com/modelscope/FunASR/blob/main/runtime/docs/SDK_advanced_guide_online_zh.md) 部署。
+Refer to [FunASR Official Documentation](https://github.com/modelscope/FunASR/blob/main/runtime/docs/SDK_advanced_guide_online_zh.md) for deployment.
 
-**编译与启动**
+**Compile and Start**
 
 ```bash
-# 编译
+# Compile
 go build -o xiaozhi_server ./cmd/server/
 
-# 启动（配置文件详见 config/config.yaml）
+# Start (see config/config.yaml for configuration)
 ./xiaozhi_server -c config/config.yaml
 ```
 
 ---
 
-## 📚 文档导航 | Docs
+## 📚 Documentation
 
-### 部署相关
-- [一键启动包教程](doc/quickstart_bundle_tutorial.md)
-- [Docker Compose 部署](doc/docker_compose.md)
-- [Docker 部署](doc/docker.md)
-- [编译与部署指南](doc/compile_deploy.md)
-- [配置详解](doc/config.md)
+### Deployment
+- [One-Click Bundle Tutorial](doc/quickstart_bundle_tutorial.md)
+- [Docker Compose Deployment](doc/docker_compose.md)
+- [Docker Deployment](doc/docker.md)
+- [Compilation and Deployment Guide](doc/compile_deploy.md)
+- [Configuration Details](doc/config.md)
 
-### 使用指南
-- [管理后台使用指南](doc/manager_console_guide.md)
-- [WebSocket 服务与 OTA 配置](doc/websocket_server.md)
-- [MQTT + UDP 配置](doc/mqtt_udp.md)
-- [MQTT UDP 协议](doc/mqtt_udp_protocol.md)
+### User Guide
+- [Management Console Guide](doc/manager_console_guide.md)
+- [WebSocket Service and OTA Configuration](doc/websocket_server.md)
+- [MQTT + UDP Configuration](doc/mqtt_udp.md)
+- [MQTT UDP Protocol](doc/mqtt_udp_protocol.md)
 
-### 功能模块
-- [视觉能力](doc/vision.md)
-- [声纹识别](doc/speaker_identification.md)
-- [MCP 架构](doc/mcp.md)
-- [MCP 音频资源](doc/mcp_resource.md)
-- [MCP 市场（市场发现/导入/热更新）](doc/mcp_market.md)
-- [OpenClaw 智能体接入（Endpoint/关键词路由/会话测试）](doc/openclaw_integration.md)
-- [声音复刻（用户操作与管理员额度）](doc/voice_clone.md)
-- [知识库（Provider 配置/同步/召回测试/RAG）](doc/knowledge_base.md)
-- [设备/智能体维度 MCP 远程调用（Endpoint/Tools/Call）](doc/mcp_remote_call_agent_device.md)
+### Feature Modules
+- [Vision Capabilities](doc/vision.md)
+- [Voiceprint Recognition](doc/speaker_identification.md)
+- [MCP Architecture](doc/mcp.md)
+- [MCP Audio Resources](doc/mcp_resource.md)
+- [MCP Market (Market Discovery/Import/Hot Update)](doc/mcp_market.md)
+- [OpenClaw Agent Integration (Endpoint/Keyword Routing/Session Testing)](doc/openclaw_integration.md)
+- [Voice Cloning (User Operations and Admin Quota)](doc/voice_clone.md)
+- [Knowledge Base (Provider Configuration/Sync/Recall Testing/RAG)](doc/knowledge_base.md)
+- [Device/Agent-Level MCP Remote Call (Endpoint/Tools/Call)](doc/mcp_remote_call_agent_device.md)
 
-### 设备接入
-- [ESP32 端接入指南](doc/esp32_xiaozhi_backend_guide.md)
-- [OTA MQTT 授权说明](doc/ota_mqtt_auth.md)
+### Device Access
+- [ESP32 Access Guide](doc/esp32_xiaozhi_backend_guide.md)
+- [OTA MQTT Authorization](doc/ota_mqtt_auth.md)
 
 ---
 
-## 🧩 模块架构 | Module Overview
+## 🧩 Module Architecture
 
-| 模块 | 功能简介 | 技术栈 |
+| Module | Function | Tech Stack |
 |------|----------|--------|
-| VAD | 语音活动检测 | Silero VAD / WebRTC VAD / ten_vad |
-| ASR | 语音识别 | FunASR / Doubao ASR |
-| LLM | 大模型推理 | Eino 框架兼容、OpenAI、Ollama 等 |
-| TTS | 语音合成 | Doubao / EdgeTTS / CosyVoice |
-| MCP | 多协议接入、MCP 市场发现导入、设备/智能体维度远程调用调试 | MCP Server / 接入点 / MCP Market / SSE / StreamableHTTP / WebSocket Controller / MCP Tool Call |
-| OpenClaw | 智能体维度接入点、进入/退出关键词模式切换、会话消息转发与测试 | OpenClaw WebSocket / Agent Endpoint / Chat Router |
-| 视觉 | 视觉处理 | Doubao / 阿里云视觉 |
-| 声纹识别 | 说话人识别 | sherpa-onnx + 向量数据库 |
-| 声音复刻 | 用户侧复刻音色创建与试听 | Minimax / CosyVoice / 千问 |
-| 知识库（RAG） | 文档同步、召回测试与对话检索 | Dify / RAGFlow / WeKnora |
+| VAD | Voice Activity Detection | Silero VAD / WebRTC VAD / ten_vad |
+| ASR | Speech Recognition | FunASR / Doubao ASR |
+| LLM | Large Model Inference | Eino framework compatible, OpenAI, Ollama, etc. |
+| TTS | Text-to-Speech | Doubao / EdgeTTS / CosyVoice |
+| MCP | Multi-protocol access, MCP market discovery and import, device/agent-level remote call debugging | MCP Server / Endpoint / MCP Market / SSE / StreamableHTTP / WebSocket Controller / MCP Tool Call |
+| OpenClaw | Agent-level endpoints, enter/exit keyword mode switching, session message forwarding and testing | OpenClaw WebSocket / Agent Endpoint / Chat Router |
+| Vision | Vision Processing | Doubao / Alibaba Cloud Vision |
+| Voiceprint Recognition | Speaker Recognition | sherpa-onnx + Vector Database |
+| Voice Cloning | User-side voice cloning creation and preview | Minimax / CosyVoice / Qwen |
+| Knowledge Base (RAG) | Document sync, recall testing and dialogue retrieval | Dify / RAGFlow / WeKnora |
 
 ---
 
-## 📈 性能与测试 | Performance & Testing
+## 📈 Performance & Testing
 
-- [延迟测试报告](doc/delay_test.md)
-- 管理后台提供 VAD/ASR/LLM/TTS 可用性与延迟测试入口
-
----
-
-## 🛠️ 规划中 | Roadmap
-
-- 与设备建立长连接
-- 主动式ai
+- [Latency Test Report](doc/delay_test.md)
+- Management console provides VAD/ASR/LLM/TTS availability and latency testing entry points
 
 ---
 
-## 🤝 贡献 | Contributing
+## 🛠️ Roadmap
 
-欢迎提交 Issue、PR 或建议！
+- Long connection establishment with devices
+- Proactive AI
+
+---
+
+## 🤝 Contributing
+
+Welcome to submit Issues, PRs, or suggestions!
 
 ---
 
@@ -162,15 +162,15 @@ MIT License
 
 ---
 
-## 📬 联系方式 | Contact
+## 📬 Contact
 
-**交流群**（二维码过期请联系作者）
+**Discussion Group** (QR code expires, please contact author)
 
-![群二维码](https://github.com/user-attachments/assets/c1c1c4ab-2567-4a6b-92a2-c8fcde7a5dcb)
+![Group QR Code](https://github.com/user-attachments/assets/c1c1c4ab-2567-4a6b-92a2-c8fcde7a5dcb)
 
-**个人微信**：hackers365
+**WeChat**: hackers365
 
-![个人微信](https://github.com/user-attachments/assets/6b8d3d11-7bf5-4fa4-a73e-5109019dab85)
+![WeChat](https://github.com/user-attachments/assets/6b8d3d11-7bf5-4fa4-a73e-5109019dab85)
 
 ---
 

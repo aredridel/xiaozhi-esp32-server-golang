@@ -35,9 +35,9 @@
           </div>
         </div>
         <van-cell-group inset>
-          <van-cell title="更多功能" is-link @click="handleGoMore" />
-          <van-cell v-if="authStore.isAdmin" title="配置向导" is-link @click="handleGoConfigWizard" />
-          <van-cell title="退出登录" is-link @click="handleLogout" />
+          <van-cell title="More Features" is-link @click="handleGoMore" />
+          <van-cell v-if="authStore.isAdmin" title="Config Wizard" is-link @click="handleGoConfigWizard" />
+          <van-cell title="Logout" is-link @click="handleLogout" />
         </van-cell-group>
       </div>
     </van-popup>
@@ -61,7 +61,7 @@ const showUserMenu = ref(false)
 
 // 页面标题
 const pageTitle = computed(() => {
-  return route.meta?.title || '小智管理系统'
+  return route.meta?.title || 'XiaoZhi Management System'
 })
 
 // 是否显示返回按钮（非首页且不在标签栏页面时显示）
@@ -89,9 +89,9 @@ const showTabBar = computed(() => {
   return !hideTabBarPages.includes(currentPath)
 })
 
-// 角色文本
+// Role text
 const roleText = computed(() => {
-  return authStore.isAdmin ? '管理员' : '普通用户'
+  return authStore.isAdmin ? 'Administrator' : 'Regular User'
 })
 
 // 用户图标点击
@@ -110,20 +110,20 @@ const handleGoConfigWizard = () => {
   showUserMenu.value = false
 }
 
-// 退出登录
+// Logout
 const handleLogout = async () => {
   try {
     await showConfirmDialog({
-      title: '提示',
-      message: '确定要退出登录吗？'
+      title: 'Confirm',
+      message: 'Are you sure you want to logout?'
     })
     
     authStore.logout()
-    showSuccessToast('已退出登录')
+    showSuccessToast('Logged out successfully')
     router.push('/login')
     showUserMenu.value = false
   } catch {
-    // 用户取消
+    // User cancelled
   }
 }
 

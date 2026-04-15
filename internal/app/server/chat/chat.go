@@ -31,7 +31,7 @@ type ChatManager struct {
 	ctx         context.Context
 	cancel      context.CancelFunc
 
-	// Close 保护，防止多次关闭
+	// Close protection, prevents multiple closes
 	closeOnce sync.Once
 	closed    bool
 }
@@ -52,7 +52,7 @@ func sharedChatHookAsyncExecutor() *pkghooks.AsyncExecutor {
 			Timeout:      time.Duration(viper.GetInt("chat_hooks.async.timeout_ms")) * time.Millisecond,
 		}
 		chatHookAsyncExecutor = pkghooks.NewAsyncExecutor(context.Background(), asyncCfg)
-		log.Infof("初始化全局共享 chat hook observer executor: queue_size=%d worker_count=%d drop_when_full=%v timeout=%s", asyncCfg.QueueSize, asyncCfg.WorkerCount, asyncCfg.DropWhenFull, asyncCfg.Timeout)
+		log.Infof("Initializing global shared chat hook observer executor: queue_size=%d worker_count=%d drop_when_full=%v timeout=%s", asyncCfg.QueueSize, asyncCfg.WorkerCount, asyncCfg.DropWhenFull, asyncCfg.Timeout)
 	})
 	return chatHookAsyncExecutor
 }
@@ -66,7 +66,7 @@ func newChatHookHub(parent context.Context) *chathooks.Hub {
 	}
 	hub := chathooks.NewHub(parent, pkghooks.WithAsyncConfig(asyncCfg), pkghooks.WithAsyncExecutor(sharedChatHookAsyncExecutor()))
 	stats := hub.Stats()
-	log.Infof("初始化 chat hook hub: queue_size=%d worker_count=%d drop_when_full=%v timeout=%s dropped_async=%d", asyncCfg.QueueSize, asyncCfg.WorkerCount, asyncCfg.DropWhenFull, asyncCfg.Timeout, stats.DroppedAsync)
+	log.Infof("Initializing chat hook hub: queue_size=%d worker_count=%d drop_when_full=%v timeout=%s dropped_async=%d", asyncCfg.QueueSize, asyncCfg.WorkerCount, asyncCfg.DropWhenFull, asyncCfg.Timeout, stats.DroppedAsync)
 	return hub
 }
 
@@ -102,27 +102,27 @@ func NewChatManager(deviceID string, transport types_conn.IConn, options ...Chat
 
 	cm.ctx, cm.cancel = context.WithCancel(ctx)
 
-	// 先创建 clientState，再注册 OnClose 回调，避免竞态条件
+	// Create clientState first, then register OnClose callback to avoid race conditions
 	clientState, err := GenClientState(cm.ctx, cm.DeviceID)
 	if err != nil {
-		log.Errorf("初始化客户端状态失败: %v", err)
+		log.Errorf("Failed to initialize client state: %v", err)
 		cm.transport.Close()
 		return nil, err
 	}
 	cm.clientState = clientState
 
-	// clientState 创建完成后再注册 OnClose 回调
+	// Register OnClose callback after clientState is created
 	cm.transport.OnClose(cm.OnClose)
 
 	serverTransport := NewServerTransport(cm.transport, clientState)
 	hookHub := newChatHookHub(cm.ctx)
 	if !viper.IsSet("chat_hooks.enabled") || viper.GetBool("chat_hooks.enabled") {
 		if err := chathooks.RegisterBuiltinPlugins(hookHub, chatHookBuiltinOverrides()); err != nil {
-			log.Errorf("注册 chat hook builtin plugins 失败: %v", err)
+			log.Errorf("Failed to register chat hook builtin plugins: %v", err)
 			cm.transport.Close()
 			return nil, err
 		}
-		log.Infof("已加载 chat hook plugins: %+v", hookHub.PluginMetas())
+		log.Infof("Loaded chat hook plugins: %+v", hookHub.PluginMetas())
 	}
 	transformRegistry := streamtransform.NewRegistry()
 	plugins.Init(transformRegistry)
@@ -140,18 +140,18 @@ func NewChatManager(deviceID string, transport types_conn.IConn, options ...Chat
 func GenClientState(pctx context.Context, deviceID string) (*ClientState, error) {
 	configProvider, err := userconfig.GetProvider(viper.GetString("config_provider.type"))
 	if err != nil {
-		log.Errorf("获取 用户配置提供者失败: %+v", err)
+		log.Errorf("Failed to get user config provider: %+v", err)
 		return nil, err
 	}
 	deviceConfig, err := configProvider.GetUserConfig(pctx, deviceID)
 	if err != nil {
-		log.Errorf("获取 设备 %s 配置失败: %+v", deviceID, err)
+		log.Errorf("Failed to get device %s configuration: %+v", deviceID, err)
 		return nil, err
 	}
 	deviceConfig.MemoryMode = NormalizeMemoryMode(deviceConfig.MemoryMode)
 	deviceConfig.SpeakerChatMode = NormalizeSpeakerChatMode(deviceConfig.SpeakerChatMode)
 
-	// 创建带取消功能的上下文
+	// Create context with cancellation capability
 	ctx, cancel := context.WithCancel(pctx)
 
 	maxSilenceDuration := viper.GetInt64("chat.chat_max_silence_duration")
@@ -161,7 +161,7 @@ func GenClientState(pctx context.Context, deviceID string) (*ClientState, error)
 
 	isDeviceActivated, err := configProvider.IsDeviceActivated(ctx, deviceID, "")
 	if err != nil {
-		log.Errorf("检查设备激活状态失败: %v", err)
+		log.Errorf("Failed to check device activation status: %v", err)
 	}
 
 	clientState := &ClientState{
@@ -203,23 +203,23 @@ func applyOutputAudioFormatForTTS(clientState *ClientState) {
 		Format:        types_audio.Format,
 	}
 	ttsType := clientState.DeviceConfig.Tts.Provider
-	// 如果使用 xiaozhi tts，则固定使用24000hz, 20ms帧长
+	// If using xiaozhi tts, fixed to 24000hz, 20ms frame length
 	if ttsType == constants.TtsTypeXiaozhi {
 		clientState.OutputAudioFormat.SampleRate = 24000
 		clientState.OutputAudioFormat.FrameDuration = 20
 	}
 }
 
-// ReloadDeviceConfig 重新加载设备配置并应用到当前会话
+// ReloadDeviceConfig reloads device configuration and applies to current session
 func (c *ChatManager) ReloadDeviceConfig(ctx context.Context) error {
 	configProvider, err := userconfig.GetProvider(viper.GetString("config_provider.type"))
 	if err != nil {
-		return fmt.Errorf("获取配置提供者失败: %w", err)
+		return fmt.Errorf("failed to get config provider: %w", err)
 	}
 
 	deviceConfig, err := configProvider.GetUserConfig(ctx, c.DeviceID)
 	if err != nil {
-		return fmt.Errorf("获取设备配置失败: %w", err)
+		return fmt.Errorf("failed to get device configuration: %w", err)
 	}
 	deviceConfig.MemoryMode = NormalizeMemoryMode(deviceConfig.MemoryMode)
 	deviceConfig.SpeakerChatMode = NormalizeSpeakerChatMode(deviceConfig.SpeakerChatMode)
@@ -228,20 +228,20 @@ func (c *ChatManager) ReloadDeviceConfig(ctx context.Context) error {
 	c.clientState.AgentID = deviceConfig.AgentId
 	c.clientState.DeviceConfig = deviceConfig
 	c.clientState.SystemPrompt = deviceConfig.SystemPrompt
-	// 切换角色后清空声纹临时TTS配置，避免旧配置污染
+	// Clear speaker temporary TTS config after role switch to avoid old config pollution
 	c.clientState.SpeakerTTSConfig = nil
-	// OpenClaw模式状态由 openclaw manager 按 agent session 维护，配置刷新时主动退出模式。
+	// OpenClaw mode status is maintained by openclaw manager per agent session, actively exit mode on config refresh.
 	openclaw.GetManager().ExitMode(oldAgentID, c.DeviceID)
 	openclaw.GetManager().ExitMode(c.clientState.AgentID, c.DeviceID)
 	applyOutputAudioFormatForTTS(c.clientState)
-	log.Infof("设备 %s 配置已刷新，当前agent=%s", c.DeviceID, deviceConfig.AgentId)
+	log.Infof("Device %s configuration refreshed, current agent=%s", c.DeviceID, deviceConfig.AgentId)
 	return nil
 }
 
 func (c *ChatManager) Start() error {
 	err := c.session.Start(c.ctx)
 	if err != nil {
-		log.Errorf("ChatManager启动失败: %v", err)
+		log.Errorf("ChatManager startup failed: %v", err)
 		return err
 	}
 	select {
@@ -250,25 +250,25 @@ func (c *ChatManager) Start() error {
 	return nil
 }
 
-// 主动关闭断开连接
+// Close actively closes the connection
 func (c *ChatManager) Close() error {
 	c.closeOnce.Do(func() {
 		if c.clientState != nil {
-			log.Infof("主动关闭断开连接, 设备 %s", c.clientState.DeviceID)
+			log.Infof("Actively closing connection, device %s", c.clientState.DeviceID)
 		}
-		// 先关闭会话级别的资源
+		// Close session-level resources first
 		if c.session != nil {
 			c.session.Close()
 		}
 
-		// 最后取消管理器级别的上下文
+		// Finally cancel manager-level context
 		c.cancel()
 	})
 	return nil
 }
 
 func (c *ChatManager) OnClose(deviceId string) {
-	log.Infof("设备 %s 断开连接", deviceId)
+	log.Infof("Device %s disconnected", deviceId)
 	if c.session != nil && c.session.mediaPlayer != nil {
 		c.session.mediaPlayer.DetachSession(true)
 	}
@@ -287,18 +287,18 @@ func (c *ChatManager) GetDeviceId() string {
 	return c.clientState.DeviceID
 }
 
-// GetSession 获取 ChatSession
+// GetSession gets ChatSession
 func (c *ChatManager) GetSession() *ChatSession {
 	return c.session
 }
 
-// InjectMessage 注入消息到设备
+// InjectMessage injects message to device
 func (c *ChatManager) InjectMessage(message string, skipLlm bool) error {
 	if skipLlm {
-		// 直接发送文本消息到设备，跳过LLM处理
+		// Send text message directly to device, skip LLM processing
 		return c.session.AddTextToTTSQueue(message)
 	} else {
-		// 通过LLM处理消息
+		// Process message through LLM
 		return c.session.AddAsrResultToQueue(message, nil)
 	}
 }

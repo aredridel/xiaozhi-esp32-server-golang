@@ -4,17 +4,17 @@
       <div class="header-left">
         <el-button @click="goBack" type="text" class="back-btn">
           <el-icon><ArrowLeft /></el-icon>
-          返回
+          Back
         </el-button>
         <div class="header-info">
-          <h2>设备管理</h2>
-          <p class="page-subtitle">管理智能体关联的设备</p>
+          <h2>Device Management</h2>
+          <p class="page-subtitle">Manage devices associated with the agent</p>
         </div>
       </div>
       <div class="header-right">
         <el-button type="primary" @click="showAddDeviceDialog = true">
           <el-icon><Plus /></el-icon>
-          添加设备
+          Add Device
         </el-button>
       </div>
     </div>
@@ -23,12 +23,12 @@
       <el-card class="empty-card">
         <div class="empty-content">
           <el-icon size="64" color="#909399"><Monitor /></el-icon>
-          <h3>暂无设备</h3>
-          <p>该智能体还没有关联任何设备。</p>
+          <h3>No Devices</h3>
+          <p>This agent has no associated devices yet.</p>
           <div class="empty-actions">
             <el-button type="primary" size="large" @click="showAddDeviceDialog = true">
               <el-icon><Plus /></el-icon>
-              添加第一个设备
+              Add First Device
             </el-button>
           </div>
         </div>
@@ -43,34 +43,34 @@
               <el-icon size="28"><Monitor /></el-icon>
             </div>
             <div class="device-info">
-              <h3 class="device-name">{{ device.device_name || '未命名设备' }}</h3>
+              <h3 class="device-name">{{ device.device_name || 'Unnamed Device' }}</h3>
               <p class="device-code">{{ device.device_code }}</p>
             </div>
             <div class="device-status">
               <span :class="['status-dot', isDeviceOnline(device.last_active_at) ? 'online' : 'offline']"></span>
-              <span class="status-text">{{ isDeviceOnline(device.last_active_at) ? '在线' : '离线' }}</span>
+              <span class="status-text">{{ isDeviceOnline(device.last_active_at) ? 'Online' : 'Offline' }}</span>
             </div>
           </div>
           
           <div class="device-meta">
             <div class="meta-row">
-              <span class="meta-label">设备类型</span>
-              <span class="meta-value">ESP32设备</span>
+              <span class="meta-label">Device Type</span>
+              <span class="meta-value">ESP32 Device</span>
             </div>
             <div class="meta-row">
-              <span class="meta-label">激活状态</span>
+              <span class="meta-label">Activation Status</span>
               <span class="meta-value">
                 <el-tag :type="device.activated ? 'success' : 'warning'" size="small">
-                  {{ device.activated ? '已激活' : '未激活' }}
+                  {{ device.activated ? 'Activated' : 'Not Activated' }}
                 </el-tag>
               </span>
             </div>
             <div class="meta-row">
-              <span class="meta-label">最后活跃</span>
+              <span class="meta-label">Last Active</span>
               <span class="meta-value">{{ formatDate(device.last_active_at) }}</span>
             </div>
             <div class="meta-row">
-              <span class="meta-label">创建时间</span>
+              <span class="meta-label">Created At</span>
               <span class="meta-value">{{ formatDate(device.created_at) }}</span>
             </div>
           </div>
@@ -78,7 +78,7 @@
           <div class="device-actions">
             <el-button size="small" @click="handleDeviceRole(device.id)">
               <el-icon><User /></el-icon>
-              角色
+              Role
             </el-button>
             <el-button size="small" @click="handleDeviceMcp(device)">
               <el-icon><Setting /></el-icon>
@@ -86,17 +86,17 @@
             </el-button>
             <el-button size="small" type="danger" @click="handleRemoveDevice(device.id)">
               <el-icon><Delete /></el-icon>
-              移除
+              Remove
             </el-button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 添加设备弹窗 -->
+    <!-- Add Device Dialog -->
     <el-dialog
       v-model="showAddDeviceDialog"
-      title="添加设备"
+      title="Add Device"
       width="400px"
       :before-close="handleCloseAddDevice"
     >
@@ -104,7 +104,7 @@
         <div class="device-icon">
           <el-icon size="48"><Monitor /></el-icon>
         </div>
-        <p class="device-tip">请输入设备验证码</p>
+        <p class="device-tip">Please enter device verification code</p>
         <el-form
           ref="deviceFormRef"
           :model="deviceForm"
@@ -113,7 +113,7 @@
           <el-form-item prop="code">
             <el-input
               v-model="deviceForm.code"
-              placeholder="请输入6位验证码"
+              placeholder="Please enter 6-digit verification code"
               size="large"
               :maxlength="6"
               style="text-align: center; font-size: 18px; letter-spacing: 4px;"
@@ -124,84 +124,84 @@
       
       <template #footer>
         <div class="dialog-footer">
-          <el-button @click="handleCloseAddDevice" size="large">取消</el-button>
+          <el-button @click="handleCloseAddDevice" size="large">Cancel</el-button>
           <el-button type="primary" @click="handleAddDevice" :loading="addingDevice" size="large">
-            确定
+            Confirm
           </el-button>
         </div>
       </template>
     </el-dialog>
 
-    <!-- 设备MCP弹窗 -->
+    <!-- Device MCP Dialog -->
 
     <el-dialog
       v-model="showMcpDialog"
-      title="设备MCP工具"
+      title="Device MCP Tools"
       width="760px"
     >
       <div v-loading="mcpLoading">
         <div class="mcp-tools-header">
-          <el-button size="small" type="primary" @click="refreshDeviceMcpTools" :loading="toolsLoading">刷新工具列表</el-button>
+          <el-button size="small" type="primary" @click="refreshDeviceMcpTools" :loading="toolsLoading">Refresh Tools List</el-button>
         </div>
 
-        <div v-if="mcpTools.length === 0" class="tools-empty">暂无工具数据</div>
+        <div v-if="mcpTools.length === 0" class="tools-empty">No tools data available</div>
         <div v-else class="tools-tags">
           <el-tag v-for="tool in mcpTools" :key="tool.name" class="tool-tag">{{ tool.name }}</el-tag>
         </div>
 
         <el-divider />
         <el-form :model="mcpCallForm" label-width="90px">
-          <el-form-item label="工具">
-            <el-select v-model="mcpCallForm.tool_name" placeholder="请选择工具" style="width:100%" @change="handleMcpToolChange">
+          <el-form-item label="Tool">
+            <el-select v-model="mcpCallForm.tool_name" placeholder="Please select tool" style="width:100%" @change="handleMcpToolChange">
               <el-option v-for="tool in mcpTools" :key="tool.name" :label="tool.name" :value="tool.name" />
             </el-select>
           </el-form-item>
-          <el-form-item label="参数JSON">
-            <el-input v-model="mcpCallForm.argumentsText" type="textarea" :rows="6" placeholder='例如: {"query":"hello"}' />
+          <el-form-item label="Parameters JSON">
+            <el-input v-model="mcpCallForm.argumentsText" type="textarea" :rows="6" placeholder='e.g.: {"query":"hello"}' />
           </el-form-item>
         </el-form>
 
-        <el-button type="primary" @click="callDeviceMcpTool" :loading="callingTool">调用工具</el-button>
+        <el-button type="primary" @click="callDeviceMcpTool" :loading="callingTool">Call Tool</el-button>
 
         <el-divider />
-        <div class="mcp-result-box">{{ mcpCallResult || '暂无调用结果' }}</div>
+        <div class="mcp-result-box">{{ mcpCallResult || 'No call results yet' }}</div>
       </div>
     </el-dialog>
 
 
-    <!-- 设备角色配置弹窗 -->
+    <!-- Device Role Config Dialog -->
     <el-dialog
       v-model="showRoleConfigDialog"
-      title="设备角色配置"
+      title="Device Role Configuration"
       width="700px"
       @close="handleCloseRoleConfig"
     >
       <div v-loading="roleConfigLoading">
         <div class="role-config-content">
           <el-alert
-            title="配置说明"
+            title="Configuration Instructions"
             type="info"
             :closable="false"
             style="margin-bottom: 16px"
           >
-            设备关联角色后，将使用角色的配置（Prompt、LLM、TTS）覆盖智能体的配置。如需使用智能体配置，请取消关联角色。
+            After associating a role with the device, the device will use the role's configuration (Prompt, LLM, TTS) to override the agent's configuration. To use the agent's configuration, please cancel the role association.
           </el-alert>
 
           <el-form label-width="120px">
-            <el-form-item label="当前角色">
+            <el-form-item label="Current Role">
               <div v-if="currentDevice.role_id">
-                <el-tag type="success" size="large">已关联角色</el-tag>
+                <el-tag type="success" size="large">Role Associated</el-tag>
                 <div class="current-role-info">
-                  <p><strong>角色ID:</strong> {{ currentDevice.role_id }}</p>
+                  <p><strong>Role ID:</strong> {{ currentDevice.role_id }}</p>
                 </div>
               </div>
-              <el-tag v-else type="info" size="large">未关联角色（使用智能体配置）</el-tag>
+              <el-tag v-else type="info" size="large">No Role Associated (Using Agent Configuration)</el-tag>
             </el-form-item>
 
-            <el-form-item label="选择角色">
+            <el-form-item label="Select Role">
               <el-select
                 v-model="selectedRoleId"
-                placeholder="选择角色（可选）"
+                placeholder="Select role (optional)"
                 style="width: 100%"
                 clearable
                 filterable
@@ -216,29 +216,29 @@
                   <div class="role-option-item">
                     <div class="role-option-main">
                       <span>{{ role.name }}</span>
-                      <el-tag v-if="role.role_type === 'global'" size="small" type="success">全局</el-tag>
+                      <el-tag v-if="role.role_type === 'global'" size="small" type="success">Global</el-tag>
                     </div>
-                    <el-tag size="small" type="info">LLM: {{ role.llm_config_id || '默认' }}</el-tag>
+                    <el-tag size="small" type="info">LLM: {{ role.llm_config_id || 'Default' }}</el-tag>
                   </div>
                 </el-option>
               </el-select>
               <div class="form-help">
-                选择角色后，设备将使用角色的配置。留空则取消角色关联。
+                After selecting a role, the device will use the role's configuration. Leave empty to cancel role association.
               </div>
             </el-form-item>
 
-            <el-form-item label="角色详情" v-if="selectedRole">
+            <el-form-item label="Role Details" v-if="selectedRole">
               <el-card class="role-preview-card">
                 <div class="role-preview-content">
-                  <p><strong>名称:</strong> {{ selectedRole.name }}</p>
-                  <p v-if="selectedRole.description"><strong>描述:</strong> {{ selectedRole.description }}</p>
+                  <p><strong>Name:</strong> {{ selectedRole.name }}</p>
+                  <p v-if="selectedRole.description"><strong>Description:</strong> {{ selectedRole.description }}</p>
                   <el-divider />
                   <p><strong>Prompt:</strong></p>
                   <p class="prompt-preview">{{ selectedRole.prompt.substring(0, 200) }}{{ selectedRole.prompt.length > 200 ? '...' : '' }}</p>
                   <div class="role-configs-preview">
-                    <el-tag size="small">LLM: {{ selectedRole.llm_config_id || '默认' }}</el-tag>
-                    <el-tag size="small">TTS: {{ selectedRole.tts_config_id || '默认' }}</el-tag>
-                    <el-tag v-if="selectedRole.voice" size="small">音色: {{ selectedRole.voice }}</el-tag>
+                    <el-tag size="small">LLM: {{ selectedRole.llm_config_id || 'Default' }}</el-tag>
+                    <el-tag size="small">TTS: {{ selectedRole.tts_config_id || 'Default' }}</el-tag>
+                    <el-tag v-if="selectedRole.voice" size="small">Voice: {{ selectedRole.voice }}</el-tag>
                   </div>
                 </div>
               </el-card>
@@ -248,14 +248,14 @@
       </div>
 
       <template #footer>
-        <el-button @click="handleCloseRoleConfig">取消</el-button>
+        <el-button @click="handleCloseRoleConfig">Cancel</el-button>
         <el-button
           type="primary"
           @click="handleApplyRole"
           :loading="roleConfigLoading"
           :disabled="!selectedRoleId && !currentDevice.role_id"
         >
-          {{ selectedRoleId ? '应用角色' : '取消角色' }}
+          {{ selectedRoleId ? 'Apply Role' : 'Cancel Role' }}
         </el-button>
       </template>
     </el-dialog>
@@ -287,7 +287,7 @@ const mcpTools = ref([])
 const mcpCallResult = ref('')
 const mcpCallForm = ref({ tool_name: '', argumentsText: '{}' })
 
-// 设备角色配置相关
+// Device role config related
 const showRoleConfigDialog = ref(false)
 const roleConfigLoading = ref(false)
 const currentDevice = ref({})
@@ -302,8 +302,8 @@ const deviceForm = reactive({
 
 const deviceRules = {
   code: [
-    { required: true, message: '请输入设备验证码', trigger: 'blur' },
-    { len: 6, message: '验证码长度为6位', trigger: 'blur' }
+    { required: true, message: 'Please enter device verification code', trigger: 'blur' },
+    { len: 6, message: 'Verification code must be 6 digits', trigger: 'blur' }
   ]
 }
 
@@ -312,7 +312,7 @@ const loadDevices = async () => {
     const response = await api.get(`/user/agents/${agentId}/devices`)
     devices.value = response.data.data || []
   } catch (error) {
-    ElMessage.error('加载设备列表失败')
+    ElMessage.error('Failed to load device list')
   }
 }
 
@@ -328,13 +328,13 @@ const handleAddDevice = async () => {
     })
     
     if (response.data.success) {
-      ElMessage.success('设备添加成功')
+      ElMessage.success('Device added successfully')
       handleCloseAddDevice()
       await loadDevices()
     }
   } catch (error) {
-    console.error('添加设备失败:', error)
-    ElMessage.error('添加设备失败')
+    console.error('Failed to add device:', error)
+    ElMessage.error('Failed to add device')
   } finally {
     addingDevice.value = false
   }
@@ -371,7 +371,7 @@ const refreshDeviceMcpTools = async () => {
       mcpCallForm.value.tool_name = mcpTools.value[0].name
     }
   } catch (error) {
-    ElMessage.error('获取设备MCP工具失败')
+    ElMessage.error('Failed to get device MCP tools')
     mcpTools.value = []
   } finally {
     toolsLoading.value = false
@@ -484,7 +484,7 @@ const formatMcpCallResult = (payload) => {
 
 const callDeviceMcpTool = async () => {
   if (!currentDeviceId.value || !mcpCallForm.value.tool_name) {
-    ElMessage.warning('请选择工具')
+    ElMessage.warning('Please select a tool')
     return
   }
 
@@ -492,7 +492,7 @@ const callDeviceMcpTool = async () => {
   try {
     argumentsObj = mcpCallForm.value.argumentsText ? JSON.parse(mcpCallForm.value.argumentsText) : {}
   } catch (e) {
-    ElMessage.error('参数JSON格式错误')
+    ElMessage.error('Invalid JSON format for parameters')
     return
   }
 
@@ -503,16 +503,16 @@ const callDeviceMcpTool = async () => {
       arguments: argumentsObj
     })
     mcpCallResult.value = formatMcpCallResult(response.data.data || {})
-    ElMessage.success('MCP工具调用成功')
+    ElMessage.success('MCP tool called successfully')
   } catch (error) {
     mcpCallResult.value = JSON.stringify(error.response?.data || { error: error.message }, null, 2)
-    ElMessage.error('MCP工具调用失败')
+    ElMessage.error('Failed to call MCP tool')
   } finally {
     callingTool.value = false
   }
 }
 
-// 加载角色列表
+// Load role list
 const loadRoles = async () => {
   try {
     const response = await api.get('/user/roles')
@@ -520,11 +520,11 @@ const loadRoles = async () => {
     const userRoles = response.data.data?.user_roles || []
     availableRoles.value = [...globalRoles, ...userRoles].filter(isRoleActive)
   } catch (error) {
-    console.error('加载角色列表失败:', error)
+    console.error('Failed to load role list:', error)
   }
 }
 
-// 打开设备角色配置弹窗
+// Open device role config dialog
 const handleDeviceRole = async (deviceId) => {
   const device = devices.value.find(d => d.id === deviceId)
   if (!device) return
@@ -533,12 +533,12 @@ const handleDeviceRole = async (deviceId) => {
   selectedRoleId.value = device.role_id || null
   selectedRole.value = null
 
-  // 加载角色列表（如果还没有加载）
+  // Load role list (if not loaded yet)
   if (availableRoles.value.length === 0) {
     await loadRoles()
   }
 
-  // 如果已有关联角色，查找角色信息
+  // If role already associated, find role info
   if (device.role_id) {
     const role = availableRoles.value.find(r => r.id === device.role_id)
     if (role) {
@@ -549,7 +549,7 @@ const handleDeviceRole = async (deviceId) => {
   showRoleConfigDialog.value = true
 }
 
-// 处理角色选择变化
+// Handle role selection change
 const handleRoleSelect = (roleId) => {
   if (!roleId) {
     selectedRole.value = null
@@ -561,7 +561,7 @@ const handleRoleSelect = (roleId) => {
   }
 }
 
-// 应用角色到设备
+// Apply role to device
 const handleApplyRole = async () => {
   if (!currentDevice.value.id) return
 
@@ -572,17 +572,17 @@ const handleApplyRole = async () => {
     }
 
     await api.post(`/devices/${currentDevice.value.id}/apply-role`, data)
-    ElMessage.success(selectedRoleId.value ? '角色已应用到设备' : '已取消设备角色')
+    ElMessage.success(selectedRoleId.value ? 'Role applied to device' : 'Device role cancelled')
     showRoleConfigDialog.value = false
     await loadDevices()
   } catch (error) {
-    ElMessage.error('操作失败: ' + (error.response?.data?.error || error.message))
+    ElMessage.error('Operation failed: ' + (error.response?.data?.error || error.message))
   } finally {
     roleConfigLoading.value = false
   }
 }
 
-// 关闭角色配置弹窗
+// Close role config dialog
 const handleCloseRoleConfig = () => {
   showRoleConfigDialog.value = false
   currentDevice.value = {}
@@ -593,23 +593,23 @@ const handleCloseRoleConfig = () => {
 const handleRemoveDevice = async (deviceId) => {
   try {
     await ElMessageBox.confirm(
-      '确定要移除这个设备吗？',
-      '确认移除',
+      'Are you sure you want to remove this device?',
+      'Confirm Remove',
       {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
+        confirmButtonText: 'Confirm',
+        cancelButtonText: 'Cancel',
         type: 'warning',
       }
     )
     
     const response = await api.delete(`/user/agents/${agentId}/devices/${deviceId}`)
     if (response.data.success) {
-      ElMessage.success('设备移除成功')
+      ElMessage.success('Device removed successfully')
       await loadDevices()
     }
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('移除设备失败')
+      ElMessage.error('Failed to remove device')
     }
   }
 }
@@ -619,16 +619,16 @@ const goBack = () => {
 }
 
 const formatDate = (dateString) => {
-  if (!dateString) return '从未'
+  if (!dateString) return 'Never'
   return new Date(dateString).toLocaleString('zh-CN')
 }
 
-// 判断设备是否在线（基于最后活跃时间）
+// Determine if device is online (based on last active time)
 const isDeviceOnline = (lastActiveAt) => {
   if (!lastActiveAt) return false
   const now = new Date()
   const lastActive = new Date(lastActiveAt)
-  // 5分钟内有活动认为在线
+  // Consider online if active within 5 minutes
   return (now - lastActive) < 5 * 60 * 1000
 }
 
@@ -879,7 +879,7 @@ onMounted(() => {
   min-width: 80px;
 }
 
-/* 设备角色配置相关样式 */
+/* Device role config related styles */
 .role-config-content {
   padding: 20px 0;
 }
