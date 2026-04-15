@@ -1,12 +1,12 @@
-# websocket_multi 压测客户端说明
+# websocket_multi Load Test Client Documentation
 
-## 新增优化参数
+## New Optimization Parameters
 
-- `-audio_wav`：使用本地 wav 文件（逗号分隔）作为音频输入，避免调用云端 TTS 生成测试音频。
-- `-metrics_jsonl`：输出结构化延迟指标（JSONL），包含 `first_frame`、`tts_stop` 事件。
-- `-ramp_ms`：客户端启动间隔毫秒，减少瞬时建连抖动。
+- `-audio_wav`: Use local wav files (comma-separated) as audio input, avoiding cloud TTS for test audio generation.
+- `-metrics_jsonl`: Output structured latency metrics (JSONL), including `first_frame`, `tts_stop` events.
+- `-ramp_ms`: Client startup interval in milliseconds, reducing instantaneous connection jitter.
 
-## 示例
+## Example
 
 ```bash
 go run ./test/websocket_multi/xiaozhi_ws_client_multi.go \
@@ -17,18 +17,18 @@ go run ./test/websocket_multi/xiaozhi_ws_client_multi.go \
   -metrics_jsonl ./ws_metrics.jsonl
 ```
 
-如果不传 `-audio_wav`，会沿用原行为（通过 cosyvoice 生成音频）。
+If `-audio_wav` is not provided, original behavior will be used (generate audio via cosyvoice).
 
 ---
 
-## 并发阶梯压测模板（推荐）
+## Concurrent Load Test Template (Recommended)
 
-> 先确保你已经启动：
-> 1) 主服务；
-> 2) 独立 mock 服务（如 `go run ./cmd/mock_ai_server -addr :18080`）；
-> 3) 主服务配置已指向 mock ASR/LLM/TTS。
+> First ensure you have started:
+> 1) Main service;
+> 2) Standalone mock service (e.g., `go run ./cmd/mock_ai_server -addr :18080`);
+> 3) Main service configuration points to mock ASR/LLM/TTS.
 
-### 1) 50 并发
+### 1) 50 Concurrent
 
 ```bash
 go run ./test/websocket_multi/xiaozhi_ws_client_multi.go \
@@ -39,7 +39,7 @@ go run ./test/websocket_multi/xiaozhi_ws_client_multi.go \
   -metrics_jsonl ./metrics_50.jsonl
 ```
 
-### 2) 100 并发
+### 2) 100 Concurrent
 
 ```bash
 go run ./test/websocket_multi/xiaozhi_ws_client_multi.go \
@@ -50,7 +50,7 @@ go run ./test/websocket_multi/xiaozhi_ws_client_multi.go \
   -metrics_jsonl ./metrics_100.jsonl
 ```
 
-### 3) 300 并发
+### 3) 300 Concurrent
 
 ```bash
 go run ./test/websocket_multi/xiaozhi_ws_client_multi.go \
@@ -61,7 +61,7 @@ go run ./test/websocket_multi/xiaozhi_ws_client_multi.go \
   -metrics_jsonl ./metrics_300.jsonl
 ```
 
-### 4) 500 并发
+### 4) 500 Concurrent
 
 ```bash
 go run ./test/websocket_multi/xiaozhi_ws_client_multi.go \
@@ -74,16 +74,16 @@ go run ./test/websocket_multi/xiaozhi_ws_client_multi.go \
 
 ---
 
-## 指标汇总脚本
+## Metrics Summary Script
 
-新增：`test/websocket_multi/summarize_metrics.py`
+New: `test/websocket_multi/summarize_metrics.py`
 
 ```bash
 python3 ./test/websocket_multi/summarize_metrics.py ./metrics_100.jsonl
 ```
 
-输出包含：
-- `first_frame`：avg/p50/p95/p99/max
-- `tts_stop`：avg/p50/p95/p99/max
+Output includes:
+- `first_frame`: avg/p50/p95/p99/max
+- `tts_stop`: avg/p50/p95/p99/max
 - `approx_success_rate(first_frame/tts_stop)`
 

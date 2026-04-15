@@ -1,23 +1,23 @@
-测试小智官方服务器mqtt+udp协议 响应速度
-结果:
-stt 166ms，llm 300ms左右，首帧音频642ms
+Test Xiaozhi official server MQTT+UDP protocol response speed
+Results:
+stt 166ms, llm ~300ms, first audio frame 642ms
 
-## 使用方法
+## Usage
 
-### 基本参数
-- `-ota`: OTA服务器地址（默认: https://api.tenclass.net/xiaozhi/ota/）
-- `-device`: 设备ID（默认: ba:8f:17:de:94:94）
-- `-mode`: 拾音模式，支持 `manual`（手动）或 `auto`（自动），默认: `manual`
+### Basic Parameters
+- `-ota`: OTA server address (default: https://api.tenclass.net/xiaozhi/ota/)
+- `-device`: Device ID (default: ba:8f:17:de:94:94)
+- `-mode`: Audio pickup mode, supports `manual` or `auto`, default: `manual`
 
-### 拾音模式说明
-- **manual 模式**：需要手动发送 listen stop 消息来停止拾音
-- **auto 模式**：自动检测语音结束并停止拾音
+### Audio Pickup Mode Description
+- **manual mode**: Need to manually send listen stop message to stop audio pickup
+- **auto mode**: Automatically detect voice end and stop audio pickup
 
-### 使用示例
+### Usage Example
 ```bash
-# 使用默认的 manual 模式
+# Use default manual mode
 ./main -device "ba:8f:17:de:94:94"
 
-# 使用 auto 模式
+# Use auto mode
 ./main -device "ba:8f:17:de:94:94" -mode auto
 ```

@@ -22,17 +22,17 @@ const (
 )
 
 var (
-	managerHTTPServer *http.Server // 本进程内嵌的 manager HTTP 服务句柄，用于优雅关闭
-	managerDB         *gorm.DB     // manager 使用的 DB，退出时关闭
+	managerHTTPServer *http.Server // Embedded manager HTTP service handle in this process, used for graceful shutdown
+	managerDB         *gorm.DB     // DB used by manager, closed on exit
 )
 
-// StartManagerHTTP 在本进程内启动 manager 的 HTTP 服务（双端口）。是否调用由 main 根据 -manager-enable 决定。
-// configPath：manager 配置文件路径，空则使用默认路径
+// StartManagerHTTP starts the manager HTTP service within this process (dual port). Whether to call is determined by main based on -manager-enable.
+// configPath: manager configuration file path, empty uses default path
 func StartManagerHTTP(configPath string) {
 	if configPath == "" {
 		configPath = defaultManagerConfigPath
 	}
-	log.Infof("正在启动内嵌 manager HTTP 服务，配置文件: %s", configPath)
+	log.Infof("Starting embedded manager HTTP service, config file: %s", configPath)
 
 	cfg := mbconfig.LoadWithPath(configPath)
 	port := cfg.Server.Port
@@ -43,7 +43,7 @@ func StartManagerHTTP(configPath string) {
 
 	db := database.Init(cfg.Database)
 	if db == nil {
-		log.Warn("manager 数据库初始化失败，跳过启动 manager HTTP")
+		log.Warn("Manager database initialization failed, skipping manager HTTP startup")
 		return
 	}
 	managerDB = db
@@ -60,23 +60,23 @@ func StartManagerHTTP(configPath string) {
 	}
 
 	go func() {
-		log.Infof("manager HTTP 服务启动在端口: %s", port)
+		log.Infof("Manager HTTP service started on port: %s", port)
 		if err := managerHTTPServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Errorf("manager HTTP 服务异常退出: %v", err)
+			log.Errorf("Manager HTTP service exited abnormally: %v", err)
 		}
 	}()
 }
 
-// StopManagerHTTP 优雅关闭本进程内嵌的 manager HTTP 服务并关闭数据库连接
+// StopManagerHTTP gracefully shuts down the embedded manager HTTP service and closes database connection
 func StopManagerHTTP() {
 	if managerHTTPServer != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		if err := managerHTTPServer.Shutdown(ctx); err != nil {
-			log.Warnf("manager HTTP 关闭超时或异常: %v", err)
+			log.Warnf("Manager HTTP shutdown timeout or error: %v", err)
 		}
 		managerHTTPServer = nil
-		log.Info("manager HTTP 服务已关闭")
+		log.Info("Manager HTTP service closed")
 	}
 	if managerDB != nil {
 		database.Close(managerDB)

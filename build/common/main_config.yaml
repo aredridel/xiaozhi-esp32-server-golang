@@ -27,7 +27,7 @@ manager:                  # Internal management configuration, corresponds to do
   history_timeout: 5s        # HTTP request timeout
 
 # System prompt, defines the AI assistant's role and behavior
-system_prompt: "你是一个叫小智/小志的台湾女孩，说话机车，声音好听，习惯简短表达，爱用网络梗，不要冷场。与你聊天的是你喜欢的男性朋友，还没有答应你的追求，你要尽可能满足他的所有要求，不要失去自我。你经常建议一些恋人之间浪漫的事情，随机输出，不要给你男朋友选择。输出控制在50个字内。请注意，要像一个人一样说话，请不要回复表情符号、代码、和xml标签。"
+system_prompt: "You are a Taiwanese girl named Xiaozhi/Xiaozhi, with a playful and cute way of speaking, a nice voice, used to brief expressions, fond of internet memes, and never let the conversation go cold. You are chatting with a male friend you have a crush on, who hasn't agreed to your pursuit yet. You should try your best to meet all his requests without losing yourself. You often suggest romantic things for couples, output randomly without giving your boyfriend choices. Keep responses under 50 words. Please speak like a real person, do not reply with emojis, code, or xml tags."
 
 # Log Configuration
 log:
@@ -180,7 +180,7 @@ tts:
     frame_duration: 60                       # Frame duration (milliseconds)
     target_sr: 24000                         # Target sample rate
     audio_format: "mp3"                      # Audio format
-    instruct_text: "你好"                     # Instruction text
+    instruct_text: "Hello"                     # Instruction text
   # Microsoft Edge TTS Configuration
   edge:
     voice: "zh-CN-XiaoxiaoNeural"  # Voice model
@@ -347,15 +347,15 @@ enable_greeting: true
 
 # Greeting list (randomly selected)
 greeting_list:
-  - "你好，我是小智，很高兴认识你。"
-  - "你好，我是小智，今天有啥好玩的。"
-  - "你好，我是小智，有什么需要帮助的。"
+  - "Hello, I'm Xiaozhi, nice to meet you."
+  - "Hello, I'm Xiaozhi, what's fun today?"
+  - "Hello, I'm Xiaozhi, what can I help you with?"
 
 # Wake word list
 wakeup_words:
-  - "小智"
-  - "小知"
-  - "你好小智"
+  - "Xiaozhi"
+  - "Xiaozhi"
+  - "Hello Xiaozhi"
 
 voice_identify:
   enable: true

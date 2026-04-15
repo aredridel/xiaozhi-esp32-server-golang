@@ -8,14 +8,14 @@ import struct
 import opuslib
 
 def decode_raw_opus(opus_data, sample_rate=24000, channels=1, frame_size_ms=60):
-    """解码原始Opus数据，返回PCM数据"""
-    # 计算一个帧的样本数
+    """Decode raw Opus data, return PCM data"""
+    # Calculate number of samples per frame
     frame_size = int(sample_rate * frame_size_ms / 1000)
     
-    # 创建解码器
+    # Create decoder
     decoder = opuslib.Decoder(sample_rate, channels)
     
-    # 尝试直接解码整个文件
+    # Try to decode entire file directly
     try:
         pcm_data = bytearray()
         decoded = decoder.decode(opus_data, frame_size, False)
@@ -23,47 +23,47 @@ def decode_raw_opus(opus_data, sample_rate=24000, channels=1, frame_size_ms=60):
             pcm_data.extend(struct.pack('<h', sample))
         return pcm_data
     except Exception as e:
-        print(f"直接解码失败: {e}")
+        print(f"Direct decoding failed: {e}")
         return None
 
 def main():
-    # 检查命令行参数
+    # Check command line arguments
     if len(sys.argv) < 2:
-        print("用法: python dec_opus.py <opus_file>")
+        print("Usage: python dec_opus.py <opus_file>")
         return
 
     opus_file = sys.argv[1]
     
-    # 检查文件是否存在
+    # Check if file exists
     if not os.path.exists(opus_file):
-        print(f"错误: 文件 '{opus_file}' 不存在")
+        print(f"Error: file '{opus_file}' does not exist")
         return
     
-    # 初始化参数
-    sample_rate = 24000  # 采样率24000Hz
-    channels = 1         # 单声道
-    frame_size_ms = 60   # 帧大小60ms
+    # Initialize parameters
+    sample_rate = 24000  # Sample rate 24000Hz
+    channels = 1         # Mono
+    frame_size_ms = 60   # Frame size 60ms
     
-    # 读取opus文件全部内容
+    # Read entire opus file content
     with open(opus_file, 'rb') as f:
         opus_data = f.read()
     
-    print(f"读取原始Opus数据: {len(opus_data)} 字节")
+    print(f"Read raw Opus data: {len(opus_data)} bytes")
     
-    # 解码数据
+    # Decode data
     pcm_data = decode_raw_opus(opus_data, sample_rate, channels, frame_size_ms)
     
     if pcm_data is None or len(pcm_data) == 0:
-        print("解码失败，未能生成PCM数据")
+        print("Decoding failed, failed to generate PCM data")
         return
     
-    # 计算PCM数据长度（样本数）
-    pcm_samples_count = len(pcm_data) // 2  # 每个样本2字节
+    # Calculate PCM data length (number of samples)
+    pcm_samples_count = len(pcm_data) // 2  # 2 bytes per sample
     pcm_duration_ms = pcm_samples_count * 1000 / sample_rate
     
-    print(f"解码后PCM数据大小: {len(pcm_data)} 字节")
-    print(f"PCM样本数: {pcm_samples_count}")
-    print(f"PCM时长: {pcm_duration_ms:.2f} 毫秒")
+    print(f"Decoded PCM data size: {len(pcm_data)} bytes")
+    print(f"PCM samples: {pcm_samples_count}")
+    print(f"PCM duration: {pcm_duration_ms:.2f} milliseconds")
 
 if __name__ == "__main__":
     main()

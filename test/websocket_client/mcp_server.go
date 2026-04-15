@@ -34,7 +34,7 @@ func (c *McpTransport) SendMcpMsg(payload json.RawMessage) error {
 	case c.SendMsgChan <- serverBytes:
 		return nil
 	case <-time.After(time.Duration(2000) * time.Millisecond):
-		return fmt.Errorf("mcp 发送消息超时")
+		return fmt.Errorf("mcp send message timeout")
 	}
 }
 
@@ -43,7 +43,7 @@ func (c *McpTransport) RecvMcpMsg(timeOut int) ([]byte, error) {
 	case msg := <-c.RecvMsgChan:
 		return msg, nil
 	case <-time.After(time.Duration(timeOut) * time.Millisecond):
-		return nil, fmt.Errorf("mcp 接收消息超时")
+		return nil, fmt.Errorf("mcp receive message timeout")
 	}
 }
 
@@ -68,40 +68,40 @@ func NewMcpServer(sendMsgChan chan []byte, recvMsgChan chan []byte) {
 		),
 	)
 
-	// 新增查询天气工具
+	// Add weather query tool
 	weatherTool := mcp.NewTool("query_weather",
-		mcp.WithDescription("查询大连天气"),
+		mcp.WithDescription("Query Dalian weather"),
 	)
 
-	// 新增生成随机数工具（参数类型为 string，handler 内部转换）
+	// Add random number generation tool (parameter type is string, converted internally by handler)
 	randomNumberTool := mcp.NewTool("random_number",
-		mcp.WithDescription("生成指定范围的随机整数"),
+		mcp.WithDescription("Generate random integer in specified range"),
 		mcp.WithNumber("min",
 			mcp.Required(),
-			mcp.Description("最小值"),
+			mcp.Description("Minimum value"),
 		),
 		mcp.WithNumber("max",
 			mcp.Required(),
-			mcp.Description("最大值"),
+			mcp.Description("Maximum value"),
 		),
 	)
 
 
 
-	// 注册所有工具及其handler
+	// Register all tools and their handlers
 	s.AddTool(tool, helloHandler)
 	s.AddTool(weatherTool, queryWeatherHandler)
 	s.AddTool(randomNumberTool, randomNumberHandler)*/
 
-	// 新增讲笑话工具
+	// Add joke telling tool
 	jokeTool := mcp.NewTool("tell_joke",
-		mcp.WithDescription("讲一个笑话"),
+		mcp.WithDescription("Tell a joke"),
 	)
 	s.AddTool(jokeTool, jokeHandler)
 
-	// 新增讲笑话工具
+	// Add vision analysis tool
 	visionTool := mcp.NewTool("vision_tool",
-		mcp.WithDescription("拍照分析图片"),
+		mcp.WithDescription("Take photo and analyze image"),
 	)
 	s.AddTool(visionTool, visionHandler)
 
@@ -126,30 +126,30 @@ func helloHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallTo
 	return mcp.NewToolResultText(fmt.Sprintf("Hello, %s!", name)), nil
 }
 
-// 查询天气 handler
+// Weather query handler
 func queryWeatherHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return mcp.NewToolResultText("天气晴朗 20度 北风3级"), nil
+	return mcp.NewToolResultText("Sunny weather, 20 degrees, north wind level 3"), nil
 }
 
-// 生成随机数 handler
+// Random number generation handler
 func randomNumberHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	//重新实现
+	// Re-implement
 	min := request.GetInt("min", 0)
 	max := request.GetInt("max", 100)
 
 	if min > max {
-		return mcp.NewToolResultError("min 不能大于 max"), nil
+		return mcp.NewToolResultError("min cannot be greater than max"), nil
 	}
 	rnd := min
 	if max > min {
 		rnd = min + int(time.Now().UnixNano()%int64(max-min+1))
 	}
-	return mcp.NewToolResultText(fmt.Sprintf("随机数：%d", rnd)), nil
+	return mcp.NewToolResultText(fmt.Sprintf("Random number: %d", rnd)), nil
 }
 
-// 讲笑话 handler
+// Joke telling handler
 func jokeHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	joke := "有一天小明去上学，老师问他为什么迟到，小明说：因为作业太难，梦里都在写作业，结果一觉醒来就迟到了。"
+	joke := "One day Xiaoming went to school. The teacher asked him why he was late. Xiaoming said: Because the homework was too difficult, I was doing homework in my dream, and when I woke up, I was already late."
 	return mcp.NewToolResultText(joke), nil
 }
 
@@ -158,7 +158,7 @@ func visionHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallT
 	question := "图片中有什么？"
 	url := GetServerVisionURL()
 	if url == "" {
-		url = "http://192.168.208.214:8989/xiaozhi/api/vision" // 未收到服务器下发时使用默认
+		url = "http://192.168.208.214:8989/xiaozhi/api/vision" // Use default when not received from server
 	}
 	deviceId := "shijingbo"
 	responseText, err := requestVllm(image, question, url, deviceId)

@@ -7,11 +7,11 @@ import (
 )
 
 func main() {
-	//读取文件，使用参数传入，输入输出文件
-	inputFilePath := flag.String("input", "", "输入文件路径")
-	outputFilePath := flag.String("output", "", "输出文件路径")
-	sampleRate := flag.Int("sampleRate", 24000, "采样率")
-	channels := flag.Int("channels", 1, "声道数")
+	// Read file, use parameters for input and output files
+	inputFilePath := flag.String("input", "", "Input file path")
+	outputFilePath := flag.String("output", "", "Output file path")
+	sampleRate := flag.Int("sampleRate", 24000, "Sample rate")
+	channels := flag.Int("channels", 1, "Number of channels")
 	flag.Parse()
 
 	if *inputFilePath == "" || *outputFilePath == "" {
@@ -19,22 +19,22 @@ func main() {
 		return
 	}
 
-	//读取文件所有内容
+	// Read all file content
 	content, err := os.ReadFile(*inputFilePath)
 	if err != nil {
-		fmt.Println("读取文件失败:", err)
+		fmt.Println("Failed to read file:", err)
 		return
 	}
 
-	fmt.Println("读取文件成功:", *inputFilePath)
+	fmt.Println("Successfully read file:", *inputFilePath)
 
 	opusData := [][]byte{content}
 	pcmData, err := OpusToWav(opusData, *sampleRate, *channels, *outputFilePath)
 	if err != nil {
-		fmt.Println("转换失败:", err)
+		fmt.Println("Conversion failed:", err)
 		return
 	}
 	fmt.Println("pcmData len: ", len(pcmData[0]))
 
-	fmt.Println("转换成功:", *outputFilePath)
+	fmt.Println("Conversion successful:", *outputFilePath)
 }

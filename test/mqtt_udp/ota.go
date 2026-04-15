@@ -113,7 +113,7 @@ func GetDeviceConfig(deviceInfo *DeviceInfo, deviceID, clientID string, otaUrl s
 	req.Header.Set("Activation-Version", "1")
 	req.Header.Set("User-Agent", "lc-esp32-s3/xiaozhi-1.6.0")
 
-	//打印header
+	// Print header
 	fmt.Println("header: ", req.Header)
 	fmt.Println("url: ", url)
 	fmt.Println("jsonData: ", string(jsonData))
@@ -130,7 +130,7 @@ func GetDeviceConfig(deviceInfo *DeviceInfo, deviceID, clientID string, otaUrl s
 		return nil, fmt.Errorf("failed to read response body: %v", err)
 	}
 
-	fmt.Println("ota resp: ", string(body))
+	fmt.Println("OTA response: ", string(body))
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
@@ -164,7 +164,7 @@ func CreateDefaultDeviceInfo(uuid string, mac string, boardName string) *DeviceI
 	deviceInfo.Application.IDFVersion = "v5.3.2"
 	deviceInfo.OTA.Label = "app0"
 	deviceInfo.Board.Type = "lc-esp32-s3"
-	deviceInfo.Board.Name = "立创ESP32-S3开发板"
+	deviceInfo.Board.Name = "LC ESP32-S3 Development Board"
 	deviceInfo.Board.Features = []string{"wifi", "ble", "psram", "octal_flash"}
 	deviceInfo.Board.IP = "10.0.0.171"
 	deviceInfo.Board.MAC = mac
@@ -193,12 +193,12 @@ func activateDevice(deviceID, clientID, serialNumber, hmacKey, challenge string,
 		url = strings.TrimRight(url, "/") + "/activate"
 	}
 
-	// 创建 HMAC
+	// Create HMAC
 	h := hmac.New(sha256.New, []byte(hmacKey))
 	h.Write([]byte(challenge))
 	hmacValue := hex.EncodeToString(h.Sum(nil))
 
-	// 构建请求数据
+	// Build request data
 	payload := ActivationPayload{
 		Algorithm:    "hmac-sha256",
 		SerialNumber: serialNumber,
@@ -216,9 +216,9 @@ func activateDevice(deviceID, clientID, serialNumber, hmacKey, challenge string,
 		return nil, fmt.Errorf("failed to marshal activation request: %v", err)
 	}
 
-	fmt.Println("激活请求数据: ", string(jsonData))
+	fmt.Println("Activation request data: ", string(jsonData))
 
-	//循环10次
+	// Loop 10 times
 	for i := 0; i < 10; i++ {
 		req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 		if err != nil {
@@ -243,13 +243,13 @@ func activateDevice(deviceID, clientID, serialNumber, hmacKey, challenge string,
 		}
 
 		if resp.StatusCode == http.StatusOK {
-			fmt.Printf("激活成功, resp: %+v\n", string(body))
-			//验证成功
+			fmt.Printf("Activation successful, response: %+v\n", string(body))
+			// Verification successful
 			return nil, nil
 		}
 
 		if resp.StatusCode == 202 {
-			fmt.Println("等待验证码, 等待10秒后重试")
+			fmt.Println("Waiting for verification code, retrying after 10 seconds")
 			time.Sleep(10 * time.Second)
 			continue
 		}

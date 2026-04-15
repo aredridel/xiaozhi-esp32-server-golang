@@ -12,12 +12,12 @@ func main() {
 	ip := "1.202.193.194"
 	signatureKey := "your_ota_signature_key_here"
 
-	fmt.Println("=== MQTT凭据生成测试 ===")
+	fmt.Println("=== MQTT Credentials Generation Test ===")
 
-	// 生成MQTT凭据
+	// Generate MQTT credentials
 	credentials, err := util.GenerateMqttCredentials(deviceId, clientId, ip, signatureKey)
 	if err != nil {
-		fmt.Printf("生成MQTT凭据失败: %v\n", err)
+		fmt.Printf("Failed to generate MQTT credentials: %v\n", err)
 		return
 	}
 
@@ -28,9 +28,9 @@ func main() {
 	fmt.Printf("Username (base64): %s\n", credentials.Username)
 	fmt.Printf("Password: %s\n", credentials.Password)
 
-	fmt.Println("\n=== MQTT凭据验证测试 ===")
+	fmt.Println("\n=== MQTT Credentials Verification Test ===")
 
-	// 验证MQTT凭据
+	// Verify MQTT credentials
 	credentialInfo, err := util.ValidateMqttCredentials(
 		credentials.ClientId,
 		credentials.Username,
@@ -38,19 +38,19 @@ func main() {
 		signatureKey,
 	)
 	if err != nil {
-		fmt.Printf("验证MQTT凭据失败: %v\n", err)
+		fmt.Printf("Failed to verify MQTT credentials: %v\n", err)
 		return
 	}
 
-	fmt.Printf("验证成功!\n")
+	fmt.Printf("Verification successful!\n")
 	fmt.Printf("Group ID: %s\n", credentialInfo.GroupId)
 	fmt.Printf("MAC Address: %s\n", credentialInfo.MacAddress)
 	fmt.Printf("UUID: %s\n", credentialInfo.UUID)
 	fmt.Printf("User Data: %+v\n", credentialInfo.UserData)
 
-	fmt.Println("\n=== 错误情况测试 ===")
+	fmt.Println("\n=== Error Case Test ===")
 
-	// 测试错误的密码
+	// Test wrong password
 	_, err = util.ValidateMqttCredentials(
 		credentials.ClientId,
 		credentials.Username,
@@ -58,10 +58,10 @@ func main() {
 		signatureKey,
 	)
 	if err != nil {
-		fmt.Printf("错误密码验证失败（预期）: %v\n", err)
+		fmt.Printf("Wrong password verification failed (expected): %v\n", err)
 	}
 
-	// 测试错误的clientId格式
+	// Test wrong clientId format
 	_, err = util.ValidateMqttCredentials(
 		"invalid_client_id",
 		credentials.Username,
@@ -69,10 +69,10 @@ func main() {
 		signatureKey,
 	)
 	if err != nil {
-		fmt.Printf("错误clientId格式验证失败（预期）: %v\n", err)
+		fmt.Printf("Wrong clientId format verification failed (expected): %v\n", err)
 	}
 
-	// 测试错误的username格式
+	// Test wrong username format
 	_, err = util.ValidateMqttCredentials(
 		credentials.ClientId,
 		"invalid_username",
@@ -80,6 +80,6 @@ func main() {
 		signatureKey,
 	)
 	if err != nil {
-		fmt.Printf("错误username格式验证失败（预期）: %v\n", err)
+		fmt.Printf("Wrong username format verification failed (expected): %v\n", err)
 	}
 }

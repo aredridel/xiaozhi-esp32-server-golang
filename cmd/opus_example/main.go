@@ -8,74 +8,74 @@ import (
 )
 
 func main() {
-	// 音频参数设置
+	// Audio parameter settings
 	channels := 1
 	sampleRate := 16000 // 16kHz
-	fmt.Printf("通道数: %d, 采样率: %d Hz\n", channels, sampleRate)
+	fmt.Printf("Channels: %d, Sample Rate: %d Hz\n", channels, sampleRate)
 
-	// 创建一个编码器，指定应用类型为VoIP (低延迟语音)
+	// Create an encoder with VoIP application type (low latency voice)
 	enc, err := opus.NewEncoder(sampleRate, channels, opus.AppVoIP)
 	if err != nil {
-		fmt.Printf("创建编码器失败: %v\n", err)
+		fmt.Printf("Failed to create encoder: %v\n", err)
 		os.Exit(1)
 	}
 
-	// 设置比特率为16kbps
+	// Set bitrate to 16kbps
 	if err = enc.SetBitrate(16000); err != nil {
-		fmt.Printf("设置比特率失败: %v\n", err)
+		fmt.Printf("Failed to set bitrate: %v\n", err)
 		os.Exit(1)
 	}
 
-	// 设置复杂度，0-10之间，越高质量越好但CPU消耗越大
+	// Set complexity, 0-10 range, higher is better quality but more CPU usage
 	if err = enc.SetComplexity(5); err != nil {
-		fmt.Printf("设置复杂度失败: %v\n", err)
+		fmt.Printf("Failed to set complexity: %v\n", err)
 		os.Exit(1)
 	}
 
-	// 生成20ms的测试PCM数据 (每帧20ms，16kHz采样率 = 320样本)
+	// Generate 20ms test PCM data (20ms per frame, 16kHz sample rate = 320 samples)
 	frameSize := 320
 	pcm := make([]int16, frameSize*channels)
 
-	// 生成一个简单的正弦波进行测试
+	// Generate a simple sine wave for testing
 	for i := 0; i < frameSize; i++ {
-		// 简单的正弦波，频率约为440Hz
+		// Simple sine wave, frequency around 440Hz
 		value := int16(10000.0 * float64(i%36) / 36.0)
 		pcm[i] = value
 	}
 
-	// 用于存储编码后的数据
+	// Store encoded data
 	data := make([]byte, 1000)
 
-	// 编码PCM数据为Opus
+	// Encode PCM data to Opus
 	n, err := enc.Encode(pcm, data)
 	if err != nil {
-		fmt.Printf("编码失败: %v\n", err)
+		fmt.Printf("Encoding failed: %v\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Printf("编码%d个样本为%d字节的Opus数据，压缩率: %.2f%%\n",
+	fmt.Printf("Encoded %d samples to %d bytes of Opus data, compression ratio: %.2f%%\n",
 		frameSize*channels, n, float64(n)/float64(frameSize*channels*2)*100)
 
-	// 创建解码器进行解码测试
+	// Create decoder for decoding test
 	dec, err := opus.NewDecoder(sampleRate, channels)
 	if err != nil {
-		fmt.Printf("创建解码器失败: %v\n", err)
+		fmt.Printf("Failed to create decoder: %v\n", err)
 		os.Exit(1)
 	}
 
-	// 用于存储解码后的PCM数据
+	// Store decoded PCM data
 	decodedPCM := make([]int16, frameSize*channels)
 
-	// 解码Opus数据为PCM
+	// Decode Opus data to PCM
 	samplesDecoded, err := dec.Decode(data[:n], decodedPCM)
 	if err != nil {
-		fmt.Printf("解码失败: %v\n", err)
+		fmt.Printf("Decoding failed: %v\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Printf("解码%d字节的Opus数据为%d个样本\n", n, samplesDecoded)
+	fmt.Printf("Decoded %d bytes of Opus data to %d samples\n", n, samplesDecoded)
 
-	// 计算原始PCM与解码后PCM的差异
+	// Calculate difference between original and decoded PCM
 	var sumDiff int64
 	for i := 0; i < frameSize; i++ {
 		diff := int64(pcm[i]) - int64(decodedPCM[i])
@@ -86,6 +86,6 @@ func main() {
 	}
 	avgDiff := float64(sumDiff) / float64(frameSize)
 
-	fmt.Printf("原始PCM与解码PCM的平均差异: %.2f\n", avgDiff)
-	fmt.Println("Opus编解码示例完成!")
+	fmt.Printf("Average difference between original and decoded PCM: %.2f\n", avgDiff)
+	fmt.Println("Opus codec example completed!")
 }

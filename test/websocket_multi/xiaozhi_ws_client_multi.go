@@ -137,20 +137,20 @@ func (m *MetricsWriter) WriteEvent(e MetricEvent) {
 }
 
 func main() {
-	serverAddr := flag.String("server", "ws://localhost:8989/xiaozhi/v1/", "服务器地址")
-	clientCount := flag.Int("count", 10, "客户端数量")
-	chatText := flag.String("text", "你好", "聊天内容, 多句以逗号分隔会依次发送")
-	deviceId := flag.String("device", "", "设备ID")
-	audioWav := flag.String("audio_wav", "", "预置wav文件路径(逗号分隔)，启用后不调用云端TTS生成测试音频")
-	rampMs := flag.Int("ramp_ms", 0, "启动客户端间隔毫秒，避免瞬时建连抖动")
-	metricsJSONL := flag.String("metrics_jsonl", "", "指标输出文件(JSONL)")
+	serverAddr := flag.String("server", "ws://localhost:8989/xiaozhi/v1/", "Server address")
+	clientCount := flag.Int("count", 10, "Number of clients")
+	chatText := flag.String("text", "Hello", "Chat content, multiple sentences separated by commas will be sent sequentially")
+	deviceId := flag.String("device", "", "Device ID")
+	audioWav := flag.String("audio_wav", "", "Preset wav file path (comma-separated), when enabled will not call cloud TTS for test audio generation")
+	rampMs := flag.Int("ramp_ms", 0, "Client startup interval in milliseconds, avoiding instantaneous connection jitter")
+	metricsJSONL := flag.String("metrics_jsonl", "", "Metrics output file (JSONL)")
 	flag.Parse()
 
-	fmt.Printf("运行小智客户端\n服务器: %s\n客户端数量: %d\n发送内容: %s\n", *serverAddr, *clientCount, *chatText)
+	fmt.Printf("Running Xiaozhi client\nServer: %s\nClient count: %d\nContent to send: %s\n", *serverAddr, *clientCount, *chatText)
 
 	metricsWriter, err := NewMetricsWriter(*metricsJSONL)
 	if err != nil {
-		fmt.Printf("创建metrics输出失败: %v\n", err)
+		fmt.Printf("Failed to create metrics output: %v\n", err)
 		return
 	}
 	defer func() {
@@ -162,7 +162,7 @@ func main() {
 	textList := strings.Split(*chatText, ",")
 	audioOpusDataList, err := genAudioOpusDataList(textList, *audioWav)
 	if err != nil {
-		fmt.Printf("生成音频数据失败: %v\n", err)
+		fmt.Printf("Failed to generate audio data: %v\n", err)
 		return
 	}
 
@@ -178,7 +178,7 @@ func main() {
 			}
 
 			if err := client.runClient(audioOpusDataList); err != nil {
-				log.Printf("客户端运行失败(index=%d): %v", idx, err)
+				log.Printf("Client run failed (index=%d): %v", idx, err)
 			}
 		}()
 		if *rampMs > 0 {
@@ -190,7 +190,7 @@ func main() {
 		for {
 			time.Sleep(2 * time.Second)
 			lock.Lock()
-			fmt.Printf("请求%d次, 平均响应时间: %d 毫秒\n", totalRequest, avgResponseMs)
+			fmt.Printf("Request %d times, average response time: %d ms\n", totalRequest, avgResponseMs)
 			lock.Unlock()
 		}
 	}()
@@ -200,9 +200,9 @@ func main() {
 
 func (w *WsClient) runClient(audioOpusDataList []AudioOpusData) error {
 	if len(audioOpusDataList) == 0 {
-		return fmt.Errorf("音频数据列表为空")
+		return fmt.Errorf("audio data list is empty")
 	}
-	fmt.Printf("%d 客户端开始运行\n", w.index)
+	fmt.Printf("%d Client started\n", w.index)
 
 	if w.DeviceId == "" {
 		w.DeviceId = genDeviceId()
@@ -219,25 +219,25 @@ func (w *WsClient) runClient(audioOpusDataList []AudioOpusData) error {
 	var err error
 	w.Conn, _, err = websocket.DefaultDialer.Dial(w.ServerAddr, header)
 	if err != nil {
-		return fmt.Errorf("连接失败: %v", err)
+		return fmt.Errorf("connection failed: %v", err)
 	}
 	defer w.Conn.Close()
 
-	fmt.Printf("%d 客户端已连接到服务器: %s\n", w.index, w.ServerAddr)
+	fmt.Printf("%d Client connected to server: %s\n", w.index, w.ServerAddr)
 
 	audioDataIndex := 0
 	go func() {
 		for {
 			messageType, message, err := w.Conn.ReadMessage()
 			if err != nil {
-				log.Printf("读取消息失败(index=%d): %v", w.index, err)
+				log.Printf("Failed to read message (index=%d): %v", w.index, err)
 				return
 			}
 
 			if messageType == websocket.TextMessage {
 				var serverMsg ServerMessage
 				if err := json.Unmarshal(message, &serverMsg); err != nil {
-					log.Printf("解析消息失败(index=%d): %v", w.index, err)
+					log.Printf("Failed to parse message (index=%d): %v", w.index, err)
 					continue
 				}
 
@@ -303,7 +303,7 @@ func (w *WsClient) sendHello() error {
 		},
 	}
 	if err := sendJSONMessage(w.Conn, helloMsg); err != nil {
-		return fmt.Errorf("发送hello消息失败: %v", err)
+		return fmt.Errorf("failed to send hello message: %v", err)
 	}
 	return nil
 }
@@ -311,7 +311,7 @@ func (w *WsClient) sendHello() error {
 func (w *WsClient) sendListenStart() error {
 	listenStartMsg := ClientMessage{Type: MessageTypeListen, DeviceID: w.DeviceId, State: MessageStateStart, Mode: "manual"}
 	if err := sendJSONMessage(w.Conn, listenStartMsg); err != nil {
-		return fmt.Errorf("发送listen start消息失败: %v", err)
+		return fmt.Errorf("failed to send listen start message: %v", err)
 	}
 	return nil
 }
@@ -319,7 +319,7 @@ func (w *WsClient) sendListenStart() error {
 func (w *WsClient) sendListenStop() error {
 	listenStopMsg := ClientMessage{Type: MessageTypeListen, DeviceID: w.DeviceId, State: MessageStateStop, Mode: "manual"}
 	if err := sendJSONMessage(w.Conn, listenStopMsg); err != nil {
-		return fmt.Errorf("发送listen stop消息失败: %v", err)
+		return fmt.Errorf("failed to send listen stop message: %v", err)
 	}
 	w.detectStartTs = time.Now().UnixMilli()
 	w.firstRecvFrame = false
@@ -361,12 +361,12 @@ func genAudioOpusDataList(textList []string, wavPaths string) ([]AudioOpusData, 
 		"frame_duration": FrameDurationMs,
 		"target_sr":      SampleRate,
 		"audio_format":   "mp3",
-		"instruct_text":  "你好",
+		"instruct_text":  "Hello",
 	}
 
 	ttsProvider, err := tts.GetTTSProvider("cosyvoice", cosyVoiceConfig)
 	if err != nil {
-		return nil, fmt.Errorf("获取tts服务失败: %v", err)
+		return nil, fmt.Errorf("failed to get TTS service: %v", err)
 	}
 
 	ret := []AudioOpusData{}
@@ -377,7 +377,7 @@ func genAudioOpusDataList(textList []string, wavPaths string) ([]AudioOpusData, 
 		for i := 0; i < 3; i++ {
 			audioChan, err = ttsProvider.TextToSpeechStream(context.Background(), text, SampleRate, 1, FrameDurationMs)
 			if err != nil {
-				fmt.Printf("生成语音失败: %v\n", err)
+				fmt.Printf("Failed to generate speech: %v\n", err)
 				continue
 			}
 			break
@@ -402,16 +402,16 @@ func genAudioOpusDataFromWav(wavPaths string) ([]AudioOpusData, error) {
 		}
 		data, err := os.ReadFile(path)
 		if err != nil {
-			return nil, fmt.Errorf("读取wav失败(%s): %w", path, err)
+			return nil, fmt.Errorf("failed to read wav (%s): %w", path, err)
 		}
 		opusData, err := wavToOpus(data, SampleRate, Channels, 64000)
 		if err != nil {
-			return nil, fmt.Errorf("wav转opus失败(%s): %w", path, err)
+			return nil, fmt.Errorf("failed to convert wav to opus (%s): %w", path, err)
 		}
 		ret = append(ret, AudioOpusData{OpusData: opusData})
 	}
 	if len(ret) == 0 {
-		return nil, fmt.Errorf("未加载到任何有效wav输入")
+		return nil, fmt.Errorf("no valid wav input loaded")
 	}
 	return ret, nil
 }
@@ -420,7 +420,7 @@ func wavToOpus(wavData []byte, sampleRate int, channels int, bitRate int) ([][]b
 	wavReader := bytes.NewReader(wavData)
 	wavDecoder := wav.NewDecoder(wavReader)
 	if !wavDecoder.IsValidFile() {
-		return nil, fmt.Errorf("无效WAV文件")
+		return nil, fmt.Errorf("invalid WAV file")
 	}
 	wavDecoder.ReadInfo()
 	format := wavDecoder.Format()
@@ -434,11 +434,11 @@ func wavToOpus(wavData []byte, sampleRate int, channels int, bitRate int) ([][]b
 
 	enc, err := opus.NewEncoder(sampleRate, channels, opus.AppAudio)
 	if err != nil {
-		return nil, fmt.Errorf("创建opus编码器失败: %w", err)
+		return nil, fmt.Errorf("failed to create opus encoder: %w", err)
 	}
 	if bitRate > 0 {
 		if err := enc.SetBitrate(bitRate); err != nil {
-			return nil, fmt.Errorf("设置opus码率失败: %w", err)
+			return nil, fmt.Errorf("failed to set opus bitrate: %w", err)
 		}
 	}
 
@@ -454,7 +454,7 @@ func wavToOpus(wavData []byte, sampleRate int, channels int, bitRate int) ([][]b
 			break
 		}
 		if err != nil {
-			return nil, fmt.Errorf("读取wav数据失败: %w", err)
+			return nil, fmt.Errorf("failed to read wav data: %w", err)
 		}
 		for i := range pcmBuffer {
 			if i < len(audioBuf.Data) {
@@ -465,7 +465,7 @@ func wavToOpus(wavData []byte, sampleRate int, channels int, bitRate int) ([][]b
 		}
 		encN, err := enc.Encode(pcmBuffer, opusBuffer)
 		if err != nil {
-			return nil, fmt.Errorf("opus编码失败: %w", err)
+			return nil, fmt.Errorf("opus encoding failed: %w", err)
 		}
 		frame := make([]byte, encN)
 		copy(frame, opusBuffer[:encN])
@@ -482,7 +482,7 @@ func (w *WsClient) sendAudioDataToServer() error {
 		}
 		for _, opusData := range audioOpusData.OpusData {
 			if err := w.Conn.WriteMessage(websocket.BinaryMessage, opusData); err != nil {
-				return fmt.Errorf("发送Opus帧失败: %v", err)
+				return fmt.Errorf("failed to send Opus frame: %v", err)
 			}
 			time.Sleep(FrameDurationMs * time.Millisecond)
 		}

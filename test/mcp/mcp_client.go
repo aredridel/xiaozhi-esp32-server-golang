@@ -16,33 +16,33 @@ import (
 	. "xiaozhi-esp32-server-golang/internal/domain/mcp"
 )
 
-// ExampleMCPInteractive 交互式演示如何使用MCP Host
+// ExampleMCPInteractive interactive demonstration of how to use MCP Host
 func main() {
-	fmt.Println("=== MCP Host 交互式使用示例 ===")
+	fmt.Println("=== MCP Host Interactive Usage Example ===")
 
-	// 1. 配置MCP
+	// 1. Configure MCP
 	setupMCPConfig()
 
-	// 2. 启动全局MCP管理器
+	// 2. Start global MCP manager
 	globalManager := GetGlobalMCPManager()
 	if err := globalManager.Start(); err != nil {
-		log.Printf("启动全局MCP管理器失败: %v", err)
+		log.Printf("Failed to start global MCP manager: %v", err)
 		return
 	}
 	defer globalManager.Stop()
 
-	// 3. 展示全局工具
+	// 3. Show global tools
 	showGlobalTools(globalManager)
 
-	// 4. 交互式等待用户输入
+	// 4. Interactive wait for user input
 	reader := bufio.NewReader(os.Stdin)
 	missCount := 0
 	for {
-		fmt.Print("\n请输入要调用的工具名称（或 exit 退出，? 查看工具列表）：")
+		fmt.Print("\nPlease enter the tool name to call (or exit to quit, ? to view tool list): ")
 		toolName, _ := reader.ReadString('\n')
 		toolName = strings.TrimSpace(toolName)
 		if toolName == "exit" {
-			fmt.Println("已退出交互模式。")
+			fmt.Println("Exited interactive mode.")
 			break
 		}
 		if toolName == "?" {
@@ -51,86 +51,86 @@ func main() {
 		}
 		tool, exists := globalManager.GetToolByName(toolName)
 		if !exists {
-			fmt.Printf("未找到工具：%s\n", toolName)
+			fmt.Printf("Tool not found: %s\n", toolName)
 			missCount++
 			if missCount >= 3 {
-				fmt.Println("连续3次未找到工具，自动退出交互模式。")
+				fmt.Println("Tool not found 3 times in a row, automatically exiting interactive mode.")
 				break
 			}
 			continue
 		}
-		missCount = 0 // 找到工具则重置
-		// 获取参数示例并打印
+		missCount = 0 // Reset if tool found
+		// Get parameter example and print
 		info, err := tool.Info(context.Background())
 		if err != nil {
-			fmt.Printf("获取工具信息失败: %v\n", err)
+			fmt.Printf("Failed to get tool info: %v\n", err)
 			continue
 		}
-		fmt.Println("参数示例：")
+		fmt.Println("Parameter example:")
 		if info.ParamsOneOf != nil {
-			// 尝试序列化为 JSON 美观输出
+			// Try to serialize to JSON for pretty output
 			if b, err := json.MarshalIndent(info.ParamsOneOf, "", "  "); err == nil {
 				fmt.Println(string(b))
 			} else {
 				fmt.Printf("%+v\n", info.ParamsOneOf)
 			}
 		} else {
-			fmt.Println("  (无参数或未定义)")
+			fmt.Println("  (No parameters or undefined)")
 		}
-		fmt.Print("请输入参数（JSON格式）：")
+		fmt.Print("Please enter parameters (JSON format): ")
 		argsInJSON, _ := reader.ReadString('\n')
 		argsInJSON = strings.TrimSpace(argsInJSON)
-		fmt.Println("   正在调用工具...")
+		fmt.Println("   Invoking tool...")
 		result, err := tool.InvokableRun(context.Background(), argsInJSON)
 		if err != nil {
-			fmt.Printf("   ❌ 工具调用失败: %v\n", err)
+			fmt.Printf("   ❌ Tool invocation failed: %v\n", err)
 			continue
 		}
-		fmt.Printf("   ✓ 工具调用成功: %s\n", result)
+		fmt.Printf("   ✓ Tool invocation successful: %s\n", result)
 	}
 }
 
-// ExampleMCPUsage 演示如何使用MCP Host
+// ExampleMCPUsage demonstrates how to use MCP Host
 func ExampleMCPUsage(t *testing.T) {
-	fmt.Println("=== MCP Host 使用示例 ===")
+	fmt.Println("=== MCP Host Usage Example ===")
 
-	// 1. 配置MCP
+	// 1. Configure MCP
 	setupMCPConfig()
 
-	// 2. 启动全局MCP管理器
+	// 2. Start global MCP manager
 	globalManager := GetGlobalMCPManager()
 	if err := globalManager.Start(); err != nil {
-		log.Printf("启动全局MCP管理器失败: %v", err)
+		log.Printf("Failed to start global MCP manager: %v", err)
 		return
 	}
 	defer globalManager.Stop()
 
-	// 3. 获取设备MCP管理器
+	// 3. Get device MCP manager
 	deviceManager := GetDeviceMCPManager()
 
-	// 4. 模拟等待工具注册
+	// 4. Simulate waiting for tool registration
 	time.Sleep(30 * time.Second)
 
-	// 5. 展示全局工具
+	// 5. Show global tools
 	showGlobalTools(globalManager)
 
-	// 6. 展示设备工具
+	// 6. Show device tools
 	showDeviceTools(deviceManager, "example_device")
 
-	// 7. 演示工具调用
+	// 7. Demonstrate tool calling
 	demonstrateToolCalling(globalManager)
 }
 
-// setupMCPConfig 设置MCP配置
+// setupMCPConfig sets MCP configuration
 func setupMCPConfig() {
-	fmt.Println("1. 设置MCP配置...")
+	fmt.Println("1. Setting MCP configuration...")
 
-	// 设置全局MCP配置
+	// Set global MCP configuration
 	viper.Set("mcp.global.enabled", true)
 	viper.Set("mcp.global.reconnect_interval", 5)
 	viper.Set("mcp.global.max_reconnect_attempts", 3)
 
-	// 设置MCP服务器列表
+	// Set MCP server list
 	servers := []map[string]interface{}{
 		{
 			"name":    "global_mcp",
@@ -140,138 +140,138 @@ func setupMCPConfig() {
 	}
 	viper.Set("mcp.global.servers", servers)
 
-	// 设置设备MCP配置
+	// Set device MCP configuration
 	viper.Set("mcp.device.enabled", true)
 	viper.Set("mcp.device.websocket_path", "/xiaozhi/mcp/")
 	viper.Set("mcp.device.max_connections_per_device", 5)
 
-	fmt.Println("   ✓ MCP配置已设置")
+	fmt.Println("   ✓ MCP configuration set")
 }
 
-// showGlobalTools 展示全局工具
+// showGlobalTools shows global tools
 func showGlobalTools(manager *GlobalMCPManager) {
-	fmt.Println("\n2. 全局工具列表:")
+	fmt.Println("\n2. Global tool list:")
 
 	tools := manager.GetAllTools()
 	if len(tools) == 0 {
-		fmt.Println("   暂无全局工具（需要连接到真实的MCP服务器）")
+		fmt.Println("   No global tools (need to connect to real MCP server)")
 		return
 	}
 
 	for name, tool := range tools {
 		info, err := tool.Info(context.Background())
 		if err != nil {
-			fmt.Printf("   ❌ %s: 获取信息失败 - %v\n", name, err)
+			fmt.Printf("   ❌ %s: Failed to get info - %v\n", name, err)
 			continue
 		}
 		fmt.Printf("   ✓ %s: %s,%+v\n", info.Name, info.Desc, info.ParamsOneOf)
 	}
 }
 
-// showDeviceTools 展示设备工具
+// showDeviceTools shows device tools
 func showDeviceTools(manager *DeviceMCPManager, deviceID string) {
-	fmt.Printf("\n3. 设备 %s 的工具列表:\n", deviceID)
+	fmt.Printf("\n3. Device %s tool list:\n", deviceID)
 
 	tools := manager.GetDeviceTools(deviceID)
 	if len(tools) == 0 {
-		fmt.Println("   暂无设备工具（需要设备连接到MCP WebSocket端点）")
+		fmt.Println("   No device tools (device needs to connect to MCP WebSocket endpoint)")
 		return
 	}
 
 	for name, tool := range tools {
 		info, err := tool.Info(context.Background())
 		if err != nil {
-			fmt.Printf("   ❌ %s: 获取信息失败 - %v\n", name, err)
+			fmt.Printf("   ❌ %s: Failed to get info - %v\n", name, err)
 			continue
 		}
 		fmt.Printf("   ✓ %s: %s\n", info.Name, info.Desc)
 	}
 }
 
-// demonstrateToolCalling 演示工具调用
+// demonstrateToolCalling demonstrates tool calling
 func demonstrateToolCalling(manager *GlobalMCPManager) {
-	fmt.Println("\n4. 工具调用演示:")
+	fmt.Println("\n4. Tool invocation demonstration:")
 
-	// 尝试获取一个工具
+	// Try to get a tool
 	tool, exists := manager.GetToolByName("random")
 	if !exists {
-		fmt.Println("   暂无可用工具进行演示")
+		fmt.Println("   No available tools for demonstration")
 		return
 	}
 
 	argsInJSON := `{"min":1,"max":100}`
 	fmt.Printf("argsInJSON: %s", argsInJSON)
-	// 调用工具
-	fmt.Println("   正在调用工具...")
+	// Invoke tool
+	fmt.Println("   Invoking tool...")
 	result, err := tool.InvokableRun(
 		context.Background(),
 		argsInJSON,
 	)
 
 	if err != nil {
-		fmt.Printf("   ❌ 工具调用失败: %v\n", err)
+		fmt.Printf("   ❌ Tool invocation failed: %v\n", err)
 		return
 	}
 
-	fmt.Printf("   ✓ 工具调用成功: %s\n", result)
+	fmt.Printf("   ✓ Tool invocation successful: %s\n", result)
 }
 
 /*
-// ExampleMCPTool 演示自定义MCP工具
+// ExampleMCPTool demonstrates custom MCP tool
 func ExampleMCPTool() {
-	fmt.Println("=== 自定义MCP工具示例 ===")
+	fmt.Println("=== Custom MCP Tool Example ===")
 
-	// 创建示例工具
+	// Create example tool
 	tool := &mcpTool{
 		name:        "example_tool",
-		description: "这是一个示例工具",
+		description: "This is an example tool",
 		inputSchema: map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
 				"message": map[string]interface{}{
 					"type":        "string",
-					"description": "要处理的消息",
+					"description": "Message to process",
 				},
 			},
 			"required": []string{"message"},
 		},
 		serverName: "example_server",
-		client:     nil, // 在实际使用中需要提供真实的客户端
+		client:     nil, // Real client needs to be provided in actual use
 	}
 
-	// 获取工具信息
+	// Get tool information
 	info, err := tool.Info(context.Background())
 	if err != nil {
-		fmt.Printf("获取工具信息失败: %v\n", err)
+		fmt.Printf("Failed to get tool info: %v\n", err)
 		return
 	}
 
-	fmt.Printf("工具名称: %s\n", info.Name)
-	fmt.Printf("工具描述: %s\n", info.Desc)
+	fmt.Printf("Tool name: %s\n", info.Name)
+	fmt.Printf("Tool description: %s\n", info.Desc)
 
-	// 注意：由于没有真实的客户端连接，工具调用会失败
-	fmt.Println("注意: 由于没有真实的MCP客户端连接，工具调用功能无法演示")
+	// Note: Tool invocation will fail without real client connection
+	fmt.Println("Note: Tool invocation cannot be demonstrated without real MCP client connection")
 }*/
 
-// ExampleWebSocketClient 演示WebSocket客户端连接
+// ExampleWebSocketClient demonstrates WebSocket client connection
 func ExampleWebSocketClient() {
-	fmt.Println("=== WebSocket客户端连接示例 ===")
+	fmt.Println("=== WebSocket Client Connection Example ===")
 
 	fmt.Print(`
-JavaScript客户端示例:
+JavaScript client example:
 
 const ws = new WebSocket('ws://localhost:8989/xiaozhi/mcp/device123');
 
 ws.onopen = function() {
-    console.log('MCP连接已建立');
+    console.log('MCP connection established');
 };
 
 ws.onmessage = function(event) {
     const message = JSON.parse(event.data);
-    console.log('收到消息:', message);
+    console.log('Received message:', message);
     
     if (message.method === 'initialize') {
-        // 响应初始化
+        // Respond to initialization
         ws.send(JSON.stringify({
             jsonrpc: "2.0",
             id: message.id,
@@ -287,11 +287,11 @@ ws.onmessage = function(event) {
 };
 
 ws.onerror = function(error) {
-    console.error('WebSocket错误:', error);
+    console.error('WebSocket error:', error);
 };
 
 ws.onclose = function() {
-    console.log('MCP连接已关闭');
+    console.log('MCP connection closed');
 };
 `)
 }

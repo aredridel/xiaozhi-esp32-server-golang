@@ -11,51 +11,51 @@ import (
 )
 
 func main() {
-	// 命令行参数
-	imagePath := flag.String("image", "", "图片文件路径")
-	question := flag.String("question", "", "问题文本")
-	url := flag.String("url", "", "HTTP接口地址")
-	deviceId := flag.String("device", "", "Device-Id 头部")
+	// Command line parameters
+	imagePath := flag.String("image", "", "Image file path")
+	question := flag.String("question", "", "Question text")
+	url := flag.String("url", "", "HTTP API address")
+	deviceId := flag.String("device", "", "Device-Id header")
 	flag.Parse()
 
 	if *imagePath == "" || *question == "" || *url == "" || *deviceId == "" {
-		fmt.Println("用法: main -image <图片路径> -question <问题> -url <接口地址> -device <Device-Id>")
+		fmt.Println("Usage: main -image <image_path> -question <question> -url <api_url> -device <Device-Id>")
 		os.Exit(1)
 	}
 
-	// 打开图片文件
+	// Open image file
 	file, err := os.Open(*imagePath)
 	if err != nil {
-		fmt.Printf("打开图片失败: %v\n", err)
+		fmt.Printf("Failed to open image: %v\n", err)
 		os.Exit(1)
 	}
 	defer file.Close()
 
-	// 创建 multipart writer
+	// Create multipart writer
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
-	// 写入图片字段
+	// Write image field
 	fileWriter, err := writer.CreateFormFile("file", (*imagePath))
 	if err != nil {
-		fmt.Printf("创建图片字段失败: %v\n", err)
+		fmt.Printf("Failed to create image field: %v\n", err)
 		os.Exit(1)
 	}
 	_, err = io.Copy(fileWriter, file)
 	if err != nil {
-		fmt.Printf("写入图片内容失败: %v\n", err)
+		fmt.Printf("Failed to write image content: %v\n", err)
 		os.Exit(1)
 	}
 
-	// 写入文本字段
+	// Write text field
 	_ = writer.WriteField("question", *question)
 
 	writer.Close()
 
-	// 创建自定义请求，添加Device-Id头
+	// Create custom request, add Device-Id header
 	req, err := http.NewRequest("POST", *url, body)
 	if err != nil {
-		fmt.Printf("创建请求失败: %v\n", err)
+		fmt.Printf("Failed to create request: %v\n", err)
 		os.Exit(1)
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
@@ -64,17 +64,17 @@ func main() {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Printf("请求失败: %v\n", err)
+		fmt.Printf("Request failed: %v\n", err)
 		os.Exit(1)
 	}
 	defer resp.Body.Close()
 
-	// 读取响应
+	// Read response
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Printf("读取响应失败: %v\n", err)
+		fmt.Printf("Failed to read response: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Println("响应:")
+	fmt.Println("Response:")
 	fmt.Println(string(respBody))
 }

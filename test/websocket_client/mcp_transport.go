@@ -44,7 +44,7 @@ func (t *websocketServerTransport) Run() error {
 	t.ctx = ctx
 	t.cancel = cancel
 
-	// 主消息处理循环
+	// Main message processing loop
 	t.wg.Add(1)
 	go func() {
 		defer t.wg.Done()
@@ -81,7 +81,7 @@ func (t *websocketServerTransport) Run() error {
 		}
 	}()
 
-	// 等待所有goroutine完成
+	// Wait for all goroutines to complete
 	t.wg.Wait()
 	return nil
 }

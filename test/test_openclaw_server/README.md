@@ -1,45 +1,45 @@
 # test_openclaw_server
 
-用于对接 `test/xiaozhi_openclaw/xiaozhi-integration/openclaw-channel` 插件的 WebSocket 测试服务。
+WebSocket test service for interfacing with the `test/xiaozhi_openclaw/xiaozhi-integration/openclaw-channel` plugin.
 
-## 功能
+## Features
 
-- 提供 `/ws/openclaw` WebSocket 端点（校验 `user_id/agent_id/endpoint_id` token）。
-- 连接建立后主动发送 `handshake_ack`。
-- 接收插件 `ping` 并回复 `pong`。
-- 接收插件 `response`，记录回包（包含 `metadata.device_id`）。
-- 提供 HTTP API 主动向插件发送 `message`。
+- Provides `/ws/openclaw` WebSocket endpoint (validates `user_id/agent_id/endpoint_id` token).
+- Actively sends `handshake_ack` after connection establishment.
+- Receives plugin `ping` and replies with `pong`.
+- Receives plugin `response`, records response (includes `metadata.device_id`).
+- Provides HTTP API to actively send `message` to plugin.
 
-## 启动
+## Startup
 
 ```bash
 go run ./test/test_openclaw_server -addr :18080 -jwt-secret xiaozhi_admin_secret_key
 ```
 
-输出详细 WebSocket 调试日志：
+Output detailed WebSocket debug logs:
 
 ```bash
 go run ./test/test_openclaw_server -addr :18080 -jwt-secret xiaozhi_admin_secret_key -verbose
 ```
 
-## 生成 token（测试）
+## Generate Token (Test)
 
 ```bash
 node test/xiaozhi_openclaw/xiaozhi-integration/generate-token.js 1 main agent_main
 ```
 
-或显式指定与服务端一致的密钥（推荐）：
+Or explicitly specify the same key as the server (recommended):
 
 ```bash
 JWT_SECRET=xiaozhi_admin_secret_key \
 node test/xiaozhi_openclaw/xiaozhi-integration/generate-token.js 1 main agent_main
 ```
 
-把输出的 `Token` 配到插件配置里：
+Configure the output `Token` in the plugin configuration:
 
 - `channels.xiaozhi.url = ws://127.0.0.1:18080/ws/openclaw`
 - `channels.xiaozhi.token = <token>`
-- `JWT_SECRET` 必须和 `go run ./test/test_openclaw_server -jwt-secret ...` 完全一致，否则会报 `signature is invalid`
+- `JWT_SECRET` must exactly match `go run ./test/test_openclaw_server -jwt-secret ...`, otherwise `signature is invalid` will be reported
 
 ## HTTP API
 
@@ -49,13 +49,13 @@ node test/xiaozhi_openclaw/xiaozhi-integration/generate-token.js 1 main agent_ma
 curl -sS http://127.0.0.1:18080/healthz | jq
 ```
 
-### 1.1) 鉴权调试（排查 401）
+### 1.1) Auth Debugging (Troubleshoot 401)
 
 ```bash
 curl -sS "http://127.0.0.1:18080/debug/ws-auth?token=<token>" | jq
 ```
 
-也支持从请求头带 token：
+Also supports passing token via request header:
 
 ```bash
 curl -sS "http://127.0.0.1:18080/debug/ws-auth" \
@@ -81,7 +81,7 @@ curl -sS -X POST http://127.0.0.1:18080/api/send \
   }' | jq
 ```
 
-多连接模式下可指定 `conn_id` 精确发送：
+In multi-connection mode, you can specify `conn_id` for precise sending:
 
 ```bash
 curl -sS -X POST http://127.0.0.1:18080/api/send \
@@ -100,7 +100,7 @@ curl -sS -X POST http://127.0.0.1:18080/api/send \
 curl -sS "http://127.0.0.1:18080/api/responses?limit=20" | jq
 ```
 
-可按 agent 过滤：
+Can filter by agent:
 
 ```bash
 curl -sS "http://127.0.0.1:18080/api/responses?agent_id=main&limit=20" | jq

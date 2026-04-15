@@ -30,7 +30,7 @@ var frameDuration = 60
 
 var allowChat = make(chan struct{}, 1)
 
-// ServerMessage 表示服务器消息
+// ServerMessage represents server message
 type ServerMessage struct {
 	Type        string      `json:"type"`
 	Text        string      `json:"text,omitempty"`
@@ -76,77 +76,77 @@ var serverConfig *ServerResponse
 func test_aes_encrypt(plainText string) []byte {
 	md5Data := md5.Sum([]byte(plainText))
 	md5Str := hex.EncodeToString(md5Data[:])
-	fmt.Println("加密前 md5Str:", md5Str)
+	fmt.Println("MD5 before encryption:", md5Str)
 
-	// 32字节的密钥 (256位)
+	// 32-byte key (256-bit)
 	key, _ := hex.DecodeString("7f99ed0bf6647d38666628c322bc6a49")
-	// 16字节的IV (128位)
+	// 16-byte IV (128-bit)
 	iv, _ := hex.DecodeString("010000003c2075c40000000000000000")
 
-	//md5 iv
+	// MD5 IV
 	ivMd5 := md5.Sum(iv)
 	ivMd5Str := hex.EncodeToString(ivMd5[:])
-	fmt.Println("ivMd5Str:", ivMd5Str)
+	fmt.Println("IV MD5:", ivMd5Str)
 
 	encryptedData, err := AesCTREncrypt(key, iv, []byte(plainText))
 	if err != nil {
-		fmt.Println("加密失败:", err)
+		fmt.Println("Encryption failed:", err)
 		return nil
 	}
 
-	//计算md5
+	// Calculate MD5
 	md5Data = md5.Sum(encryptedData)
 
-	fmt.Println("加密后的md5:", hex.EncodeToString(md5Data[:]))
+	fmt.Println("MD5 after encryption:", hex.EncodeToString(md5Data[:]))
 	return encryptedData
 }
 
 func test_aes_decrypt(data []byte) []byte {
 	md5Data := md5.Sum(data)
 	md5Str := hex.EncodeToString(md5Data[:])
-	fmt.Println("解密前 md5Str:", md5Str)
+	fmt.Println("MD5 before decryption:", md5Str)
 
-	// 32字节的密钥 (256位)
+	// 32-byte key (256-bit)
 	key, _ := hex.DecodeString("7f99ed0bf6647d38666628c322bc6a49")
-	// 16字节的IV (128位)
+	// 16-byte IV (128-bit)
 	iv, _ := hex.DecodeString("010000003c2075c40000000000000000")
 
 	decryptedData, err := AesCTRDecrypt(key, iv, data)
 	if err != nil {
-		fmt.Println("加密失败:", err)
+		fmt.Println("Decryption failed:", err)
 		return nil
 	}
 
-	//计算md5
+	// Calculate MD5
 	md5Data = md5.Sum(decryptedData)
 
-	fmt.Println("解密后 md5:", hex.EncodeToString(md5Data[:]))
+	fmt.Println("MD5 after decryption:", hex.EncodeToString(md5Data[:]))
 	return decryptedData
 }
 
 func main1() {
 	plainText := "12345"
-	fmt.Println("加密前数据:", plainText)
+	fmt.Println("Data before encryption:", plainText)
 	enc_data := test_aes_encrypt(plainText)
 	dec_data := test_aes_decrypt(enc_data)
-	fmt.Println("解密后的数据:", string(dec_data))
+	fmt.Println("Data after decryption:", string(dec_data))
 }
 
-var listenMode = "manual" // 全局变量，用于存储拾音模式
+var listenMode = "manual" // Global variable for storing audio pickup mode
 
 func main() {
-	otaUrl := flag.String("ota", "https://api.tenclass.net/xiaozhi/ota/", "OTA服务器地址")
-	deviceID := flag.String("device", "ba:8f:17:de:94:94", "设备ID")
-	mode := flag.String("mode", "manual", "拾音模式: manual(手动) 或 auto(自动)")
+	otaUrl := flag.String("ota", "https://api.tenclass.net/xiaozhi/ota/", "OTA server address")
+	deviceID := flag.String("device", "ba:8f:17:de:94:94", "Device ID")
+	mode := flag.String("mode", "manual", "Audio pickup mode: manual or auto")
 	flag.Parse()
 
-	// 验证模式参数
+	// Validate mode parameter
 	if *mode != "manual" && *mode != "auto" {
-		fmt.Printf("❌ 无效的模式: %s，只支持 manual 或 auto\n", *mode)
+		fmt.Printf("❌ Invalid mode: %s, only manual or auto supported\n", *mode)
 		os.Exit(1)
 	}
 	listenMode = *mode
-	fmt.Printf("📋 拾音模式: %s\n", listenMode)
+	fmt.Printf("📋 Audio pickup mode: %s\n", listenMode)
 
 	clientID := "e4b0c442-98fc-4e1b-8c3d-6a5b6a5b6a6d"
 	boardName := "lc-esp32-s3"
@@ -154,35 +154,35 @@ func main() {
 	// Get device configuration
 	deviceInfo := CreateDefaultDeviceInfo(clientID, *deviceID, boardName)
 
-	// 生成序列号和HMAC密钥
+	// Generate serial number and HMAC key
 	uuid1 := strings.ReplaceAll(uuid.New().String(), "-", "")
 	uuid2 := strings.ReplaceAll(uuid.New().String(), "-", "")
 	serialNumber := fmt.Sprintf("SN-%s-%s", strings.ToUpper(uuid1[:8]), uuid2[:12])
 
-	// 生成HMAC密钥 (32字节的十六进制字符串)
+	// Generate HMAC key (32-byte hexadecimal string)
 	//hmacKey := strings.ReplaceAll(uuid.New().String(), "-", "")
 	hmacKey := "b05df1f583419f4a088c812533b4774b97d3ff5e22d5735d3aab8dff160ebef6"
 
-	fmt.Printf("生成的序列号: %s\n", serialNumber)
-	fmt.Printf("生成的HMAC密钥: %s\n", hmacKey)
+	fmt.Printf("Generated serial number: %s\n", serialNumber)
+	fmt.Printf("Generated HMAC key: %s\n", hmacKey)
 
 	config, err := GetDeviceConfig(deviceInfo, *deviceID, clientID, *otaUrl)
 	if err != nil {
-		fmt.Println("获取设备配置失败:", err)
+		fmt.Println("Failed to get device config:", err)
 		os.Exit(1)
 	}
 	serverConfig = config
 
 	if config.Activation.Code != "" {
-		fmt.Println("设备激活中, 验证码: ", config.Activation.Code)
-		// 进行激活请求
+		fmt.Println("Device activating, verification code: ", config.Activation.Code)
+		// Perform activation request
 		_, err := activateDevice(*deviceID, clientID, serialNumber, hmacKey, config.Activation.Challenge, *otaUrl)
 		if err != nil {
-			fmt.Println("设备激活失败:", err)
+			fmt.Println("Device activation failed:", err)
 			os.Exit(1)
 		}
 	} else {
-		fmt.Println("设备已激活")
+		fmt.Println("Device activated")
 	}
 
 	globalChannel = make(chan *UDPConfig, 1)
@@ -190,22 +190,22 @@ func main() {
 	// v3.1.1
 	mqttClient, ok := connectMQTT(config)
 	if !ok {
-		fmt.Println("❌ MQTT 连接失败")
+		fmt.Println("❌ MQTT connection failed")
 		os.Exit(1)
 	}
 
 	var udpConfig *UDPConfig
 	select {
 	case udpConfig = <-globalChannel:
-		fmt.Println("收到UDP消息")
+		fmt.Println("Received UDP message")
 	case <-time.After(10 * time.Second):
-		fmt.Println("等待hello消息超时")
+		fmt.Println("Timeout waiting for hello message")
 		return
 	}
 
 	connectUdqAndSendAudio(udpConfig, mqttClient)
 
-	// 保持程序运行
+	// Keep program running
 	select {}
 }
 
@@ -226,10 +226,10 @@ func connectMQTT(config *ServerResponse) (mqtt.Client, bool) {
 	}
 	brokerUrl := fmt.Sprintf("%s://%s:%s", protocol, endpoint, port)
 
-	// 设置 TLS 配置
+	// Set TLS configuration
 	tlsConfig := &tls.Config{
 		ServerName: endpoint,
-		//InsecureSkipVerify: true, // 跳过证书验证，仅用于测试环境
+		//InsecureSkipVerify: true, // Skip certificate verification, for testing only
 	}
 	if protocol == "tls" {
 		opts.SetTLSConfig(tlsConfig)
@@ -245,39 +245,39 @@ func connectMQTT(config *ServerResponse) (mqtt.Client, bool) {
 	opts.SetConnectTimeout(30 * time.Second)
 	opts.SetCleanSession(true)
 
-	// 设置连接回调
+	// Set connection callback
 	/*
 		opts.SetOnConnectHandler(func(client mqtt.Client) {
 			version := "v3.1.1"
 			if useV5 {
 				version = "v5.0"
 			}
-			fmt.Printf("✅ MQTT %s 连接成功\n", version)
+			fmt.Printf("✅ MQTT %s connected\n", version)
 		})*/
 
-	// 设置断开连接回调
+	// Set disconnection callback
 	opts.SetConnectionLostHandler(func(client mqtt.Client, err error) {
-		fmt.Printf("⚠️ MQTT 连接断开: %v\n", err)
+		fmt.Printf("⚠️ MQTT connection lost: %v\n", err)
 	})
 
-	// 设置重连回调
+	// Set reconnection callback
 	opts.SetReconnectingHandler(func(client mqtt.Client, opts *mqtt.ClientOptions) {
-		fmt.Println("🔄 正在重新连接 MQTT 服务器...")
+		fmt.Println("🔄 Reconnecting to MQTT server...")
 	})
 
-	// 设置默认消息处理函数
+	// Set default message handler
 	opts.SetDefaultPublishHandler(onMessage)
 
 	client := mqtt.NewClient(opts)
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
-		fmt.Println("❌ 连接失败:", token.Error())
+		fmt.Println("❌ Connection failed:", token.Error())
 		return nil, false
 	}
 
-	// 发布一条测试消息
+	// Publish a test message
 	err := publicHello(config.MQTT.PublishTopic, client)
 	if err != nil {
-		fmt.Println("❌ 发布消息失败:", err)
+		fmt.Println("❌ Failed to publish message:", err)
 		return nil, false
 	}
 
@@ -300,14 +300,14 @@ func publicHello(publishTopic string, client mqtt.Client) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("📤 发布消息to topic:", publishTopic, string(jsonData))
+	fmt.Println("📤 Publishing message to topic:", publishTopic, string(jsonData))
 
-	// 使用 MQTT v5.0 的发布选项
+	// Use MQTT v5.0 publish options
 	token := client.Publish(publishTopic, byte(0), false, jsonData)
 	if token.Wait() && token.Error() != nil {
 		return token.Error()
 	}
-	fmt.Println("✅ 发布消息成功")
+	fmt.Println("✅ Message published successfully")
 	allowChat <- struct{}{}
 	return nil
 }
@@ -317,19 +317,19 @@ func encodeHexPayload(payload []byte) string {
 }
 
 func onMessage(client mqtt.Client, msg mqtt.Message) {
-	fmt.Printf("📩 收到消息: 时间: %d, topic: [%s] %s\n", time.Now().UnixMilli(), msg.Topic(), string(msg.Payload()))
+	fmt.Printf("📩 Received message: time: %d, topic: [%s] %s\n", time.Now().UnixMilli(), msg.Topic(), string(msg.Payload()))
 
-	// 解析消息
+	// Parse message
 	var message map[string]interface{}
 	if err := json.Unmarshal(msg.Payload(), &message); err != nil {
-		fmt.Printf("❌ 消息解析错误: %v, msg: %s\n", err, string(msg.Payload()))
+		fmt.Printf("❌ Message parsing error: %v, msg: %s\n", err, string(msg.Payload()))
 		return
 	}
 
-	// 根据消息类型处理
+	// Process based on message type
 	msgType, ok := message["type"].(string)
 	if !ok {
-		fmt.Println("❌ 消息格式错误: 缺少type字段")
+		fmt.Println("❌ Message format error: missing type field")
 		return
 	}
 
@@ -345,49 +345,49 @@ func onMessage(client mqtt.Client, msg mqtt.Message) {
 	case "goodbye":
 		handleGoodbye(client, msg)
 	default:
-		fmt.Printf("⚠️ 未知消息类型: %s\n", msgType)
+		fmt.Printf("⚠️ Unknown message type: %s\n", msgType)
 	}
 }
 
 func handleHello(client mqtt.Client, msg mqtt.Message) {
-	fmt.Printf("处理 hello 消息: %s\n", string(msg.Payload()))
-	//解析msg到HelloMessage
+	fmt.Printf("Processing hello message: %s\n", string(msg.Payload()))
+	// Parse msg to HelloMessage
 	var helloMessage UDPConfig
 	if err := json.Unmarshal(msg.Payload(), &helloMessage); err != nil {
-		fmt.Printf("❌ 消息解析错误: %v\n", err)
+		fmt.Printf("❌ Message parsing error: %v\n", err)
 		return
 	}
 
 	globalChannel <- &helloMessage
 
-	fmt.Printf("处理 hello 消息: %s\n", helloMessage)
+	fmt.Printf("Processing hello message: %s\n", helloMessage)
 
 }
 
 func handleLLM(client mqtt.Client, msg mqtt.Message) {
-	fmt.Printf("从发送音频结束至 LLM 消息 耗时: %d ms\n", time.Now().UnixMilli()-sendAudioEndTs)
+	fmt.Printf("Time from sending audio end to LLM message: %d ms\n", time.Now().UnixMilli()-sendAudioEndTs)
 }
 
 func handleStt(client mqtt.Client, msg mqtt.Message) {
-	fmt.Printf("从发送音频结束至 STT 消息 耗时: %d ms\n", time.Now().UnixMilli()-sendAudioEndTs)
+	fmt.Printf("Time from sending audio end to STT message: %d ms\n", time.Now().UnixMilli()-sendAudioEndTs)
 }
 
 func handleTTS(client mqtt.Client, msg mqtt.Message) {
-	fmt.Printf("处理 TTS 消息: %s\n", string(msg.Payload()))
+	fmt.Printf("Processing TTS message: %s\n", string(msg.Payload()))
 	type st struct {
 		Type  string `json:"type"`
 		State string `json:"state"`
 	}
-	// TODO: 实现 TTS 状态更新
+	// TODO: Implement TTS status update
 	var ttsState st
 	if err := json.Unmarshal(msg.Payload(), &ttsState); err != nil {
-		fmt.Printf("❌ 消息解析错误: %v\n", err)
+		fmt.Printf("❌ Message parsing error: %v\n", err)
 		return
 	}
-	fmt.Printf("处理 TTS 消息: %s\n", ttsState)
+	fmt.Printf("Processing TTS message: %s\n", ttsState)
 	if ttsState.Type == "tts" && !firstTts {
 		if ttsState.State == "sentence_start" {
-			fmt.Printf("从发送音频结束至TTS 开始 耗时: %d ms\n", time.Now().UnixMilli()-sendAudioEndTs)
+			fmt.Printf("Time from sending audio end to TTS start: %d ms\n", time.Now().UnixMilli()-sendAudioEndTs)
 			firstTts = true
 		}
 	}
@@ -397,10 +397,10 @@ func handleTTS(client mqtt.Client, msg mqtt.Message) {
 		saveOpusData()
 		pcmDataList, err := OpusToWav(opusData, 24000, 1, "output_24000.wav")
 		if err != nil {
-			fmt.Println("转换WAV文件失败:", err)
+			fmt.Println("Failed to convert WAV file:", err)
 			return
 		}
-		fmt.Printf("TTS 结束, 音频数据长度: %d\n", len(pcmDataList))
+		fmt.Printf("TTS ended, audio data length: %d\n", len(pcmDataList))
 	}
 }
 
@@ -421,8 +421,8 @@ func saveOpusData() error {
 }
 
 func handleGoodbye(client mqtt.Client, msg mqtt.Message) {
-	fmt.Printf("处理 goodbye 消息: %s\n", string(msg.Payload()))
-	// TODO: 实现会话清理
+	fmt.Printf("Processing goodbye message: %s\n", string(msg.Payload()))
+	// TODO: Implement session cleanup
 }
 
 func connectUdqAndSendAudio(udpConfig *UDPConfig, mqttClient mqtt.Client) error {
@@ -445,57 +445,57 @@ func connectUdqAndSendAudio(udpConfig *UDPConfig, mqttClient mqtt.Client) error 
 					fmt.Println(err)
 					return err
 				}
-			fmt.Printf("发送音频数据结束: %d\n", time.Now().UnixMilli())
+			fmt.Printf("Audio data sending ended: %d\n", time.Now().UnixMilli())
 		//sendListenStop(mqttClient, sessionId)
-		fmt.Printf("发送停止消息结束: %d\n", time.Now().UnixMilli())
+		fmt.Printf("Stop message sending ended: %d\n", time.Now().UnixMilli())
 		sendAudioEndTs = time.Now().UnixMilli()
 	*/
 
 	return nil
 }
 
-// 读取WAV文件并使用Opus编码发送
+// Read WAV file and send with Opus encoding
 func sendWavFileWithOpusEncoding(udpInstance *UDPClient, filePath string) error {
 	sampleRate := audioRate
 	channels := 1
-	// 打开WAV文件
+	// Open WAV file
 	file, err := os.Open(filePath)
 	if err != nil {
-		return fmt.Errorf("打开WAV文件失败: %v", err)
+		return fmt.Errorf("failed to open WAV file: %v", err)
 	}
 	defer file.Close()
 
-	// 读取文件内容
+	// Read file content
 	fileContent, err := io.ReadAll(file)
 	if err != nil {
-		return fmt.Errorf("读取文件内容失败: %v", err)
+		return fmt.Errorf("failed to read file content: %v", err)
 	}
-	fmt.Printf("文件内容长度: %d\n", len(fileContent))
+	fmt.Printf("File content length: %d\n", len(fileContent))
 	file.Close()
 
 	opusFrames, err := WavToOpus(fileContent, sampleRate, channels, 0)
 	if err != nil {
-		return fmt.Errorf("转换WAV文件失败: %v", err)
+		return fmt.Errorf("failed to convert WAV file: %v", err)
 	}
 
-	fmt.Printf("开始发送音频数据\n", len(opusFrames))
+	fmt.Printf("Starting to send audio data\n", len(opusFrames))
 
 	for i, frame := range opusFrames {
-		fmt.Printf("Opus帧 %d 长度: %d\n", i, len(frame))
-		// 发送Opus帧
+		fmt.Printf("Opus frame %d length: %d\n", i, len(frame))
+		// Send Opus frame
 		if err := udpInstance.SendAudioData(frame); err != nil {
-			return fmt.Errorf("发送Opus帧失败: %v", err)
+			return fmt.Errorf("failed to send Opus frame: %v", err)
 		}
-		// 控制发送速率，模拟实时音频流
+		// Control send rate, simulate real-time audio stream
 		time.Sleep(60 * time.Millisecond)
 	}
-	fmt.Printf("总共发送: %d 个帧\n", len(opusFrames))
+	fmt.Printf("Total sent: %d frames\n", len(opusFrames))
 
-	//持续发送空的音频数据
+	// Continuously send empty audio data
 	/*emptyFrame := make([]byte, 50)
 	for {
 		if err := conn.WriteMessage(websocket.BinaryMessage, emptyFrame); err != nil {
-			return fmt.Errorf("发送空音频数据失败: %v", err)
+			return fmt.Errorf("failed to send empty audio data: %v", err)
 		}
 		time.Sleep(50 * time.Millisecond)
 	}*/
@@ -503,7 +503,7 @@ func sendWavFileWithOpusEncoding(udpInstance *UDPClient, filePath string) error 
 	return nil
 }
 
-// ClientMessage 表示客户端消息
+// ClientMessage represents client message
 type ClientMessage struct {
 	Type        string   `json:"type"`
 	DeviceID    string   `json:"device_id,omitempty"`
@@ -519,14 +519,14 @@ type ClientMessage struct {
 	States      []string `json:"states,omitempty"`
 }
 
-// ClientMessage 表示客户端消息
+// IotClientMessage represents IoT client message
 type IotClientMessage struct {
 	Type        string   `json:"type"`
 	SessionID   string   `json:"session_id"`
 	Descriptors []string `json:"descriptors"`
 }
 
-// ClientMessage 表示客户端消息
+// IotStatesClientMessage represents IoT states client message
 type IotStatesClientMessage struct {
 	Type      string   `json:"type"`
 	SessionID string   `json:"session_id"`
@@ -546,7 +546,7 @@ func sendListenStart(mqttClient mqtt.Client, sessionID string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("📤 发布消息to topic:", "", string(jsonData))
+	fmt.Println("📤 Publishing message to topic:", "", string(jsonData))
 
 	token := mqttClient.Publish(serverConfig.MQTT.PublishTopic, byte(0), false, jsonData)
 	if token.Wait() && token.Error() != nil {
@@ -566,7 +566,7 @@ func sendListenStop(mqttClient mqtt.Client, sessionID string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("📤 发布消息to topic:", "", string(jsonData))
+	fmt.Println("📤 Publishing message to topic:", "", string(jsonData))
 
 	token := mqttClient.Publish(serverConfig.MQTT.PublishTopic, byte(0), false, jsonData)
 	if token.Wait() && token.Error() != nil {
@@ -588,7 +588,7 @@ func sendListenDetect(mqttClient mqtt.Client, sessionID string, text string) err
 	if err != nil {
 		return err
 	}
-	fmt.Println("📤 发布消息to topic:", "", string(jsonData))
+	fmt.Println("📤 Publishing message to topic:", "", string(jsonData))
 
 	token := mqttClient.Publish(serverConfig.MQTT.PublishTopic, byte(0), false, jsonData)
 	if token.Wait() && token.Error() != nil {
@@ -607,7 +607,7 @@ func sendIotMessage(mqttClient mqtt.Client, sessionID string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("📤 发布消息to topic:", "", string(jsonData))
+	fmt.Println("📤 Publishing message to topic:", "", string(jsonData))
 
 	token := mqttClient.Publish(serverConfig.MQTT.PublishTopic, byte(0), false, jsonData)
 	if token.Wait() && token.Error() != nil {
@@ -623,7 +623,7 @@ func sendIotMessage(mqttClient mqtt.Client, sessionID string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("📤 发布消息to topic:", "", string(jsonData))
+	fmt.Println("📤 Publishing message to topic:", "", string(jsonData))
 
 	token = mqttClient.Publish(serverConfig.MQTT.PublishTopic, byte(0), false, jsonData)
 	if token.Wait() && token.Error() != nil {
@@ -641,7 +641,7 @@ func sendAbort(mqttClient mqtt.Client, sessionID string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("📤 发布消息to topic:", "", string(jsonData))
+	fmt.Println("📤 Publishing message to topic:", "", string(jsonData))
 	token := mqttClient.Publish(serverConfig.MQTT.PublishTopic, byte(0), false, jsonData)
 	if token.Wait() && token.Error() != nil {
 		return token.Error()
@@ -649,7 +649,7 @@ func sendAbort(mqttClient mqtt.Client, sessionID string) error {
 	return nil
 }
 
-// 调用tts服务生成语音, 并编码至opus发送至服务端
+// Call TTS service to generate speech, encode to opus and send to server
 func sendTextToSpeech(mqttClient mqtt.Client, sessionID string, udpInstance *UDPClient, udpConfig *UDPConfig) error {
 	cosyVoiceConfig := map[string]interface{}{
 		"api_url":        "https://tts.linkerai.cn/tts",
@@ -657,17 +657,17 @@ func sendTextToSpeech(mqttClient mqtt.Client, sessionID string, udpInstance *UDP
 		"frame_duration": frameDuration,
 		"target_sr":      audioRate,
 		"audio_format":   "mp3",
-		"instruct_text":  "你好",
+		"instruct_text":  "Hello",
 	}
 	_ = cosyVoiceConfig
 	/**
-		    "edge": {
-	      "voice": "zh-CN-XiaoxiaoNeural",
-	      "rate": "+0%",
-	      "volume": "+0%",
-	      "pitch": "+0Hz",
-	      "connect_timeout": 10,
-	      "receive_timeout": 60
+			    "edge": {
+		      "voice": "zh-CN-XiaoxiaoNeural",
+		      "rate": "+0%",
+		      "volume": "+0%",
+		      "pitch": "+0Hz",
+		      "connect_timeout": 10,
+		      "receive_timeout": 60
 	    }
 	*/
 	edgeConfig := map[string]interface{}{
@@ -679,18 +679,18 @@ func sendTextToSpeech(mqttClient mqtt.Client, sessionID string, udpInstance *UDP
 		"receive_timeout": 60,
 	}
 	_ = edgeConfig
-	//调用tts服务生成语音
+	// Call TTS service to generate speech
 	ttsProvider, err := tts.GetTTSProvider("cosyvoice", cosyVoiceConfig)
 	//ttsProvider, err := tts.GetTTSProvider("edge", edgeConfig)
 	if err != nil {
-		return fmt.Errorf("获取tts服务失败: %v", err)
+		return fmt.Errorf("failed to get TTS service: %v", err)
 	}
 
 	/*
-		audioData, err := ttsProvider.TextToSpeech(context.Background(), "你叫什么名字?")
+		audioData, err := ttsProvider.TextToSpeech(context.Background(), "What is your name?")
 		if err != nil {
-			fmt.Printf("生成语音失败: %v\n", err)
-			return fmt.Errorf("生成语音失败: %v", err)
+			fmt.Printf("Failed to generate speech: %v\n", err)
+			return fmt.Errorf("Failed to generate speech: %v", err)
 		}
 	*/
 
@@ -703,18 +703,18 @@ func sendTextToSpeech(mqttClient mqtt.Client, sessionID string, udpInstance *UDP
 	udpInstance.ReceiveAudioData(hexKey, func(key []byte, audioData []byte) {
 		decryptedData, err := udpInstance.decryptAudioData(key, audioData)
 		if err != nil {
-			fmt.Println("解密失败:", err)
+			fmt.Println("Decryption failed:", err)
 			return
 		}
 		if isStart {
-			fmt.Printf("发送音频结束至收到首帧耗时: %d ms\n", time.Now().UnixMilli()-startTs)
+			fmt.Printf("Time from sending audio end to receiving first frame: %d ms\n", time.Now().UnixMilli()-startTs)
 			isStart = false
 			os.WriteFile("mqtt_output_first_frame.wav", decryptedData, 0644)
 		}
 
-		//fmt.Printf("收到音频数据, 长度: %d\n", len(decryptedData))
+		//fmt.Printf("Received audio data, length: %d\n", len(decryptedData))
 		opusData = append(opusData, decryptedData)
-		//fmt.Println("收到音频数据", len(decryptedData))
+		//fmt.Println("Received audio data", len(decryptedData))
 	})
 
 	var audioCtx context.Context
@@ -731,8 +731,8 @@ func sendTextToSpeech(mqttClient mqtt.Client, sessionID string, udpInstance *UDP
 		}()
 		audioChan, err := ttsProvider.TextToSpeechStream(context.Background(), msg, 16000, 1, 60)
 		if err != nil {
-			//fmt.Printf("生成语音失败: %v\n", err)
-			return fmt.Errorf("生成语音失败: %v", err)
+			//fmt.Printf("Failed to generate speech: %v\n", err)
+			return fmt.Errorf("failed to generate speech: %v", err)
 		}
 
 		for audioData := range audioChan {
@@ -741,7 +741,7 @@ func sendTextToSpeech(mqttClient mqtt.Client, sessionID string, udpInstance *UDP
 				return nil
 			default:
 			}
-			fmt.Printf("生成语音数据长度: %d\n", len(audioData))
+			fmt.Printf("Generated speech data length: %d\n", len(audioData))
 			udpInstance.SendAudioData(audioData)
 			time.Sleep(60 * time.Millisecond)
 		}
@@ -755,14 +755,14 @@ func sendTextToSpeech(mqttClient mqtt.Client, sessionID string, udpInstance *UDP
 		return nil
 	}
 
-	// 新增：等待用户输入文本
+	// New: Wait for user input text
 	reader := bufio.NewReader(os.Stdin)
 
 	f := func() bool {
-		fmt.Print("请输入要合成的文本（回车发送，直接回车退出）：")
+		fmt.Print("Please enter text to synthesize (press Enter to send, empty Enter to exit): ")
 		input, err := reader.ReadString('\n')
 		if err != nil {
-			fmt.Printf("读取输入失败: %v\n", err)
+			fmt.Printf("Failed to read input: %v\n", err)
 			return false
 		}
 		input = strings.TrimSpace(input)
@@ -785,13 +785,13 @@ func sendTextToSpeech(mqttClient mqtt.Client, sessionID string, udpInstance *UDP
 		}
 	}
 
-	//genAndSendAudio("你好", 100)
+	//genAndSendAudio("Hello", 100)
 	//time.Sleep(30 * time.Second)
-	/*genAndSendAudio("再来一个", 20)
+	/*genAndSendAudio("Another one", 20)
 	time.Sleep(30 * time.Second)
-	genAndSendAudio("你今天穿的衣服真好看", 20)
+	genAndSendAudio("Your clothes look nice today", 20)
 	time.Sleep(30 * time.Second)
-	genAndSendAudio("明天准备穿什么", 20)
+	genAndSendAudio("What are you wearing tomorrow", 20)
 	time.Sleep(30 * time.Second)*/
 
 	return nil

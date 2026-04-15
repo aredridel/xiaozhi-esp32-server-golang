@@ -1,46 +1,46 @@
-# 知识库无感触发检索方案（设备聊天，v2）
+# Knowledge Base Auto-Trigger Retrieval Plan (Device Chat, v2)
 
-## 背景
-- 当前检索工具 `search_knowledge` 主要依赖模型是否主动调用。
-- 需要支持“按命中知识库ID定向检索”，减少无关知识库请求。
+## Background
+- Current retrieval tool `search_knowledge` mainly relies on whether the model actively calls it.
+- Need to support "targeted retrieval by knowledge base ID" to reduce irrelevant knowledge base requests.
 
-## 核心变更
-1. 工具入参升级
-- `search_knowledge` 增加可选字段 `knowledge_base_ids: number[]`。
-- 保留 `query`、`top_k`。
-- 兼容逻辑：不传 `knowledge_base_ids` 时，按当前智能体所有可用知识库检索。
+## Core Changes
+1. Tool Parameter Upgrade
+- `search_knowledge` adds optional field `knowledge_base_ids: number[]`.
+- Retains `query`, `top_k`.
+- Backward compatibility: When `knowledge_base_ids` is not provided, search all available knowledge bases for the current agent.
 
-2. 定向检索语义
-- 传入 `knowledge_base_ids` 时，仅在这些知识库内检索。
-- 非法ID（未关联/不存在/inactive/缺少 external_kb_id）自动忽略（best effort）。
+2. Targeted Retrieval Semantics
+- When `knowledge_base_ids` is provided, only search within these knowledge bases.
+- Invalid IDs (not associated/non-existent/inactive/missing external_kb_id) are automatically ignored (best effort).
 
-3. 并发执行策略
-- 按“知识库维度”并发请求，每个命中知识库独立发起检索请求。
-- provider 仍由知识库自身配置决定（dify/ragflow）。
-- 聚合所有命中后按 score 全局排序，再截断 `top_k`。
+3. Concurrent Execution Strategy
+- Concurrent requests by "knowledge base dimension", each hit knowledge base initiates an independent retrieval request.
+- Provider is still determined by the knowledge base's own configuration (dify/ragflow).
+- Aggregate all hits, sort globally by score, then truncate to `top_k`.
 
-4. 超时策略（已确认默认值）
-- 单库超时：`2500ms`
-- 总超时：`2500ms`
-- 超时/部分失败不阻断主流程；若全部失败则返回错误。
+4. Timeout Strategy (Confirmed Defaults)
+- Single knowledge base timeout: `2500ms`
+- Total timeout: `2500ms`
+- Timeout/partial failure does not block main flow; returns error only if all fail.
 
-5. LLM路由提示升级
-- System Prompt 下发“可用知识库 id:名称”列表。
-- 引导模型在可判断时传 `knowledge_base_ids`，不确定时可不传。
+5. LLM Routing Prompt Upgrade
+- System Prompt sends "available knowledge base id:name" list.
+- Guide model to pass `knowledge_base_ids` when determinable, can omit when uncertain.
 
-## 实施步骤
-1. `search_knowledge` 参数结构新增 `knowledge_base_ids`。
-2. `ChatSessionOperator -> LocalMcpSearchKnowledge -> rag.Search` 调用链透传 `knowledge_base_ids`。
-3. `rag.Search` 增加 ID 过滤与总超时控制。
-4. `dify_searcher` 与 `ragflow_searcher` 改为按知识库并发检索，并增加单库超时控制。
-5. 调整系统提示词中的知识库检索规则，支持 `knowledge_base_ids` 引导。
+## Implementation Steps
+1. Add `knowledge_base_ids` to `search_knowledge` parameter structure.
+2. Pass through `knowledge_base_ids` in the call chain `ChatSessionOperator -> LocalMcpSearchKnowledge -> rag.Search`.
+3. Add ID filtering and total timeout control to `rag.Search`.
+4. Modify `dify_searcher` and `ragflow_searcher` to search concurrently by knowledge base, with single knowledge base timeout control.
+5. Adjust knowledge base retrieval rules in system prompt to support `knowledge_base_ids` guidance.
 
-## 兼容与回退
-- 不传 `knowledge_base_ids` 的历史调用不受影响。
-- 任一 provider 局部失败仅记日志并跳过，保留其他 provider 成果。
+## Compatibility and Fallback
+- Historical calls without `knowledge_base_ids` are not affected.
+- Partial failure of any provider is only logged and skipped, preserving results from other providers.
 
-## 验收标准
-- 工具可接收并生效 `knowledge_base_ids`。
-- 多知识库场景下可并发检索并返回聚合结果。
-- 单库与总超时均默认为 2500ms。
-- 旧调用路径（不传 `knowledge_base_ids`）行为保持可用。
+## Acceptance Criteria
+- Tool can receive and take effect `knowledge_base_ids`.
+- Can perform concurrent retrieval in multi-knowledge-base scenarios and return aggregated results.
+- Single knowledge base and total timeout both default to 2500ms.
+- Old call paths (without `knowledge_base_ids`) maintain available behavior.

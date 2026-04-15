@@ -12,42 +12,42 @@ import (
 func requestVllm(imagePath, question, url, deviceId string) (string, error) {
 
 	if imagePath == "" || question == "" || url == "" || deviceId == "" {
-		return "", fmt.Errorf("用法: main -image <图片路径> -question <问题> -url <接口地址> -device <Device-Id>")
+		return "", fmt.Errorf("usage: main -image <image_path> -question <question> -url <api_url> -device <Device-Id>")
 	}
 
-	// 打开图片文件
+	// Open image file
 	file, err := os.Open(imagePath)
 	if err != nil {
-		fmt.Printf("打开图片失败: %v\n", err)
+		fmt.Printf("Failed to open image: %v\n", err)
 		return "", err
 	}
 	defer file.Close()
 
-	// 创建 multipart writer
+	// Create multipart writer
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
-	// 写入图片字段
+	// Write image field
 	fileWriter, err := writer.CreateFormFile("file", (imagePath))
 	if err != nil {
-		fmt.Printf("创建图片字段失败: %v\n", err)
+		fmt.Printf("Failed to create image field: %v\n", err)
 		return "", err
 	}
 	_, err = io.Copy(fileWriter, file)
 	if err != nil {
-		fmt.Printf("写入图片内容失败: %v\n", err)
+		fmt.Printf("Failed to write image content: %v\n", err)
 		return "", err
 	}
 
-	// 写入文本字段
+	// Write text field
 	_ = writer.WriteField("question", question)
 
 	writer.Close()
 
-	// 创建自定义请求，添加Device-Id头
+	// Create custom request, add Device-Id header
 	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
-		fmt.Printf("创建请求失败: %v\n", err)
+		fmt.Printf("Failed to create request: %v\n", err)
 		return "", err
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
@@ -56,19 +56,19 @@ func requestVllm(imagePath, question, url, deviceId string) (string, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Printf("请求失败: %v\n", err)
+		fmt.Printf("Request failed: %v\n", err)
 		return "", err
 	}
 	defer resp.Body.Close()
 
-	// 读取响应
+	// Read response
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Printf("读取响应失败: %v\n", err)
+		fmt.Printf("Failed to read response: %v\n", err)
 		return "", err
 	}
 	responseText := string(respBody)
-	fmt.Println("响应:")
+	fmt.Println("Response:")
 	fmt.Println(responseText)
 	return responseText, nil
 }
