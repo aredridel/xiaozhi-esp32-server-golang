@@ -26,7 +26,7 @@ type MqttConfig struct {
 	Password string
 }
 
-// MqttUdpAdapter MQTT-UDP适配器结构
+// MqttUdpAdapter MQTT-UDP adapter structure
 type MqttUdpAdapter struct {
 	client          mqtt.Client
 	udpServer       *UdpServer
@@ -39,10 +39,10 @@ type MqttUdpAdapter struct {
 	sync.RWMutex
 }
 
-// MqttUdpAdapterOption 用于可选参数
+// MqttUdpAdapterOption for optional parameters
 type MqttUdpAdapterOption func(*MqttUdpAdapter)
 
-// WithUdpServer 设置 udpServer
+// WithUdpServer set udpServer
 func WithUdpServer(udpServer *UdpServer) MqttUdpAdapterOption {
 	return func(s *MqttUdpAdapter) {
 		s.udpServer = udpServer
@@ -55,7 +55,7 @@ func WithOnNewConnection(onNewConnection types.OnNewConnection) MqttUdpAdapterOp
 	}
 }
 
-// NewMqttUdpAdapter 创建新的MQTT-UDP适配器，config为必传，其它参数用Option
+// NewMqttUdpAdapter Create new MQTT-UDP adapter, config is required, other parameters use Option
 func NewMqttUdpAdapter(config *MqttConfig, opts ...MqttUdpAdapterOption) *MqttUdpAdapter {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &MqttUdpAdapter{
@@ -119,14 +119,14 @@ func (s *MqttUdpAdapter) clearDeviceSessions() {
 	})
 }
 
-// Start 启动 MQTT 客户端（非阻塞）：在后台 goroutine 中连接并重试，不阻塞程序运行
+// Start Start MQTT client (non-blocking): connect and retry in background goroutine, does not block program execution
 func (s *MqttUdpAdapter) Start() error {
-	Infof("MqttUdpAdapter开始启动，后台连接MQTT服务器 Broker=%s:%d ClientID=%s", s.mqttConfig.Broker, s.mqttConfig.Port, s.mqttConfig.ClientID)
+	Infof("MqttUdpAdapter starting, connecting to MQTT server in background Broker=%s:%d ClientID=%s", s.mqttConfig.Broker, s.mqttConfig.Port, s.mqttConfig.ClientID)
 	go s.connectAndRetry()
 	return nil
 }
 
-// connectAndRetry 在后台循环连接 MQTT，连接失败时按间隔重试，与 mqtt_server 解耦不阻塞主流程
+// connectAndRetry Connect to MQTT in background loop, retry at intervals on failure, decoupled from mqtt_server to not block main flow
 func (s *MqttUdpAdapter) connectAndRetry() {
 	const retryInterval = 5 * time.Second
 
@@ -144,14 +144,14 @@ func (s *MqttUdpAdapter) connectAndRetry() {
 	opts.SetPassword(cfg.Password)
 
 	opts.SetConnectionLostHandler(func(client mqtt.Client, err error) {
-		Errorf("MQTT连接丢失: %v", err)
+		Errorf("MQTT connection lost: %v", err)
 	})
 
 	opts.SetOnConnectHandler(func(client mqtt.Client) {
-		Info("MQTT已连接")
+		Info("MQTT connected")
 		topic := ServerSubTopicPrefix
 		if token := client.Subscribe(topic, 0, s.handleMessage); token.Wait() && token.Error() != nil {
-			Errorf("订阅主题失败: %v", token.Error())
+			Errorf("Failed to subscribe to topic: %v", token.Error())
 		}
 	})
 
@@ -166,7 +166,7 @@ func (s *MqttUdpAdapter) connectAndRetry() {
 		s.setClient(client)
 		if token := client.Connect(); token.Wait() && token.Error() != nil {
 			retryCount++
-			Errorf("连接MQTT服务器失败(第%d次): %v，%d秒后重试", retryCount, token.Error(), int(retryInterval.Seconds()))
+			Errorf("Failed to connect to MQTT server (attempt %d): %v, retrying in %d seconds", retryCount, token.Error(), int(retryInterval.Seconds()))
 			select {
 			case <-s.stopCtx.Done():
 				return
@@ -225,7 +225,7 @@ func (s *MqttUdpAdapter) handleMessage(client mqtt.Client, msg mqtt.Message) {
 	}
 }
 
-// 断开连接，超时或goodbye主动断开
+// Disconnect, timeout or goodbye initiated disconnect
 func (s *MqttUdpAdapter) handleDisconnect(deviceId string) {
 	Debugf("handleDisconnect, deviceId: %s", deviceId)
 
@@ -234,14 +234,11 @@ func (s *MqttUdpAdapter) handleDisconnect(deviceId string) {
 		Debugf("handleDisconnect, deviceId: %s not found", deviceId)
 		return
 	}
-	udpServer := s.getUdpServer()
-	if udpServer != nil {
-		udpServer.CloseSession(conn.UdpSession.ConnId)
-	}
+	conn.ReleaseUdpSession()
 	s.deviceId2Conn.Delete(deviceId)
 }
 
-// Stop 停止适配器：取消 context、断开 MQTT、关闭 UDP、清理会话（供热更前调用）
+// Stop Stop adapter: cancel context, disconnect MQTT, close UDP, cleanup sessions (call before hot reload)
 func (s *MqttUdpAdapter) Stop() {
 	Debugf("enter MqttUdpAdapter Stop ")
 	defer Debugf("exit MqttUdpAdapter Stop ")
@@ -260,7 +257,7 @@ func (s *MqttUdpAdapter) Stop() {
 	s.clearDeviceSessions()
 }
 
-// ReloadMqttClient 仅重连 MQTT（保持 UDP 服务器实例）
+// ReloadMqttClient Only reconnect MQTT (keep UDP server instance)
 func (s *MqttUdpAdapter) ReloadMqttClient(newConfig *MqttConfig) {
 	if newConfig == nil {
 		return
@@ -276,7 +273,7 @@ func (s *MqttUdpAdapter) ReloadMqttClient(newConfig *MqttConfig) {
 	go s.connectAndRetry()
 }
 
-// ReloadUdpServer 仅重启 UDP（保持 MQTT 连接）
+// ReloadUdpServer Only restart UDP (keep MQTT connection)
 func (s *MqttUdpAdapter) ReloadUdpServer(newUdpServer *UdpServer) {
 	if newUdpServer == nil {
 		return
@@ -289,7 +286,7 @@ func (s *MqttUdpAdapter) ReloadUdpServer(newUdpServer *UdpServer) {
 	}
 }
 
-// 处理消息
+// Process messages
 func (s *MqttUdpAdapter) processMessage() {
 	for {
 		select {
@@ -299,26 +296,21 @@ func (s *MqttUdpAdapter) processMessage() {
 			Debugf("mqtt handleMessage, topic: %s, payload: %s", msg.Topic(), string(msg.Payload()))
 			var clientMsg ClientMessage
 			if err := json.Unmarshal(msg.Payload(), &clientMsg); err != nil {
-				Errorf("解析JSON失败: %v", err)
+				Errorf("Failed to parse JSON: %v", err)
 				continue
 			}
 			topicMacAddr, deviceId := s.getDeviceIdByTopic(msg.Topic())
 			if deviceId == "" {
-				Errorf("mac_addr解析失败: %v", msg.Topic())
+				Errorf("Failed to parse mac_addr: %v", msg.Topic())
 				continue
 			}
 
 			deviceSession := s.getDeviceSession(deviceId)
 			if deviceSession == nil {
-				// 从UDP服务端获取会话信息
-				udpServer := s.getUdpServer()
-				if udpServer == nil {
-					Errorf("udpServer is nil, deviceId: %s", deviceId)
-					continue
-				}
-				udpSession := udpServer.CreateSession(deviceId, "")
-				if udpSession == nil {
-					Errorf("创建 udpSession 失败, deviceId: %s", deviceId)
+				// Get session info from UDP server
+				udpServer, udpSession, err := s.createUdpSession(deviceId)
+				if err != nil {
+					Errorf("Failed to create udpSession, deviceId: %s, err: %v", deviceId, err)
 					continue
 				}
 
@@ -330,31 +322,73 @@ func (s *MqttUdpAdapter) processMessage() {
 					continue
 				}
 				deviceSession = NewMqttUdpConn(deviceId, publicTopic, mqttClient, udpServer, udpSession)
+				s.bindUdpSessionData(deviceSession, udpSession)
 
-				strAesKey, strFullNonce := udpSession.GetAesKeyAndNonce()
-				deviceSession.SetData("aes_key", strAesKey)
-				deviceSession.SetData("full_nonce", strFullNonce)
-
-				//保存至deviceId2UdpSession
+				// Save to deviceId2UdpSession
 				s.SetDeviceSession(deviceId, deviceSession)
 
 				deviceSession.OnClose(s.handleDisconnect)
 
 				s.onNewConnection(deviceSession)
+			} else if clientMsg.Type == "hello" {
+				newUdpSession, err := s.rotateDeviceUdpSession(deviceSession, deviceId)
+				if err != nil {
+					Errorf("hello rebuild udpSession failed, deviceId: %s, err: %v", deviceId, err)
+					continue
+				}
+				Debugf("hello rebuild udpSession successful, deviceId: %s, connID: %s", deviceId, newUdpSession.ConnId)
 			}
 
 			err := deviceSession.PushMsgToRecvCmd(msg.Payload())
 			if err != nil {
-				Errorf("InternalRecvCmd失败: %v", err)
+				Errorf("InternalRecvCmd failed: %v", err)
 				continue
 			}
 		}
 	}
 }
 
+func (s *MqttUdpAdapter) createUdpSession(deviceId string) (*UdpServer, *UdpSession, error) {
+	udpServer := s.getUdpServer()
+	if udpServer == nil {
+		return nil, nil, fmt.Errorf("udpServer is nil")
+	}
+	udpSession := udpServer.CreateSession(deviceId, "")
+	if udpSession == nil {
+		return nil, nil, fmt.Errorf("udpSession is nil")
+	}
+	return udpServer, udpSession, nil
+}
+
+func (s *MqttUdpAdapter) bindUdpSessionData(deviceSession *MqttUdpConn, udpSession *UdpSession) {
+	if deviceSession == nil || udpSession == nil {
+		return
+	}
+	deviceSession.SetUdpSession(udpSession)
+	strAesKey, strFullNonce := udpSession.GetAesKeyAndNonce()
+	deviceSession.SetData("aes_key", strAesKey)
+	deviceSession.SetData("full_nonce", strFullNonce)
+}
+
+func (s *MqttUdpAdapter) rotateDeviceUdpSession(deviceSession *MqttUdpConn, deviceId string) (*UdpSession, error) {
+	if deviceSession == nil {
+		return nil, fmt.Errorf("deviceSession is nil")
+	}
+	udpServer, udpSession, err := s.createUdpSession(deviceId)
+	if err != nil {
+		return nil, err
+	}
+	oldSession := deviceSession.GetUdpSession()
+	s.bindUdpSessionData(deviceSession, udpSession)
+	if oldSession != nil {
+		udpServer.CloseSessionByRef(oldSession)
+	}
+	return udpSession, nil
+}
+
 func (s *MqttUdpAdapter) getDeviceIdByTopic(topic string) (string, string) {
 	var topicMacAddr, deviceId string
-	//根据topic(/p2p/device_public/mac_addr)解析出来mac_addr
+	// Parse mac_addr from topic (/p2p/device_public/mac_addr)
 	strList := strings.Split(topic, "/")
 	if len(strList) == 4 {
 		topicMacAddr = strList[3]

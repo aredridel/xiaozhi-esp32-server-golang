@@ -103,22 +103,22 @@ func main() {
 
 		var wg sync.WaitGroup
 		if doMqttServer {
+			wg.Add(1)
 			go func() {
-				wg.Add(1)
 				defer wg.Done()
 				appInstance.ReloadMqttServer()
 			}()
 		}
 		if doMqttReload || doUdpReload {
+			wg.Add(1)
 			go func() {
-				wg.Add(1)
 				defer wg.Done()
 				appInstance.ReloadMqttUdpWithFlags(doMqttReload, doUdpReload)
 			}()
 		}
 		if doMcpReload {
+			wg.Add(1)
 			go func() {
-				wg.Add(1)
 				defer wg.Done()
 				if err := appInstance.ReloadMCP(); err != nil {
 					log.Errorf("ReloadMCP failed: %v", err)

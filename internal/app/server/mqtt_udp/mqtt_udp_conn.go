@@ -13,11 +13,11 @@ import (
 )
 
 const (
-	MaxIdleDuration = 300 //300s 没有上下行数据 就断开
+	MaxIdleDuration = 300 // 300s without upstream/downstream data, then disconnect
 )
 
-// MqttUdpConn 实现 types.IConn 接口，适配 MQTT-UDP 连接
-// 你可以根据实际需要扩展方法和字段
+// MqttUdpConn implements types.IConn interface, adapts MQTT-UDP connection
+// You can extend methods and fields according to actual needs
 
 type MqttUdpConn struct {
 	ctx    context.Context
@@ -38,10 +38,10 @@ type MqttUdpConn struct {
 
 	onCloseCbList []func(deviceId string)
 
-	lastActiveTs int64 //上下行 信令和音频数据 都会更新
+	lastActiveTs int64 // upstream/downstream signaling and audio data will update this
 }
 
-// NewMqttUdpConn 创建一个新的 MqttUdpConn 实例
+// NewMqttUdpConn Create a new MqttUdpConn instance
 func NewMqttUdpConn(deviceID string, pubTopic string, mqttClient mqtt.Client, udpServer *UdpServer, udpSession *UdpSession) *MqttUdpConn {
 	ctx, cancel := context.WithCancel(context.Background())
 	log.Log().Debugf("NewMqttUdpConn pubTopic: %s", pubTopic)
@@ -61,7 +61,7 @@ func NewMqttUdpConn(deviceID string, pubTopic string, mqttClient mqtt.Client, ud
 	}
 }
 
-// SendCmd 通过 MQTT-UDP 发送命令（需对接实际发送逻辑）
+// SendCmd Send command via MQTT-UDP (needs to integrate with actual sending logic)
 func (c *MqttUdpConn) SendCmd(msg []byte) error {
 	//log.Debugf("mqtt udp conn send cmd, topic: %s, msg: %s", c.PubTopic, string(msg))
 	c.lastActiveTs = time.Now().Unix()
@@ -89,7 +89,7 @@ func (c *MqttUdpConn) PushMsgToRecvCmd(msg []byte) error {
 	}
 }
 
-// RecvCmd 接收命令/信令数据
+// RecvCmd Receive command/signaling data
 func (c *MqttUdpConn) RecvCmd(ctx context.Context, timeout int) ([]byte, error) {
 	select {
 	case <-ctx.Done():
@@ -103,13 +103,20 @@ func (c *MqttUdpConn) RecvCmd(ctx context.Context, timeout int) ([]byte, error) 
 	}
 }
 
-// SendAudio 通过 MQTT-UDP 发送音频（需对接实际发送逻辑）
+// SendAudio Send audio via MQTT-UDP (needs to integrate with actual sending logic)
 func (c *MqttUdpConn) SendAudio(audio []byte) error {
-	ok, err := c.UdpSession.SendAudioData(audio)
+	udpSession := c.GetUdpSession()
+	if udpSession == nil {
+		return nil
+	}
+	ok, err := udpSession.SendAudioData(audio)
 	if err != nil {
 		return err
 	}
 	if !ok {
+		if udpSession.IsClosed() {
+			return nil
+		}
 		return errors.New("sendAudioChan is full")
 	}
 	return nil
@@ -123,30 +130,47 @@ func (c *MqttUdpConn) SendAudio(audio []byte) error {
 		}*/
 }
 
-// RecvAudio 接收音频数据
+// RecvAudio Receive audio data
 func (c *MqttUdpConn) RecvAudio(ctx context.Context, timeout int) ([]byte, error) {
+	udpSession := c.GetUdpSession()
+	if udpSession == nil {
+		waitDuration := time.Second
+		if timeout > 0 {
+			timeoutDuration := time.Duration(timeout) * time.Second
+			if timeoutDuration < waitDuration {
+				waitDuration = timeoutDuration
+			}
+		}
+		select {
+		case <-ctx.Done():
+			log.Debugf("mqtt udp conn recv audio context done")
+			return nil, ctx.Err()
+		case <-time.After(waitDuration):
+			return nil, nil
+		}
+	}
 	select {
 	case <-ctx.Done():
 		log.Debugf("mqtt udp conn recv audio context done")
 		return nil, ctx.Err()
-	case audio, ok := <-c.UdpSession.RecvChannel:
+	case audio, ok := <-udpSession.RecvChannel:
 		if ok {
 			c.lastActiveTs = time.Now().Unix()
 			return audio, nil
 		}
-		return nil, errors.New("recvAudioChan is closed")
+		return nil, nil
 	case <-time.After(time.Duration(timeout) * time.Second):
 		log.Debugf("mqtt udp conn recv audio timeout")
 		return nil, nil
 	}
 }
 
-// GetDeviceID 获取设备ID
+// GetDeviceID Get device ID
 func (c *MqttUdpConn) GetDeviceID() string {
 	return c.DeviceId
 }
 
-// Close 关闭连接
+// Close Close connection
 func (c *MqttUdpConn) Close() error {
 	//c.cancel()
 	c.Destroy()
@@ -161,6 +185,33 @@ func (c *MqttUdpConn) SetMqttClient(client mqtt.Client) {
 	c.Lock()
 	c.MqttClient = client
 	c.Unlock()
+}
+
+func (c *MqttUdpConn) GetUdpSession() *UdpSession {
+	c.RLock()
+	defer c.RUnlock()
+	return c.UdpSession
+}
+
+func (c *MqttUdpConn) SetUdpSession(session *UdpSession) {
+	c.Lock()
+	c.UdpSession = session
+	c.Unlock()
+}
+
+func (c *MqttUdpConn) ReleaseUdpSession() {
+	c.Lock()
+	udpSession := c.UdpSession
+	c.UdpSession = nil
+	c.Unlock()
+	if udpSession == nil {
+		return
+	}
+	if c.udpServer != nil {
+		c.udpServer.CloseSessionByRef(udpSession)
+		return
+	}
+	udpSession.Destroy()
 }
 
 func (c *MqttUdpConn) GetTransportType() string {
@@ -183,7 +234,7 @@ func (c *MqttUdpConn) IsActive() bool {
 	return time.Now().Unix()-c.lastActiveTs < MaxIdleDuration
 }
 
-// 销毁
+// Destroy
 func (c *MqttUdpConn) Destroy() {
 	c.cancel()
 	for _, cb := range c.onCloseCbList {
@@ -192,5 +243,6 @@ func (c *MqttUdpConn) Destroy() {
 }
 
 func (c *MqttUdpConn) CloseAudioChannel() error {
+	c.ReleaseUdpSession()
 	return nil
 }
