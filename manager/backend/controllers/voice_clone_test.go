@@ -383,6 +383,6 @@ func buildPCM16WAV(sampleRate, channels, bitsPerSample, durationSec int) []byte 
 
 	copy(buf[36:40], []byte("data"))
 	binary.LittleEndian.PutUint32(buf[40:44], uint32(dataSize))
-	// 保持静音数据（默认全0）
+	// Keep silent data (default all 0)
 	return buf
 }

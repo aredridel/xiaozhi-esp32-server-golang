@@ -10,12 +10,12 @@ import (
 
 type Vad struct {
 	lock sync.RWMutex
-	// VAD provide者
+	// VAD provider
 	VadProvider vad_inter.VAD
 
-	IdleDuration           int64 // idle time, 单bit: ms
-	VoiceDuration          int64 // accumulate detected voice duration, 单bit: ms
-	VoiceDurationInSession int64 // atimespast程inaccumulate detected voice duration, 单bit: ms
+	IdleDuration           int64 // idle time, unit: ms
+	VoiceDuration          int64 // accumulated detected voice duration, unit: ms
+	VoiceDurationInSession int64 // accumulated detected voice duration in session, unit: ms
 }
 
 func (v *Vad) AddIdleDuration(idleDuration int64) int64 {
@@ -44,7 +44,7 @@ func (v *Vad) ResetVoiceDuration() {
 	atomic.StoreInt64(&v.VoiceDurationInSession, 0)
 }
 
-// reset持continue性voiceduration
+// reset continuous voice duration
 func (v *Vad) ResetVoiceContinuousDuration() {
 	atomic.StoreInt64(&v.VoiceDuration, 0)
 }
@@ -62,7 +62,7 @@ func (v *Vad) Init(provider string, config map[string]interface{}) error {
 	defer v.lock.Unlock()
 	vadProvider, err := vad.AcquireVAD(provider, config)
 	if err != nil {
-		return fmt.Errorf("create VAD provide者failed: %v", err)
+		return fmt.Errorf("create VAD provider failed: %v", err)
 	}
 
 	vadProvider.Reset()
@@ -93,8 +93,8 @@ func (v *Vad) Reset() error {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	if v.VadProvider != nil {
-		vad.ReleaseVAD(v.VadProvider) //releasevadinstanceresource
-		v.VadProvider = nil           //置nil
+		vad.ReleaseVAD(v.VadProvider) // release vad instance resource
+		v.VadProvider = nil           // set to nil
 	}
 	v.ResetIdleDuration()
 	v.ResetVoiceDuration()

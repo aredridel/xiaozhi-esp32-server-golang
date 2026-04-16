@@ -20,7 +20,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-//this file processes local mcp tool and session binding of toolcall
+// this file processes local mcp tool and session binding of toolcall
 
 // Music search API response structure
 type MusicSearchResponse struct {
@@ -170,7 +170,7 @@ func (c *ChatManager) LocalMcpSwitchDeviceRole(ctx context.Context, roleName str
 func (c *ChatManager) LocalMcpRestoreDeviceDefaultRole(ctx context.Context) error {
 	configProvider, err := user_config.GetProvider(viper.GetString("config_provider.type"))
 	if err != nil {
-		return fmt.Errorf("getconfigprovide者failed: %w", err)
+		return fmt.Errorf("get config provider failed: %w", err)
 	}
 
 	if err := configProvider.RestoreDeviceDefaultRole(ctx, c.DeviceID); err != nil {
@@ -335,7 +335,7 @@ func getMusicURL(musicName string) (string, string, error) {
 	// parse response
 	var searchResp MusicSearchResponse
 	if err := json.NewDecoder(resp.Body).Decode(&searchResp); err != nil {
-		return "", "", fmt.Errorf("parserespondfailed: %v", err)
+		return "", "", fmt.Errorf("parse response failed: %v", err)
 	}
 
 	if searchResp.Code != 200 {

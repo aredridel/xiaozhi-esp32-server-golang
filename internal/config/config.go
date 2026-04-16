@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-// Config indicateserverconfig
+// Config indicates server config
 type Config struct {
 	Server struct {
 		Host string `json:"host"`
@@ -18,17 +18,17 @@ type Config struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
 	} `json:"mqtt"`
-	// 唤醒词relevantconfig
+	// Wake word related config
 	WakeupWords    []string `json:"wakeup_words"`
 	EnableGreeting bool     `json:"enable_greeting"`
 }
 
-// ServerAddress returnserveraddress
+// ServerAddress returns server address
 func (c *Config) ServerAddress() string {
 	return fmt.Sprintf("%s:%d", c.Server.Host, c.Server.Port)
 }
 
-// LoadConfig fromfileloadconfig
+// LoadConfig loads config from file
 func LoadConfig(filename string) (*Config, error) {
 	file, err := os.Open(filename)
 	if err != nil {
@@ -44,7 +44,7 @@ func LoadConfig(filename string) (*Config, error) {
 	return &config, nil
 }
 
-// SaveConfig saveconfigtofile
+// SaveConfig saves config to file
 func (c *Config) SaveConfig(filename string) error {
 	data, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {

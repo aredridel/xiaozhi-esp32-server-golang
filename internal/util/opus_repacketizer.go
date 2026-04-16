@@ -82,7 +82,7 @@ func (r *opusRepacketizer) outRange(begin int, end int) ([]byte, error) {
 		return nil, fmt.Errorf("repacketizer range cannot be empty")
 	}
 
-	// 1277 yes单frame理论maximumpackagelong，120ms up限down这inofbuffer足够覆盖output。
+	// 1277 is the theoretical maximum packet length for a single frame, 120ms upper limit, this buffer is sufficient to cover output.
 	buf := make([]byte, 1277*maxFrames)
 	outLen := C.opus_repacketizer_out_range(
 		r.ptr,

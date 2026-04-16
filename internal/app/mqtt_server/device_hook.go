@@ -32,7 +32,7 @@ func (h *DeviceHook) OnACLCheck(cl *mqttServer.Client, topic string, write bool)
 	isAdmin := isAdminUser(cl)
 
 	if isAdmin {
-		return true // 超级manage员nolimit
+		return true // super admin no limit
 	}
 
 	if write {

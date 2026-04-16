@@ -5,7 +5,7 @@ import (
 	"sync"
 )
 
-// SafeBuffer yesagoroutine安全ofbuffer区
+// SafeBuffer is a goroutine-safe buffer
 type SafeBuffer struct {
 	buf bytes.Buffer
 	mu  sync.Mutex

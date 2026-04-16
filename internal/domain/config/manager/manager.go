@@ -14,8 +14,8 @@ import (
 )
 
 var (
-	defaultManagerOpenClawEnterKeywords = []string{"open龙虾", "enter龙虾"}
-	defaultManagerOpenClawExitKeywords  = []string{"close龙虾", "exit龙虾"}
+	defaultManagerOpenClawEnterKeywords = []string{"open lobster", "enter lobster"}
+	defaultManagerOpenClawExitKeywords  = []string{"close lobster", "exit lobster"}
 )
 
 func cloneOpenClawKeywords(keywords []string) []string {

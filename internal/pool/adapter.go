@@ -4,15 +4,15 @@ import (
 	"xiaozhi-esp32-server-golang/internal/util"
 )
 
-// ResourceWrapper 泛型resource wrapper
-// T: concreteofresourcetype（如 vad.VAD, asr.AsrProvider etc）
+// ResourceWrapper generic resource wrapper
+// T: concrete resource type (e.g. vad.VAD, asr.AsrProvider etc)
 type ResourceWrapper[T any] struct {
-	provider     T                    // actualofresourceprovider（type安全）
-	configKey    string               // configkey，used for标识resourcepool
-	resourceType string               // resourcetype（vad/asr/llm/ttsetc）
-	closeFunc    func(T) error        // closeresourceoffunction
-	isValidFunc  func(T) bool         // validateresourcewhethervalidoffunction
-	resetFunc    func(T) error        // resetresourcestateoffunction（optional）
+	provider     T             // actual resource provider (type safe)
+	configKey    string        // config key, used for identifying resource pool
+	resourceType string        // resource type (vad/asr/llm/tts etc)
+	closeFunc    func(T) error // close resource function
+	isValidFunc  func(T) bool  // validate resource whether valid function
+	resetFunc    func(T) error // reset resource state function (optional)
 }
 
 // Close closeresource
@@ -32,7 +32,7 @@ func (r *ResourceWrapper[T]) IsValid() bool {
 	return any(r.provider) != any(zero)
 }
 
-// GetProvider getactualofresourceprovider（type安全，noneedtypeassert）
+// GetProvider get actual resource provider (type-safe, no need for type assertion)
 func (r *ResourceWrapper[T]) GetProvider() T {
 	return r.provider
 }
@@ -55,13 +55,13 @@ func (r *ResourceWrapper[T]) Reset() error {
 	return nil
 }
 
-// CreatorFunc 泛型resourcecreatefunctiontype
-// T: resourcetype
-// parameter：resourceType, provider, config
-// return：resourceinstance（type T）anderror
+// CreatorFunc generic resource creation function type
+// T: resource type
+// parameters: resourceType, provider, config
+// return: resource instance (type T) and error
 type CreatorFunc[T any] func(resourceType, provider string, config map[string]interface{}) (T, error)
 
-// ResourceFactory 泛型resourcefactory
+// ResourceFactory generic resource factory
 type ResourceFactory[T any] struct {
 	resourceType string
 	provider     string

@@ -19,13 +19,13 @@ import (
 	log "xiaozhi-esp32-server-golang/logger"
 )
 
-// globalHTTPclient-side，implementjoinpool
+// global HTTP client, implement connection pool
 var (
 	httpClient     *http.Client
 	httpClientOnce sync.Once
 )
 
-// getconfigjoinpoolofHTTPclient-side
+// get connection pool HTTP client
 func getHTTPClient() *http.Client {
 	httpClientOnce.Do(func() {
 		transport := &http.Transport{
@@ -42,7 +42,7 @@ func getHTTPClient() *http.Client {
 		}
 		httpClient = &http.Client{
 			Transport: transport,
-			Timeout:   60 * time.Second, // OpenAI TTS mayneed更longtime
+			Timeout:   60 * time.Second, // OpenAI TTS may need longer time
 		}
 	})
 	return httpClient
@@ -60,7 +60,7 @@ type OpenAITTSProvider struct {
 	FrameDuration  int
 }
 
-// requeststructurebody
+// request structure body
 type openAIRequest struct {
 	Model          string  `json:"model"`
 	Input          string  `json:"input"`
@@ -70,7 +70,7 @@ type openAIRequest struct {
 	Stream         bool    `json:"stream,omitempty"`
 }
 
-// NewOpenAITTSProvider create newOpenAI TTS provider
+// NewOpenAITTSProvider create new OpenAI TTS provider
 func NewOpenAITTSProvider(config map[string]interface{}) *OpenAITTSProvider {
 	apiKey, _ := config["api_key"].(string)
 	apiURL, _ := config["api_url"].(string)
@@ -81,7 +81,7 @@ func NewOpenAITTSProvider(config map[string]interface{}) *OpenAITTSProvider {
 	stream, _ := config["stream"].(bool)
 	frameDuration, _ := config["frame_duration"].(float64)
 
-	// setdefault values
+	// set default values
 	if apiURL == "" {
 		apiURL = "https://api.openai.com/v1/audio/speech"
 	}
@@ -113,7 +113,7 @@ func NewOpenAITTSProvider(config map[string]interface{}) *OpenAITTSProvider {
 	}
 }
 
-// TextToSpeech willtextconvertisvoice，returnaudio framedataanderror
+// TextToSpeech will text convert to voice, return audio frame data and error
 func (p *OpenAITTSProvider) TextToSpeech(ctx context.Context, text string, sampleRate int, channels int, frameDuration int) ([][]byte, error) {
 	streamChan, err := p.TextToSpeechStream(ctx, text, sampleRate, channels, frameDuration)
 	if err != nil {
@@ -125,16 +125,16 @@ func (p *OpenAITTSProvider) TextToSpeech(ctx context.Context, text string, sampl
 		audioFrames = append(audioFrames, frame)
 	}
 	if len(audioFrames) == 0 {
-		return nil, fmt.Errorf("OpenAI TTS returnaudioisempty")
+		return nil, fmt.Errorf("OpenAI TTS return audio is empty")
 	}
 	return audioFrames, nil
 }
 
-// TextToSpeechStream streamingvoice合成implement
+// TextToSpeechStream streaming voice synthesis implement
 func (p *OpenAITTSProvider) TextToSpeechStream(ctx context.Context, text string, sampleRate int, channels int, frameDuration int) (outputChan chan []byte, err error) {
 	startTs := time.Now().UnixMilli()
 
-	// createrequestbody
+	// create request body
 	reqBody := openAIRequest{
 		Model:          p.Model,
 		Input:          text,
@@ -146,55 +146,55 @@ func (p *OpenAITTSProvider) TextToSpeechStream(ctx context.Context, text string,
 
 	jsonData, err := json.Marshal(reqBody)
 	if err != nil {
-		return nil, fmt.Errorf("serializerequestfailed: %v", err)
+		return nil, fmt.Errorf("serialize request failed: %v", err)
 	}
 
-	//log.Debugf("OpenAI TTSrequest: %s", string(jsonData))
+	//log.Debugf("OpenAI TTS request: %s", string(jsonData))
 
-	// createHTTPrequest
+	// create HTTP request
 	req, err := http.NewRequestWithContext(ctx, "POST", p.APIURL, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %v", err)
 	}
 
-	// setrequest header
+	// set request header
 	req.Header.Set("Content-Type", "application/json")
 	if p.APIKey != "" {
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", p.APIKey))
 	}
 
-	// usejoinpoolcreateclient-side
+	// use connection pool create client
 	client := getHTTPClient()
 
-	// createoutputchannel
+	// create output channel
 	outputChan = make(chan []byte, 100)
 
-	// startgoroutineprocessstreamingrespond
+	// start goroutine process streaming response
 	go func() {
-		// sendrequest
+		// send request
 		resp, err := client.Do(req)
 		if err != nil {
-			log.Errorf("sendOpenAIrequestfailed: %v", err)
+			log.Errorf("send OpenAI request failed: %v", err)
 			close(outputChan)
 			return
 		}
 		defer resp.Body.Close()
 
-		// inspectrespondstate码
+		// inspect response status code
 		if resp.StatusCode != http.StatusOK {
 			body, _ := io.ReadAll(resp.Body)
-			log.Errorf("OpenAI API request failed，state码: %d, respond: %s", resp.StatusCode, string(body))
+			log.Errorf("OpenAI API request failed, status code: %d, response: %s", resp.StatusCode, string(body))
 			close(outputChan)
 			return
 		}
 
-		// inspectrespondinside容length
+		// inspect response content length
 		contentLength := resp.ContentLength
-		log.Debugf("receiveOpenAI TTSrespond，Content-Length: %d", contentLength)
+		log.Debugf("receive OpenAI TTS response, Content-Length: %d", contentLength)
 
-		// judgeContent-Lengthwhether合理
+		// judge Content-Length whether reasonable
 		if contentLength == 0 {
-			log.Errorf("OpenAI APIreturnemptyrespond，Content-Lengthis0")
+			log.Errorf("OpenAI API return empty response, Content-Length is 0")
 			close(outputChan)
 			return
 		}
@@ -210,14 +210,14 @@ func (p *OpenAITTSProvider) TextToSpeechStream(ctx context.Context, text string,
 		}
 
 		if decoderFormat != "mp3" && decoderFormat != "wav" && decoderFormat != "pcm" && decoderFormat != "opus" && decoderFormat != "ogg_opus" {
-			log.Errorf("currentonlysupport mp3/wav/pcm/opus/ogg_opus formatofstreaming合成")
+			log.Errorf("currently only support mp3/wav/pcm/opus/ogg_opus format of streaming synthesis")
 			close(outputChan)
 			return
 		}
 
 		decoder, err := util.CreateAudioDecoderWithSampleRate(ctx, resp.Body, outputChan, frameDuration, decoderFormat, sampleRate)
 		if err != nil {
-			log.Errorf("createOpenAIaudio decoderfailed: %v", err)
+			log.Errorf("create OpenAI audio decoder failed: %v", err)
 			close(outputChan)
 			return
 		}
@@ -233,37 +233,37 @@ func (p *OpenAITTSProvider) TextToSpeechStream(ctx context.Context, text string,
 		}
 
 		if err := decoder.Run(startTs); err != nil {
-			log.Errorf("OpenAIaudiodecodefailed: %v", err)
+			log.Errorf("OpenAI audio decode failed: %v", err)
 			return
 		}
 
 		select {
 		case <-ctx.Done():
-			log.Debugf("OpenAI TTSstreaming合成cancel, text: %s", text)
+			log.Debugf("OpenAI TTS streaming synthesis cancel, text: %s", text)
 			return
 		default:
-			log.Infof("OpenAI TTStime consumption: from input togetaudio dataendtime consumption: %d ms", time.Now().UnixMilli()-startTs)
+			log.Infof("OpenAI TTS time consumption: from input to get audio data end time consumption: %d ms", time.Now().UnixMilli()-startTs)
 		}
 	}()
 
 	return outputChan, nil
 }
 
-// SetVoice setvoiceparameter
+// SetVoice set voice parameter
 func (p *OpenAITTSProvider) SetVoice(voiceConfig map[string]interface{}) error {
 	if voice, ok := voiceConfig["voice"].(string); ok && voice != "" {
 		p.Voice = voice
 		return nil
 	}
-	return fmt.Errorf("invalidofvoiceconfig: Missing voice")
+	return fmt.Errorf("invalid voice config: Missing voice")
 }
 
-// Close closeresource（nostate Provider，noneedclose）
+// Close close resource (no state Provider, no need close)
 func (p *OpenAITTSProvider) Close() error {
 	return nil
 }
 
-// IsValid inspectresourcewhethervalid
+// IsValid inspect resource whether valid
 func (p *OpenAITTSProvider) IsValid() bool {
 	return p != nil
 }

@@ -52,7 +52,7 @@ func NewIotOverMcpTransport(conn ConnInterface) (*IotOverMcpTransport, error) {
 
 // implement Interface interface
 func (t *IotOverMcpTransport) Start(ctx context.Context) error {
-	// TODO: startjoin/listenmessageetc
+	// TODO: start connection/listen message etc
 
 	return nil
 }
@@ -62,14 +62,14 @@ func (t *IotOverMcpTransport) SendRequest(ctx context.Context, request transport
 	if err != nil {
 		return nil, err
 	}
-	// TODO: sendrequestandsynchronizationwaitrespond
+	// TODO: send request and synchronization wait respond
 	err = t.conn.SendMcpMsg(payload)
 	if err != nil {
 		return nil, err
 	}
 
 	var response transport.JSONRPCResponse
-	msg, err := t.conn.RecvMcpMsg(ctx, 15000) //15secondtimeout
+	msg, err := t.conn.RecvMcpMsg(ctx, 15000) // 15 second timeout
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func (t *IotOverMcpTransport) SendRequest(ctx context.Context, request transport
 }
 
 func (t *IotOverMcpTransport) SendNotification(ctx context.Context, notification mcp.JSONRPCNotification) error {
-	// TODO: sendnotifymessage
+	// TODO: send notify message
 	if t.notifyHandler != nil {
 		t.notifyHandler(notification)
 	}
@@ -89,13 +89,13 @@ func (t *IotOverMcpTransport) SetNotificationHandler(handler func(notification m
 	t.notifyHandler = handler
 }
 
-// SetOnCloseHandler setjoinclosecallback
+// SetOnCloseHandler set connection close callback
 func (t *IotOverMcpTransport) SetOnCloseHandler(handler func(reason string)) {
 	t.onCloseHandler = handler
 }
 
 func (t *IotOverMcpTransport) Close() error {
-	// notifyclientlayerjoin即willclose
+	// notify client layer connection will close
 	if t.onCloseHandler != nil {
 		t.onCloseHandler("manual_close")
 	}

@@ -10,7 +10,7 @@ import (
 	"net/url"
 )
 
-// Client 通useHTTPclient-side
+// Client generic HTTP client
 type Client struct {
 	httpClient *http.Client
 	baseURL    string
@@ -18,10 +18,10 @@ type Client struct {
 	maxRetries int
 }
 
-// NewClient create newHTTPclient-side
+// NewClient create new HTTP client
 func NewClient(cfg ClientConfig) *Client {
 	if cfg.MaxRetries <= 0 {
-		cfg.MaxRetries = 1 // defaultretry3times
+		cfg.MaxRetries = 1 // default retry 3 times
 	}
 
 	return &Client{
@@ -34,17 +34,17 @@ func NewClient(cfg ClientConfig) *Client {
 	}
 }
 
-// DoRequest executeHTTPrequest
+// DoRequest execute HTTP request
 func (c *Client) DoRequest(ctx context.Context, opts RequestOptions) error {
 	return c.doRequestOnce(ctx, opts)
 }
 
-// doRequestOnce execute单timesHTTPrequest
+// doRequestOnce execute single HTTP request
 func (c *Client) doRequestOnce(ctx context.Context, opts RequestOptions) error {
-	// buildURL
+	// build URL
 	reqURL := c.baseURL + opts.Path
 
-	// addqueryparameter
+	// add query parameters
 	if len(opts.QueryParams) > 0 {
 		params := url.Values{}
 		for k, v := range opts.QueryParams {
@@ -53,73 +53,73 @@ func (c *Client) doRequestOnce(ctx context.Context, opts RequestOptions) error {
 		reqURL += "?" + params.Encode()
 	}
 
-	// buildrequestbody
+	// build request body
 	var bodyReader io.Reader
 	if opts.Body != nil {
 		data, err := json.Marshal(opts.Body)
 		if err != nil {
-			return fmt.Errorf("serializerequestbodyfailed: %w", err)
+			return fmt.Errorf("serialize request body failed: %w", err)
 		}
 		bodyReader = bytes.NewReader(data)
 	}
 
-	// createHTTPrequest
+	// create HTTP request
 	req, err := http.NewRequestWithContext(ctx, opts.Method, reqURL, bodyReader)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
-	// setdefaultrequest header
+	// set default request header
 	req.Header.Set("Content-Type", "application/json")
 
-	// setauthenticateToken
+	// set authentication token
 	if c.authToken != "" {
 		req.Header.Set("Authorization", "Bearer "+c.authToken)
 	}
 
-	// set自定义request header
+	// set custom request headers
 	for k, v := range opts.Headers {
 		req.Header.Set(k, v)
 	}
 
-	// sendrequest
+	// send request
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("requestfailed: %w", err)
+		return fmt.Errorf("request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	// readrespondbody
+	// read response body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("failed to read response: %w", err)
 	}
 
-	// inspectHTTPstate码
+	// check HTTP status code
 	/*if resp.StatusCode >= 400 {
 		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(body))
 	}*/
 
-	// parserespondbody
+	// parse response body
 	if opts.Response != nil {
 		if err := json.Unmarshal(body, opts.Response); err != nil {
-			return fmt.Errorf("parserespondfailed: %w, respondbody: %s", err, string(body))
+			return fmt.Errorf("parse response failed: %w, response body: %s", err, string(body))
 		}
 	}
 
 	return nil
 }
 
-// DoRequestRaw executeHTTPrequestandreturnoriginalrespond（noautomaticparseJSON）
+// DoRequestRaw execute HTTP request and return raw response (no automatic JSON parsing)
 func (c *Client) DoRequestRaw(ctx context.Context, opts RequestOptions) ([]byte, error) {
 	var responseBody []byte
 	var err error
 
 	operation := func() error {
-		// buildURL
+		// build URL
 		reqURL := c.baseURL + opts.Path
 
-		// addqueryparameter
+		// add query parameters
 		if len(opts.QueryParams) > 0 {
 			params := url.Values{}
 			for k, v := range opts.QueryParams {
@@ -128,49 +128,49 @@ func (c *Client) DoRequestRaw(ctx context.Context, opts RequestOptions) ([]byte,
 			reqURL += "?" + params.Encode()
 		}
 
-		// buildrequestbody
+		// build request body
 		var bodyReader io.Reader
 		if opts.Body != nil {
 			data, marshalErr := json.Marshal(opts.Body)
 			if marshalErr != nil {
-				return fmt.Errorf("serializerequestbodyfailed: %w", marshalErr)
+				return fmt.Errorf("serialize request body failed: %w", marshalErr)
 			}
 			bodyReader = bytes.NewReader(data)
 		}
 
-		// createHTTPrequest
+		// create HTTP request
 		req, createErr := http.NewRequestWithContext(ctx, opts.Method, reqURL, bodyReader)
 		if createErr != nil {
 			return fmt.Errorf("failed to create request: %w", createErr)
 		}
 
-		// setdefaultrequest header
+		// set default request header
 		req.Header.Set("Content-Type", "application/json")
 
-		// setauthenticateToken
+		// set authentication token
 		if c.authToken != "" {
 			req.Header.Set("Authorization", "Bearer "+c.authToken)
 		}
 
-		// set自定义request header
+		// set custom request headers
 		for k, v := range opts.Headers {
 			req.Header.Set(k, v)
 		}
 
-		// sendrequest
+		// send request
 		resp, doErr := c.httpClient.Do(req)
 		if doErr != nil {
-			return fmt.Errorf("requestfailed: %w", doErr)
+			return fmt.Errorf("request failed: %w", doErr)
 		}
 		defer resp.Body.Close()
 
-		// readrespondbody
+		// read response body
 		responseBody, err = io.ReadAll(resp.Body)
 		if err != nil {
 			return fmt.Errorf("failed to read response: %w", err)
 		}
 
-		// inspectHTTPstate码
+		// check HTTP status code
 		if resp.StatusCode >= 400 {
 			return fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(responseBody))
 		}

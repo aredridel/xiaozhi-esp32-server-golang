@@ -21,33 +21,33 @@ import (
 	log "xiaozhi-esp32-server-golang/logger"
 )
 
-// DefaultTestWavPath configtestusefixed WAV path（16kHz 单声道，about 1–3 second），optional
+// DefaultTestWavPath config test uses fixed WAV path (16kHz mono, about 1-3 seconds), optional
 const DefaultTestWavPath = "internal/testdata/config_test.wav"
 
-// DefaultTestTextLLM/TTS fixedtesttext
+// DefaultTestText LLM/TTS fixed test text
 const DefaultTestText = "configtest"
 const (
 	defaultLLMTestTimeout  = 15 * time.Second
 	thinkingLLMTestTimeout = 30 * time.Second
 )
 
-// used for VAD/ASR ofbackup PCM：about 1 secondmockvoice 16kHz 单声道，nofilewhenuse
-// use合成噪声mockrealvoice，以便 ASR server-side能normalprocess（特别yes Manual patternneed commit）
+// Used for VAD/ASR backup PCM: about 1 second mock voice 16kHz mono, use when no file
+// Use synthesized noise to mock real voice, so ASR server-side can process normally (especially for Manual mode requirement)
 var fallbackPCM = func() []float32 {
 	pcm := make([]float32, 16000)
-	// generatemockvoicesignal：usemultiplepositive弦波叠加 + 噪声
-	// mockin文"configtest"of基本frequencyrange
-	// 增加幅degree以使server-side能recognizeisvalidaudio（Manual pattern要求更high）
+	// Generate mock voice signal: use multiple sine wave superposition + noise
+	// Mock basic frequency range for "configtest"
+	// Increase amplitude so server-side can recognize as valid audio (Manual mode requires higher)
 	for i := range pcm {
 		t := float64(i) / 16000.0
-		// 基频 + 谐波mockvoice，large幅增加幅degree
-		sample := float32(0.5 * math.Sin(2*math.Pi*t*400))   // 基频 400Hz，幅degree 0.5
-		sample += float32(0.25 * math.Sin(2*math.Pi*t*800))  // 谐波，幅degree 0.25
-		sample += float32(0.15 * math.Sin(2*math.Pi*t*1200)) // 谐波，幅degree 0.15
-		sample += float32(0.1 * math.Sin(2*math.Pi*t*2000))  // 谐波，幅degree 0.1
-		// add噪声，large幅增加噪声水平
-		sample += (float32(i%100) - 50) / 2000 // 噪声幅degree增加to 0.05
-		// applicationpackage络（淡入淡out）
+		// Fundamental + harmonic mock voice, increase amplitude
+		sample := float32(0.5 * math.Sin(2*math.Pi*t*400))   // Fundamental 400Hz, amplitude 0.5
+		sample += float32(0.25 * math.Sin(2*math.Pi*t*800))  // Harmonic, amplitude 0.25
+		sample += float32(0.15 * math.Sin(2*math.Pi*t*1200)) // Harmonic, amplitude 0.15
+		sample += float32(0.1 * math.Sin(2*math.Pi*t*2000))  // Harmonic, amplitude 0.1
+		// Add noise, increase noise level
+		sample += (float32(i%100) - 50) / 2000 // Noise amplitude increased to 0.05
+		// Apply envelope (fade in/fade out)
 		env := float32(1.0)
 		if i < 1000 {
 			env = float32(i) / 1000
@@ -56,11 +56,11 @@ var fallbackPCM = func() []float32 {
 		}
 		pcm[i] = sample * env
 	}
-	log.Debugf("[config_test] fallbackPCM generate: len=%d", len(pcm))
+	log.Debugf("[config_test] fallbackPCM generated: len=%d", len(pcm))
 	return pcm
 }()
 
-// loadTestWav loadfixed WAV is float32 PCM，iffileno存atthenreturn nil and nil error（call方use fallbackPCM）
+// loadTestWav loads fixed WAV as float32 PCM, if file doesn't exist then return nil and nil error (caller uses fallbackPCM)
 func loadTestWav(path string) ([]float32, error) {
 	if path == "" {
 		path = DefaultTestWavPath
@@ -94,7 +94,7 @@ func loadTestWav(path string) ([]float32, error) {
 	return out, nil
 }
 
-// RunConfigTest according todown发of data（and实whenconfigconsistent）execute VAD/ASR/LLM/TTS 轻amounttest，return每class按 config_id ofresult
+// RunConfigTest according to received data (and actual config) executes VAD/ASR/LLM/TTS light test, returns results by config_id for each type
 func RunConfigTest(data map[string]interface{}, testText string) (vadResult, asrResult, llmResult, ttsResult map[string]interface{}) {
 	vadResult = make(map[string]interface{})
 	asrResult = make(map[string]interface{})
@@ -105,7 +105,7 @@ func RunConfigTest(data map[string]interface{}, testText string) (vadResult, asr
 		testText = DefaultTestText
 	}
 	log.Debugf("[config_test] RunConfigTest start test_text=%q data.keys=%v", testText, mapKeys(data))
-	// 打印receivetoof各type config_id and脱敏afterofconfiginside容，便于 debug
+	// Print received config_ids of each type and redacted config content for debug
 	for _, typ := range []string{"vad", "asr", "llm", "tts"} {
 		v, _ := data[typ].(map[string]interface{})
 		if v == nil {
@@ -119,18 +119,18 @@ func RunConfigTest(data map[string]interface{}, testText string) (vadResult, asr
 	}
 	if redacted := redactSensitive(data); redacted != nil {
 		if b, err := json.Marshal(redacted); err == nil {
-			log.Debugf("[config_test] receive data 脱敏after: %s", string(b))
+			log.Debugf("[config_test] received data after redaction: %s", string(b))
 		}
 	}
 
 	pcm, _ := loadTestWav(DefaultTestWavPath)
 	if pcm == nil || len(pcm) == 0 {
-		log.Debugf("[config_test] WAV fileloadfailedorisempty，use fallbackPCM")
+		log.Debugf("[config_test] WAV file load failed or is empty, use fallbackPCM")
 		pcm = fallbackPCM
 	}
-	log.Debugf("[config_test] use PCM data: len=%d", len(pcm))
+	log.Debugf("[config_test] using PCM data: len=%d", len(pcm))
 
-	// VAD：countprocesstime consumption（fromcall IsVAD toreturn）
+	// VAD: count process time consumption (from calling IsVAD to return)
 	if v, ok := data["vad"].(map[string]interface{}); ok {
 		for configID, val := range v {
 			if configID == "provider" {
@@ -138,7 +138,7 @@ func RunConfigTest(data map[string]interface{}, testText string) (vadResult, asr
 			}
 			cfg, ok := val.(map[string]interface{})
 			if !ok {
-				vadResult[configID] = map[string]interface{}{"ok": false, "message": "configformatinvalid"}
+				vadResult[configID] = map[string]interface{}{"ok": false, "message": "config format invalid"}
 				continue
 			}
 			wrapper, err := pool.Acquire[inter.VAD]("vad", configID, cfg)
@@ -154,12 +154,12 @@ func RunConfigTest(data map[string]interface{}, testText string) (vadResult, asr
 			if err != nil {
 				vadResult[configID] = map[string]interface{}{"ok": false, "message": err.Error(), "first_packet_ms": elapsedMs}
 			} else {
-				vadResult[configID] = map[string]interface{}{"ok": true, "message": "through", "first_packet_ms": elapsedMs}
+				vadResult[configID] = map[string]interface{}{"ok": true, "message": "success", "first_packet_ms": elapsedMs}
 			}
 		}
 	}
 
-	// ASR：use StreamingRecognize do轻amounttest，countbodybodytime consumption
+	// ASR: use StreamingRecognize to do light test, count process time consumption
 	if v, ok := data["asr"].(map[string]interface{}); ok {
 		for configID, val := range v {
 			if configID == "provider" {
@@ -167,11 +167,11 @@ func RunConfigTest(data map[string]interface{}, testText string) (vadResult, asr
 			}
 			cfg, ok := val.(map[string]interface{})
 			if !ok {
-				asrResult[configID] = map[string]interface{}{"ok": false, "message": "configformatinvalid"}
-				log.Debugf("[config_test] ASR config_id=%s configformatinvalid", configID)
+				asrResult[configID] = map[string]interface{}{"ok": false, "message": "config format invalid"}
+				log.Debugf("[config_test] ASR config_id=%s config format invalid", configID)
 				continue
 			}
-			// resourcepool creator need引擎type（funasr/doubao），use config_id will报「unsupportedofASR引擎type」
+			// Resource pool creator needs engine type (funasr/doubao), using config_id will report "unsupported ASR engine type"
 			asrEngineType := "funasr"
 			if p, ok := cfg["provider"].(string); ok && p != "" {
 				asrEngineType = p
@@ -215,12 +215,12 @@ func RunConfigTest(data map[string]interface{}, testText string) (vadResult, asr
 			if asrErr != nil {
 				asrResult[configID] = map[string]interface{}{"ok": false, "message": asrErr.Error(), "first_packet_ms": elapsedMs}
 			} else {
-				asrResult[configID] = map[string]interface{}{"ok": true, "message": "through", "first_packet_ms": elapsedMs}
+				asrResult[configID] = map[string]interface{}{"ok": true, "message": "success", "first_packet_ms": elapsedMs}
 			}
 		}
 	}
 
-	//LLM
+	// LLM
 	if v, ok := data["llm"].(map[string]interface{}); ok {
 		n := 0
 		for k := range v {
@@ -228,15 +228,15 @@ func RunConfigTest(data map[string]interface{}, testText string) (vadResult, asr
 				n++
 			}
 		}
-		log.Debugf("[config_test]LLM 待测 config count: %d", n)
+		log.Debugf("[config_test] LLM configs to test count: %d", n)
 		for configID, val := range v {
 			if configID == "provider" {
 				continue
 			}
 			cfg, ok := val.(map[string]interface{})
 			if !ok {
-				llmResult[configID] = map[string]interface{}{"ok": false, "message": "configformatinvalid"}
-				log.Debugf("[config_test]LLM config_id=%s configformatinvalid", configID)
+				llmResult[configID] = map[string]interface{}{"ok": false, "message": "config format invalid"}
+				log.Debugf("[config_test] LLM config_id=%s config format invalid", configID)
 				continue
 			}
 			testCfg := cloneConfigMap(cfg)
@@ -279,12 +279,12 @@ func RunConfigTest(data map[string]interface{}, testText string) (vadResult, asr
 				resultBase["ok"] = false
 				resultBase["message"] = errMsg
 				llmResult[configID] = resultBase
-				log.Debugf("[config_test]LLM config_id=%s failed(透传error): %s", configID, errMsg)
+				log.Debugf("[config_test] LLM config_id=%s failed (pass-through error): %s", configID, errMsg)
 			} else if gotMessage {
 				resultBase["ok"] = true
-				resultBase["message"] = "through"
+				resultBase["message"] = "success"
 				llmResult[configID] = resultBase
-				log.Debugf("[config_test]LLM config_id=%s through", configID)
+				log.Debugf("[config_test] LLM config_id=%s success", configID)
 			} else if ctx.Err() == context.DeadlineExceeded {
 				resultBase["ok"] = false
 				resultBase["message"] = "timeout"
@@ -292,13 +292,13 @@ func RunConfigTest(data map[string]interface{}, testText string) (vadResult, asr
 				log.Debugf("[config_test]LLM config_id=%s timeout", configID)
 			} else {
 				resultBase["ok"] = false
-				resultBase["message"] = "not receivedtorespondorcallfailed"
+				resultBase["message"] = "no response received or call failed"
 				llmResult[configID] = resultBase
-				log.Debugf("[config_test]LLM config_id=%s failed(not receivedtorespond)", configID)
+				log.Debugf("[config_test] LLM config_id=%s failed (no response received)", configID)
 			}
 		}
 	} else {
-		log.Debugf("[config_test]LLM data.llm 缺失ornon map, ok=%v", ok)
+		log.Debugf("[config_test] LLM data.llm missing or not map, ok=%v", ok)
 	}
 
 	// TTS
@@ -309,7 +309,7 @@ func RunConfigTest(data map[string]interface{}, testText string) (vadResult, asr
 			}
 			cfg, ok := val.(map[string]interface{})
 			if !ok {
-				ttsResult[configID] = map[string]interface{}{"ok": false, "message": "configformatinvalid"}
+				ttsResult[configID] = map[string]interface{}{"ok": false, "message": "config format invalid"}
 				continue
 			}
 			wrapper, err := pool.Acquire[tts.TTSProvider]("tts", configID, cfg)
@@ -344,10 +344,10 @@ func RunConfigTest(data map[string]interface{}, testText string) (vadResult, asr
 				firstPacketMs = time.Since(t0).Milliseconds()
 			}
 			if totalBytes == 0 {
-				ttsResult[configID] = map[string]interface{}{"ok": false, "message": "not receivedtovalidaudioor合成failed", "first_packet_ms": firstPacketMs}
-				log.Debugf("[config_test] TTS config_id=%s failed(not receivedtovalidaudio)", configID)
+				ttsResult[configID] = map[string]interface{}{"ok": false, "message": "no valid audio received or synthesis failed", "first_packet_ms": firstPacketMs}
+				log.Debugf("[config_test] TTS config_id=%s failed (no valid audio received)", configID)
 			} else {
-				ttsResult[configID] = map[string]interface{}{"ok": true, "message": "through", "first_packet_ms": firstPacketMs}
+				ttsResult[configID] = map[string]interface{}{"ok": true, "message": "success", "first_packet_ms": firstPacketMs}
 			}
 		}
 	}
@@ -384,7 +384,7 @@ func llmThinkingEnabled(cfg map[string]interface{}) bool {
 	return mode != "" && mode != "default"
 }
 
-// mapKeys return map ofkeylist，used for debug log
+// mapKeys returns list of map keys, used for debug log
 func mapKeys(m map[string]interface{}) []string {
 	if m == nil {
 		return nil
@@ -396,12 +396,12 @@ func mapKeys(m map[string]interface{}) []string {
 	return keys
 }
 
-// 敏感fieldname（smallwrite），脱敏afterused forlog
+// Sensitive field names (lowercase), used for redaction in logs
 var sensitiveKeys = map[string]bool{
 	"api_key": true, "access_token": true, "token": true, "password": true, "secret": true,
 }
 
-// redactSensitive 深拷贝 data andwill敏感fieldvaluereplaceis "***"，used for debug log
+// redactSensitive deep copies data and replaces sensitive field values with "***", used for debug log
 func redactSensitive(data map[string]interface{}) map[string]interface{} {
 	if data == nil {
 		return nil

@@ -20,10 +20,10 @@ type EdgeOfflineTTSProvider struct {
 	Timeout          time.Duration
 	HandshakeTimeout time.Duration
 
-	// joinmanage
+	// join manage
 	conn      *websocket.Conn
 	connMutex sync.RWMutex
-	// sendlock，ensureat the same timeatimeonlyhavearequestatusejoin
+	// send lock, ensure at the same time only have a request at use join
 	sendMutex sync.Mutex
 }
 
@@ -33,15 +33,15 @@ func NewEdgeOfflineTTSProvider(config map[string]interface{}) *EdgeOfflineTTSPro
 	timeout, _ := config["timeout"].(float64)
 	handshakeTimeout, _ := config["handshake_timeout"].(float64)
 
-	// setdefault values
+	// set default values
 	if serverURL == "" {
 		serverURL = "ws://localhost:8080/tts"
 	}
 	if timeout == 0 {
-		timeout = 30 // default30secondtimeout
+		timeout = 30 // default 30 second timeout
 	}
 	if handshakeTimeout == 0 {
-		handshakeTimeout = 10 // default10second握手timeout
+		handshakeTimeout = 10 // default 10 second handshake timeout
 	}
 
 	return &EdgeOfflineTTSProvider{
@@ -51,9 +51,9 @@ func NewEdgeOfflineTTSProvider(config map[string]interface{}) *EdgeOfflineTTSPro
 	}
 }
 
-// getConnection getjoin，ifno存atthencreate
+// getConnection get join, if not exist then create
 func (p *EdgeOfflineTTSProvider) getConnection(ctx context.Context) (*websocket.Conn, error) {
-	// firsttryread现havejoin
+	// first try read existing join
 	p.connMutex.RLock()
 	conn := p.conn
 	p.connMutex.RUnlock()
@@ -62,30 +62,30 @@ func (p *EdgeOfflineTTSProvider) getConnection(ctx context.Context) (*websocket.
 		return conn, nil
 	}
 
-	// needcreate新join
+	// need create new join
 	p.connMutex.Lock()
 	defer p.connMutex.Unlock()
 
-	// dual重inspect，mayother goroutine alreadycreatejoin
+	// double check, may other goroutine already create join
 	if p.conn != nil {
 		return p.conn, nil
 	}
 
-	// create新join
+	// create new join
 	dialer := &websocket.Dialer{
 		HandshakeTimeout: p.HandshakeTimeout,
 	}
 	conn, _, err := dialer.DialContext(ctx, p.ServerURL, nil)
 	if err != nil {
-		return nil, fmt.Errorf("WebSocketjoinfailed: %v", err)
+		return nil, fmt.Errorf("WebSocket join failed: %v", err)
 	}
 
 	p.conn = conn
-	log.Infof("WebSocket joinalready建立")
+	log.Infof("WebSocket join already establish")
 	return conn, nil
 }
 
-// clearConnection clearjoin（used for断线reconnect）
+// clearConnection clear join (used for disconnect reconnect)
 func (p *EdgeOfflineTTSProvider) clearConnection() {
 	p.connMutex.Lock()
 	defer p.connMutex.Unlock()
@@ -93,74 +93,74 @@ func (p *EdgeOfflineTTSProvider) clearConnection() {
 	if p.conn != nil {
 		p.conn.Close()
 		p.conn = nil
-		log.Infof("WebSocket joinalreadyclear，waitdowntimesreconnect")
+		log.Infof("WebSocket join already clear, wait next time reconnect")
 	}
 }
 
-// writeMessage 安全地to WebSocket joinwritemessage
+// writeMessage safely to WebSocket join write message
 func (p *EdgeOfflineTTSProvider) writeMessage(conn *websocket.Conn, messageType int, data []byte) error {
-	// usereadlockprotectedjoinwrite操as，preventconcurrentwritecausedata混乱
+	// use read lock protect join write operation, prevent concurrent write cause data confusion
 	p.connMutex.RLock()
 	defer p.connMutex.RUnlock()
 
-	// inspectjoinwhethervalid
+	// inspect join whether valid
 	if conn == nil {
-		return fmt.Errorf("joinalreadyclose")
+		return fmt.Errorf("join already close")
 	}
 
 	return conn.WriteMessage(messageType, data)
 }
 
-// TextToSpeech willtextconvertisvoice，returnaudio framedata
+// TextToSpeech will text convert is voice, return audio frame data
 func (p *EdgeOfflineTTSProvider) TextToSpeech(ctx context.Context, text string, sampleRate int, channels int, frameDuration int) ([][]byte, error) {
 	var frames [][]byte
 
-	// usesendlockprotected，ensureat the same timeatimeonlyhavearequestatusejoin
+	// use send lock protect, ensure at the same time only have a request at use join
 	p.sendMutex.Lock()
-	// 注意：noatfunctionreturnwhenreleaselock，而yesat goroutine completewhenrelease
+	// Note: not at function return when release lock, but at goroutine complete when release
 
-	// getjoin（复useorcreate）
+	// get join (reuse or create)
 	conn, err := p.getConnection(ctx)
 	if err != nil {
-		p.sendMutex.Unlock() // getjoinfailedwhenimmediatelyreleaselock
+		p.sendMutex.Unlock() // get join failed when immediately release lock
 		return nil, err
 	}
 
-	// sendtext（use受protectedofwritemethod）
+	// send text (use protected write method)
 	err = p.writeMessage(conn, websocket.TextMessage, []byte(text))
 	if err != nil {
-		// sendfailed，clearjoin，downtimesusewhenautomaticreconnect
-		log.Errorf("sendtext failed: %v，clearjoin", err)
+		// send failed, clear join, next time use when automatic reconnect
+		log.Errorf("send text failed: %v, clear join", err)
 		p.clearConnection()
-		p.sendMutex.Unlock() // sendfailedwhenimmediatelyreleaselock
-		return nil, fmt.Errorf("sendtext failed: %v", err)
+		p.sendMutex.Unlock() // send failed when immediately release lock
+		return nil, fmt.Errorf("send text failed: %v", err)
 	}
 
-	// createpipeused foraudio data传输
+	// create pipe used for audio data transmission
 	pipeReader, pipeWriter := io.Pipe()
 	outputChan := make(chan []byte, 1000)
 	startTs := time.Now().UnixMilli()
 
-	// createaudio decoder
+	// create audio decoder
 	audioDecoder, err := util.CreateAudioDecoder(ctx, pipeReader, outputChan, frameDuration, "mp3")
 	if err != nil {
 		pipeReader.Close()
-		p.sendMutex.Unlock() // createdecoderfailedwhenimmediatelyreleaselock
-		return nil, fmt.Errorf("createaudio decoderfailed: %v", err)
+		p.sendMutex.Unlock() // create decoder failed when immediately release lock
+		return nil, fmt.Errorf("create audio decoder failed: %v", err)
 	}
 
-	// startdecoder
+	// start decoder
 	go func() {
 		if err := audioDecoder.Run(startTs); err != nil {
-			log.Errorf("audiodecodefailed: %v", err)
+			log.Errorf("audio decode failed: %v", err)
 		}
 	}()
 
-	// use WaitGroup waitread goroutine complete
+	// use WaitGroup wait read goroutine complete
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	// receiveWebSocketdataandwritepipe；lockhere goroutine insideunifiedby defer release，ensurewhethernormalend、erroror panic arewillrelease
+	// receive WebSocket data and write pipe; lock here goroutine inside unified by defer release, ensure whether normal end, error or panic are will release
 	done := make(chan struct{})
 	go func() {
 		defer wg.Done()
@@ -174,81 +174,81 @@ func (p *EdgeOfflineTTSProvider) TextToSpeech(ctx context.Context, text string, 
 				if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
 					return
 				}
-				log.Errorf("readWebSocketmessagefailed: %v，clearjoin", err)
-				// joindisconnect，clearjoin，downtimesusewhenautomaticreconnect
+				log.Errorf("read WebSocket message failed: %v, clear join", err)
+				// join disconnect, clear join, next time use when automatic reconnect
 				p.clearConnection()
 				return
 			}
 
 			if messageType == websocket.BinaryMessage {
 				if _, err := pipeWriter.Write(data); err != nil {
-					log.Errorf("writeaudio datafailed: %v", err)
+					log.Errorf("write audio data failed: %v", err)
 					return
 				}
 			}
 		}
 	}()
 
-	// receive集allofOpusframe
+	// receive all of Opus frame
 	go func() {
 		for frame := range outputChan {
 			frames = append(frames, frame)
 		}
 	}()
 
-	// waitcompleteortimeout
+	// wait complete or timeout
 	select {
 	case <-ctx.Done():
-		return nil, fmt.Errorf("TTS合成timeoutorbecancel")
+		return nil, fmt.Errorf("TTS synthesis timeout or be cancel")
 	case <-done:
 		close(outputChan)
 		return frames, nil
 	}
 }
 
-// TextToSpeechStream streamingvoice合成
+// TextToSpeechStream streaming voice synthesis
 func (p *EdgeOfflineTTSProvider) TextToSpeechStream(ctx context.Context, text string, sampleRate int, channels int, frameDuration int) (chan []byte, error) {
 	outputChan := make(chan []byte, 100)
 
 	go func() {
-		// usesendlockprotected，ensureat the same timeatimeonlyhavearequestatusejoin
+		// use send lock protect, ensure at the same time only have a request at use join
 		p.sendMutex.Lock()
 
-		// getjoin（复useorcreate）
+		// get join (reuse or create)
 		conn, err := p.getConnection(ctx)
 		if err != nil {
 			p.sendMutex.Unlock()
-			log.Errorf("getWebSocketjoinfailed: %v", err)
+			log.Errorf("get WebSocket join failed: %v", err)
 			return
 		}
 
-		// sendtext（use受protectedofwritemethod）
+		// send text (use protected write method)
 		err = p.writeMessage(conn, websocket.TextMessage, []byte(text))
 		if err != nil {
 			p.sendMutex.Unlock()
-			log.Errorf("sendtext failed: %v，clearjoin", err)
-			// sendfailed，clearjoin，downtimesusewhenautomaticreconnect
+			log.Errorf("send text failed: %v, clear join", err)
+			// send failed, clear join, next time use when automatic reconnect
 			p.clearConnection()
 			return
 		}
 
-		// createpipeused foraudio data传输
+		// create pipe used for audio data transmission
 		pipeReader, pipeWriter := io.Pipe()
 		defer func() {
 			pipeWriter.Close()
-			// readcompleteafterreleaselock
+			// read complete after release lock
 			log.Debugf("TextToSpeechStream read completed, release sendMutex")
 			p.sendMutex.Unlock()
 		}()
 
-		// startdecoder（decoderwillat defer inautomaticclose outputChan）
+		// start decoder (decoder will at defer in automatic close outputChan)
 		go func() {
 
 			startTs := time.Now().UnixMilli()
-			// createaudio decoder
+			// create audio decoder
 			audioDecoder, err := util.CreateAudioDecoderWithSampleRate(ctx, pipeReader, outputChan, frameDuration, "pcm", sampleRate)
 			if err != nil {
-				log.Errorf("createaudio decoderfailed: %v", err)
+				log.Errorf("create audio decoder failed: %v", err)
 				return
 			}
 
@@ -258,36 +258,36 @@ func (p *EdgeOfflineTTSProvider) TextToSpeechStream(ctx context.Context, text st
 				Precision:   2,
 			})
 
-			// decoderwillat defer inautomaticclose outputChan
+			// decoder will at defer in automatic close outputChan
 			if err := audioDecoder.Run(startTs); err != nil {
-				log.Errorf("audiodecodefailed: %v", err)
+				log.Errorf("audio decode failed: %v", err)
 			}
 		}()
 
-		// receiveWebSocketdataandwritepipe（readpast程in持havelock，ensureserial化）
+		// receive WebSocket data and write pipe (read process in hold lock, ensure serialization)
 		for {
 			select {
 			case <-ctx.Done():
 				log.Debugf("TextToSpeechStream context done, exit")
-				// close pipeWriter，letdecoder自然endandclose channel
+				// close pipeWriter, let decoder natural end and close channel
 				return
 			default:
 				messageType, data, err := conn.ReadMessage()
 				if err != nil {
-					// close pipeWriter，letdecoder自然endandclose channel
+					// close pipeWriter, let decoder natural end and close channel
 					pipeWriter.Close()
 					if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
 						return
 					}
-					log.Errorf("readWebSocketmessagefailed: %v，clearjoin", err)
-					// joindisconnect，clearjoin，downtimesusewhenautomaticreconnect
+					log.Errorf("read WebSocket message failed: %v, clear join", err)
+					// join disconnect, clear join, next time use when automatic reconnect
 					p.clearConnection()
 					return
 				}
 
 				if messageType == websocket.BinaryMessage {
 					if _, err := pipeWriter.Write(data); err != nil {
-						log.Errorf("writeaudio datafailed: %v", err)
+						log.Errorf("write audio data failed: %v", err)
 						return
 					}
 					return
@@ -299,25 +299,25 @@ func (p *EdgeOfflineTTSProvider) TextToSpeechStream(ctx context.Context, text st
 	return outputChan, nil
 }
 
-// SetVoice setvoiceparameter（EdgeOffline unsupporteddynamicsetvoice，butno报错）
+// SetVoice set voice parameter (EdgeOffline unsupported dynamic set voice, but not error)
 func (p *EdgeOfflineTTSProvider) SetVoice(voiceConfig map[string]interface{}) error {
-	// EdgeOffline through WebSocket join，voicebyserver-sidecontrol，unsupportedclient-sidedynamicset
-	// return nil indicate操assuccessful（虽然actualupnoexecute任何操as）
+	// EdgeOffline through WebSocket join, voice by server-side control, unsupported client-side dynamic set
+	// return nil indicate operation successful (although actual up no execute any operation)
 	return nil
 }
 
-// Close closeresource，releasejoin
+// Close close resource, release join
 func (p *EdgeOfflineTTSProvider) Close() error {
 	p.clearConnection()
 	return nil
 }
 
-// IsValid inspectresourcewhethervalid
+// IsValid inspect resource whether valid
 func (p *EdgeOfflineTTSProvider) IsValid() bool {
 	p.connMutex.RLock()
 	conn := p.conn
 	p.connMutex.RUnlock()
 
-	// inspectjoinwhether存at
+	// inspect join whether exist
 	return conn != nil
 }

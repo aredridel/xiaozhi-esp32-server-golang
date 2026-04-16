@@ -65,10 +65,10 @@ func TestRetireAsrResult_NonFinalResultsOnlyTriggerFirstTextOnce(t *testing.T) {
 			},
 		},
 	}
-	a.AsrResultChannel <- asr_types.StreamingResult{Text: "你at", IsFinal: false}
-	a.AsrResultChannel <- asr_types.StreamingResult{Text: "你at干啥呢", IsFinal: false}
-	a.AsrResultChannel <- asr_types.StreamingResult{Text: "你at干啥呢", IsFinal: false}
-	a.AsrResultChannel <- asr_types.StreamingResult{Text: "你at干啥呢？", IsFinal: true}
+	a.AsrResultChannel <- asr_types.StreamingResult{Text: "you at", IsFinal: false}
+	a.AsrResultChannel <- asr_types.StreamingResult{Text: "you at doing what", IsFinal: false}
+	a.AsrResultChannel <- asr_types.StreamingResult{Text: "you at doing what", IsFinal: false}
+	a.AsrResultChannel <- asr_types.StreamingResult{Text: "you at doing what?", IsFinal: true}
 
 	result, shouldContinue, err := a.RetireAsrResult(context.Background())
 	if err != nil {
@@ -77,10 +77,10 @@ func TestRetireAsrResult_NonFinalResultsOnlyTriggerFirstTextOnce(t *testing.T) {
 	if !shouldContinue {
 		t.Fatalf("expected shouldContinue to be true")
 	}
-	if result.Text != "你at干啥呢？" {
-		t.Fatalf("expected final text %q, got %q", "你at干啥呢？", result.Text)
+	if result.Text != "you at doing what?" {
+		t.Fatalf("expected final text %q, got %q", "you at doing what?", result.Text)
 	}
-	if len(firstTexts) != 1 || firstTexts[0] != "你at" {
+	if len(firstTexts) != 1 || firstTexts[0] != "you at" {
 		t.Fatalf("unexpected first text callbacks: %v", firstTexts)
 	}
 }
@@ -126,8 +126,8 @@ func TestRetireAsrResult_Funasr2PassOnlineMarkedFinalStillWaitsForOfflineFinal(t
 			},
 		},
 	}
-	a.AsrResultChannel <- asr_types.StreamingResult{Text: "你at", IsFinal: true, Mode: "2pass-online"}
-	a.AsrResultChannel <- asr_types.StreamingResult{Text: "你at干啥呢。", IsFinal: true, Mode: "2pass-offline"}
+	a.AsrResultChannel <- asr_types.StreamingResult{Text: "you at", IsFinal: true, Mode: "2pass-online"}
+	a.AsrResultChannel <- asr_types.StreamingResult{Text: "you at doing what.", IsFinal: true, Mode: "2pass-offline"}
 
 	result, shouldContinue, err := a.RetireAsrResult(context.Background())
 	if err != nil {
@@ -136,10 +136,10 @@ func TestRetireAsrResult_Funasr2PassOnlineMarkedFinalStillWaitsForOfflineFinal(t
 	if !shouldContinue {
 		t.Fatalf("expected shouldContinue to be true")
 	}
-	if result.Text != "你at干啥呢。" {
-		t.Fatalf("expected final text %q, got %q", "你at干啥呢。", result.Text)
+	if result.Text != "you at doing what." {
+		t.Fatalf("expected final text %q, got %q", "you at doing what.", result.Text)
 	}
-	if len(firstTexts) != 1 || firstTexts[0] != "你at" {
+	if len(firstTexts) != 1 || firstTexts[0] != "you at" {
 		t.Fatalf("unexpected first text callbacks: %v", firstTexts)
 	}
 }

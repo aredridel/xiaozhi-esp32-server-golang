@@ -12,23 +12,23 @@ import (
 	log "xiaozhi-esp32-server-golang/logger"
 )
 
-// HTTPinterfacerespondstructurebody
+// HTTP interface response struct
 
-// CheckActivationResponse inspectactivatestaterespond
+// CheckActivationResponse check activation state response
 type CheckActivationResponse struct {
 	Activated bool   `json:"activated"`
 	Message   string `json:"message"`
 }
 
-// GetActivationInfoResponse getactivateinforespond
+// GetActivationInfoResponse get activation info response
 type GetActivationInfoResponse struct {
 	Activated bool   `json:"activated"`
-	Code      string `json:"code,omitempty"` // modifyisstringtype以matchingafterendpointAPI
+	Code      string `json:"code,omitempty"` // modified to string type to match backend API
 	Challenge string `json:"challenge,omitempty"`
 	Message   string `json:"message,omitempty"`
 }
 
-// ActivateDeviceRequest deviceactivaterequest
+// ActivateDeviceRequest device activate request
 type ActivateDeviceRequest struct {
 	DeviceId     string `json:"device_id"`
 	ClientId     string `json:"client_id"`
@@ -39,7 +39,7 @@ type ActivateDeviceRequest struct {
 	Hmac         string `json:"hmac"`
 }
 
-// ActivateDeviceResponse deviceactivaterespond
+// ActivateDeviceResponse device activate response
 type ActivateDeviceResponse struct {
 	Success bool        `json:"success"`
 	Message string      `json:"message"`
@@ -47,82 +47,82 @@ type ActivateDeviceResponse struct {
 	Data    interface{} `json:"data,omitempty"`
 }
 
-// IsDeviceActivated inspectdevicewhetheralreadyactivate
+// IsDeviceActivated check if device is already activated
 func (am *ConfigManager) IsDeviceActivated(ctx context.Context, deviceId string, clientId string) (bool, error) {
-	// directcallafterendpointmanagesystemofHTTPinterface
+	// directly call backend management system HTTP interface
 	activated, err := am.callCheckActivationAPI(ctx, deviceId, clientId)
 	if err != nil {
-		log.Log().Errorf("inspectdevice %s activatestatefailed: %v", deviceId, err)
+		log.Log().Errorf("check device %s activation state failed: %v", deviceId, err)
 		return false, err
 	}
 
-	log.Log().Debugf("device %s activatestate: %v", deviceId, activated)
+	log.Log().Debugf("device %s activation state: %v", deviceId, activated)
 	return activated, nil
 }
 
-// GetActivationInfo getdeviceactivateinfo
+// GetActivationInfo get device activation info
 func (am *ConfigManager) GetActivationInfo(ctx context.Context, deviceId string, clientId string) (string, string, string, int) {
-	// directcallafterendpointmanagesystemofHTTPinterface
+	// directly call backend management system HTTP interface
 	activated, codeStr, challenge, message, err := am.callGetActivationInfoAPI(ctx, deviceId, clientId)
 	if err != nil {
-		log.Log().Errorf("getdevice %s activateinfofailed: %v", deviceId, err)
+		log.Log().Errorf("get device %s activation info failed: %v", deviceId, err)
 		return "", "", "", 0
 	}
 
-	// ifdevicealreadyactivate，directreturn
+	// if device already activated, return directly
 	if activated {
-		log.Log().Debugf("device %s alreadyactivate", deviceId)
+		log.Log().Debugf("device %s already activated", deviceId)
 		return "", "", message, 0
 	}
 
-	// inspectChallengewhetherisempty
+	// check if Challenge is empty
 	if challenge == "" {
-		log.Log().Errorf("device %s ofChallengefieldisempty", deviceId)
-		return "", "", "Challengefieldisempty，please联系manage员", 0
+		log.Log().Errorf("device %s Challenge field is empty", deviceId)
+		return "", "", "Challenge field is empty, please contact admin", 0
 	}
 
-	// devicenotactivate，returnactivateinfo
-	timeoutMs := 300 // default5minute钟timeout
-	log.Log().Debugf("getdevice %s activateinfo: code=%s, challenge=%s", deviceId, codeStr, challenge)
+	// device not activated, return activation info
+	timeoutMs := 300 // default 5 minutes timeout
+	log.Log().Debugf("get device %s activation info: code=%s, challenge=%s", deviceId, codeStr, challenge)
 	if codeStr == "" {
-		log.Log().Warnf("device %s activate码isempty", deviceId)
+		log.Log().Warnf("device %s activation code is empty", deviceId)
 	}
 
 	return codeStr, challenge, message, timeoutMs
 }
 
-// VerifyChallenge validate挑战码andHMAC
+// VerifyChallenge validate challenge code and HMAC
 func (am *ConfigManager) VerifyChallenge(ctx context.Context, deviceId string, clientId string, activationPayload types.ActivationPayload) (bool, error) {
-	// validateHMAC（ifprovideHMAC）
+	// validate HMAC (if HMAC provided)
 	if activationPayload.HMAC != "" {
 		if !am.verifyHMAC(activationPayload.Challenge, activationPayload.HMAC) {
-			log.Log().Warnf("device %s HMACvalidatefailed", deviceId)
-			return false, fmt.Errorf("HMACvalidatefailed")
+			log.Log().Warnf("device %s HMAC validate failed", deviceId)
+			return false, fmt.Errorf("HMAC validate failed")
 		}
 	}
 
-	// directcallafterendpointmanagesystemofactivateinterface
+	// directly call backend management system activate interface
 	verified, err := am.callActivateDeviceAPI(ctx, deviceId, clientId, activationPayload)
 	if err != nil {
-		log.Log().Errorf("deviceactivatefailed: %v", err)
+		log.Log().Errorf("device activation failed: %v", err)
 		return false, err
 	}
 
 	if verified {
-		log.Log().Infof("device %s activatevalidatesuccessful", deviceId)
+		log.Log().Infof("device %s activation validate successful", deviceId)
 	}
 
 	return verified, nil
 }
 
-// verifyHMAC validateHMACsign
+// verifyHMAC validate HMAC sign
 func (am *ConfigManager) verifyHMAC(challenge, providedHmac string) bool {
-	// 这incanaccording toactualneed求configkey
-	// 暂whenuseemptykey，actualapplicationinshouldfromconfiginget
+	// this can be configured according to actual needs
+	// temporarily use empty key, actual application should get from config
 	secretKey := ""
 
 	if secretKey == "" {
-		// ifnoconfigkey，directthroughvalidate
+		// if no config key, directly pass validate
 		return true
 	}
 
@@ -133,13 +133,13 @@ func (am *ConfigManager) verifyHMAC(challenge, providedHmac string) bool {
 	return expectedHmac == providedHmac
 }
 
-// HTTP API callmethod
+// HTTP API call method
 
-// callCheckActivationAPI callinspectactivatestateinterface
+// callCheckActivationAPI call check activation state interface
 func (am *ConfigManager) callCheckActivationAPI(ctx context.Context, deviceId, clientId string) (bool, error) {
 	var response CheckActivationResponse
 
-	// sendHTTPrequest
+	// send HTTP request
 	err := am.client.DoRequest(ctx, http.RequestOptions{
 		Method: "GET",
 		Path:   "/api/internal/device/check-activation",
@@ -150,18 +150,18 @@ func (am *ConfigManager) callCheckActivationAPI(ctx context.Context, deviceId, c
 		Response: &response,
 	})
 	if err != nil {
-		return false, fmt.Errorf("requestfailed: %w", err)
+		return false, fmt.Errorf("request failed: %w", err)
 	}
 
-	log.Log().Debugf("inspectactivatestaterespond: %+v", response)
+	log.Log().Debugf("check activation state response: %+v", response)
 	return response.Activated, nil
 }
 
-// callGetActivationInfoAPI callgetactivateinfointerface
+// callGetActivationInfoAPI call get activation info interface
 func (am *ConfigManager) callGetActivationInfoAPI(ctx context.Context, deviceId, clientId string) (bool, string, string, string, error) {
 	var response GetActivationInfoResponse
 
-	// sendHTTPrequest
+	// send HTTP request
 	err := am.client.DoRequest(ctx, http.RequestOptions{
 		Method: "GET",
 		Path:   "/api/internal/device/activation-info",
@@ -172,10 +172,10 @@ func (am *ConfigManager) callGetActivationInfoAPI(ctx context.Context, deviceId,
 		Response: &response,
 	})
 	if err != nil {
-		return false, "", "", "", fmt.Errorf("requestfailed: %w", err)
+		return false, "", "", "", fmt.Errorf("request failed: %w", err)
 	}
 
-	log.Log().Debugf("getactivateinforespond: %+v", response)
+	log.Log().Debugf("get activation info response: %+v", response)
 
 	if response.Activated {
 		return true, "", "", response.Message, nil
@@ -184,9 +184,9 @@ func (am *ConfigManager) callGetActivationInfoAPI(ctx context.Context, deviceId,
 	return false, response.Code, response.Challenge, response.Message, nil
 }
 
-// callActivateDeviceAPI calldeviceactivateinterface
+// callActivateDeviceAPI call device activate interface
 func (am *ConfigManager) callActivateDeviceAPI(ctx context.Context, deviceId, clientId string, activationPayload types.ActivationPayload) (bool, error) {
-	// buildrequestbody
+	// build request body
 	request := ActivateDeviceRequest{
 		DeviceId:     deviceId,
 		ClientId:     clientId,
@@ -198,7 +198,7 @@ func (am *ConfigManager) callActivateDeviceAPI(ctx context.Context, deviceId, cl
 
 	var response ActivateDeviceResponse
 
-	// sendHTTPrequest
+	// send HTTP request
 	err := am.client.DoRequest(ctx, http.RequestOptions{
 		Method:   "POST",
 		Path:     "/api/internal/device/activate",
@@ -206,10 +206,10 @@ func (am *ConfigManager) callActivateDeviceAPI(ctx context.Context, deviceId, cl
 		Response: &response,
 	})
 	if err != nil {
-		return false, fmt.Errorf("requestfailed: %w", err)
+		return false, fmt.Errorf("request failed: %w", err)
 	}
 
-	log.Log().Debugf("deviceactivaterespond: %+v", response)
+	log.Log().Debugf("device activate response: %+v", response)
 
 	if !response.Success {
 		return false, nil

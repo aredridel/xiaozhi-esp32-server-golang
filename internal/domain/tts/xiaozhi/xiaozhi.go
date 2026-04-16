@@ -26,16 +26,16 @@ var deviceIdList = []string{
 	"5f:f3:85:8b:5d:da",
 }
 
-// record最近out错ofdeviceIdand其禁useto期time
+// record recent error deviceId and its block expiration time
 var (
 	deviceIdBlocklist     = make(map[string]time.Time)
 	deviceIdBlocklistLock sync.Mutex
-	// deviceID禁usetime（out错after多久insidenouse）
+	// deviceID block time (how long after error to not use)
 	deviceIdBlockDuration = 5 * time.Second
 )
 
-// XiaozhiProvider small智TTS WebSocket Provider
-// supportstreamingtext转voice
+// XiaozhiProvider Xiaozhi TTS WebSocket Provider
+// supports streaming text to speech
 type XiaozhiProvider struct {
 	ServerAddr  string
 	DeviceID    string
@@ -43,20 +43,20 @@ type XiaozhiProvider struct {
 	Header      http.Header
 }
 
-// 定期cleanupexpireofdeviceId禁uselist
+// periodically cleanup expired deviceId block list
 func init() {
 	go func() {
 		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()
 
 		for range ticker.C {
-			// cleanupexpireofdeviceId禁uselist
+			// cleanup expired deviceId block list
 			deviceIdBlocklistLock.Lock()
 			now := time.Now()
 			for id, expireTime := range deviceIdBlocklist {
 				if now.After(expireTime) {
 					delete(deviceIdBlocklist, id)
-					log.Debugf("deviceID禁usealreadyexpire，re启use: %s", id)
+					log.Debugf("deviceID block expired, re-enable: %s", id)
 				}
 			}
 			deviceIdBlocklistLock.Unlock()
@@ -64,16 +64,16 @@ func init() {
 	}()
 }
 
-// willdeviceIdaddto禁uselist
+// add deviceId to block list
 func blockDeviceId(deviceId string) {
 	deviceIdBlocklistLock.Lock()
 	defer deviceIdBlocklistLock.Unlock()
 
 	deviceIdBlocklist[deviceId] = time.Now().Add(deviceIdBlockDuration)
-	log.Warnf("deviceID %s alreadyaddto禁uselist，willat %v afterre启use", deviceId, deviceIdBlockDuration)
+	log.Warnf("deviceID %s added to block list, will re-enable after %v", deviceId, deviceIdBlockDuration)
 }
 
-// inspectdeviceIdwhetherat禁uselistin
+// check if deviceId is in block list
 func isDeviceIdBlocked(deviceId string) bool {
 	deviceIdBlocklistLock.Lock()
 	defer deviceIdBlocklistLock.Unlock()
@@ -83,17 +83,17 @@ func isDeviceIdBlocked(deviceId string) bool {
 		return false
 	}
 
-	// ifexpiretimealreadypast，thenfrom禁uselistinremove
+	// if expiration time has passed, remove from block list
 	if time.Now().After(expireTime) {
 		delete(deviceIdBlocklist, deviceId)
-		log.Debugf("deviceID禁usealreadyexpire，re启use: %s", deviceId)
+		log.Debugf("deviceID block expired, re-enable: %s", deviceId)
 		return false
 	}
 
 	return true
 }
 
-// NewXiaozhiProvider create newsmall智TTS Provider
+// NewXiaozhiProvider create new Xiaozhi TTS Provider
 func NewXiaozhiProvider(config map[string]interface{}) *XiaozhiProvider {
 	serverAddr, _ := config["server_addr"].(string)
 	deviceID, _ := config["device_id"].(string)
@@ -121,32 +121,32 @@ func NewXiaozhiProvider(config map[string]interface{}) *XiaozhiProvider {
 	}
 }
 
-// selectDeviceId selectaavailableofdeviceID
+// selectDeviceId select an available deviceID
 func (p *XiaozhiProvider) selectDeviceId() string {
-	// fromdeviceIdListin找outnotbe禁useofdeviceId
+	// find non-blocked deviceId from deviceIdList
 	for _, deviceId := range deviceIdList {
 		if !isDeviceIdBlocked(deviceId) {
-			log.Debugf("selectnotbe禁useofdeviceID: %s", deviceId)
+			log.Debugf("select non-blocked deviceID: %s", deviceId)
 			return deviceId
 		}
 	}
 
-	// ifalldeviceIdarebe禁use，thenfromalldeviceIdinpollingselect
+	// if all deviceIds are blocked, poll from all deviceIds
 	if len(deviceIdList) > 0 {
-		// use简单ofpollingstrategy（基于time）
+		// use simple polling strategy (based on time)
 		selectedIndex := int(time.Now().Unix()) % len(deviceIdList)
 		selectedDeviceId := deviceIdList[selectedIndex]
-		log.Warnf("alldeviceId均be禁use，pollingselectdeviceID: %s (index: %d)", selectedDeviceId, selectedIndex)
+		log.Warnf("all deviceIds are blocked, polling select deviceID: %s (index: %d)", selectedDeviceId, selectedIndex)
 		return selectedDeviceId
 	}
 
-	// ifdeviceIdListisempty，use传入ofdeviceId
+	// if deviceIdList is empty, use passed deviceId
 	if p.DeviceID != "" {
-		log.Warnf("deviceIdListisempty，usecurrentdeviceID: %s", p.DeviceID)
+		log.Warnf("deviceIdList is empty, use current deviceID: %s", p.DeviceID)
 		return p.DeviceID
 	}
 
-	// ifareno，returnnthadeviceID（if存at）
+	// if none, return first deviceID (if exists)
 	if len(deviceIdList) > 0 {
 		return deviceIdList[0]
 	}
@@ -154,32 +154,32 @@ func (p *XiaozhiProvider) selectDeviceId() string {
 	return ""
 }
 
-// createWSConnection create newWebSocketjoin
+// createWSConnection create new WebSocket connection
 func (p *XiaozhiProvider) createWSConnection(ctx context.Context) (*websocket.Conn, string, error) {
-	// selectaavailableofdeviceID
+	// select an available deviceID
 	selectedDeviceId := p.selectDeviceId()
 	if selectedDeviceId == "" {
-		return nil, "", fmt.Errorf("no法selectdeviceID")
+		return nil, "", fmt.Errorf("unable to select deviceID")
 	}
 
-	// updatecurrentp.DeviceIDandHeader
+	// update current p.DeviceID and Header
 	p.DeviceID = selectedDeviceId
 	p.Header.Set("Device-Id", selectedDeviceId)
 
-	// create新join
+	// create new connection
 	conn, _, err := websocket.DefaultDialer.DialContext(ctx, p.ServerAddr, p.Header)
 	if err != nil {
-		log.Errorf("createWebSocketjoinfailed: %v, deviceID: %s", err, selectedDeviceId)
-		blockDeviceId(selectedDeviceId) // willfailedofdeviceIdadd to禁uselist
+		log.Errorf("create WebSocket connection failed: %v, deviceID: %s", err, selectedDeviceId)
+		blockDeviceId(selectedDeviceId) // add failed deviceId to block list
 		return nil, "", err
 	}
 
-	// setkeepjoin
+	// set keep connection
 	conn.SetPingHandler(func(appData string) error {
 		return conn.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(5*time.Second))
 	})
 
-	// 新建joinwhensendhellomessage
+	// send hello message when creating new connection
 	helloMsg := map[string]interface{}{
 		"type":         "hello",
 		"device_id":    selectedDeviceId,
@@ -187,10 +187,10 @@ func (p *XiaozhiProvider) createWSConnection(ctx context.Context) (*websocket.Co
 		"version":      1,
 		"audio_params": p.AudioFormat,
 	}
-	log.Debugf("create新joinandsendhellomessage，deviceID: %s", selectedDeviceId)
+	log.Debugf("create new connection and send hello message, deviceID: %s", selectedDeviceId)
 	if err := conn.WriteJSON(helloMsg); err != nil {
 		conn.Close()
-		return nil, "", fmt.Errorf("sendhellomessagefailed: %v", err)
+		return nil, "", fmt.Errorf("send hello message failed: %v", err)
 	}
 
 	return conn, selectedDeviceId, nil
@@ -203,7 +203,7 @@ type RecvMsg struct {
 	Version int    `json:"version"`
 }
 
-// sendStopMessage sendstopmessageandclosejoin
+// sendStopMessage send stop message and close connection
 func sendStopMessage(conn *websocket.Conn, deviceId string) {
 	stopMsg := map[string]interface{}{
 		"type":      "listen",
@@ -211,26 +211,26 @@ func sendStopMessage(conn *websocket.Conn, deviceId string) {
 		"state":     "stop",
 	}
 	if err := conn.WriteJSON(stopMsg); err != nil {
-		log.Warnf("sendstopmessagefailed: %v, deviceID: %s", err, deviceId)
+		log.Warnf("send stop message failed: %v, deviceID: %s", err, deviceId)
 	} else {
-		log.Debugf("sendstopmessagesuccessful，deviceID: %s", deviceId)
+		log.Debugf("send stop message successful, deviceID: %s", deviceId)
 	}
 }
 
-// handleTTSConnection encapsulationgetjoin、sendmessageandreceivemessageoflogical
+// handleTTSConnection encapsulation get connection, send message and receive message logic
 func (p *XiaozhiProvider) handleTTSConnection(ctx context.Context, text string, outputChan chan []byte) error {
-	// create新join
+	// create new connection
 	conn, deviceId, err := p.createWSConnection(ctx)
 	if err != nil {
-		return fmt.Errorf("createsmall智TTSjoinfailed: %v", err)
+		return fmt.Errorf("create Xiaozhi TTS connection failed: %v", err)
 	}
 	defer func() {
-		// sendstopmessageandclosejoin
+		// send stop message and close connection
 		sendStopMessage(conn, deviceId)
 		conn.Close()
 	}()
 
-	// sendlisten detectmessage
+	// send listen detect message
 	sendText := fmt.Sprintf("`%s`", text)
 	listenMsg := map[string]interface{}{
 		"type":      "listen",
@@ -238,15 +238,15 @@ func (p *XiaozhiProvider) handleTTSConnection(ctx context.Context, text string, 
 		"state":     "detect",
 		"text":      sendText,
 	}
-	log.Debugf("sendxiaozhiserver-sidemessage: %v", listenMsg)
+	log.Debugf("send xiaozhi server-side message: %v", listenMsg)
 
 	if err := conn.WriteJSON(listenMsg); err != nil {
-		log.Errorf("sendlistenmessagefailed: %v，deviceID: %s", err, deviceId)
-		blockDeviceId(deviceId) // willout错ofdeviceIdadd to禁uselist
-		return fmt.Errorf("sendmessagefailed: %v", err)
+		log.Errorf("send listen message failed: %v, deviceID: %s", err, deviceId)
+		blockDeviceId(deviceId) // add error deviceId to block list
+		return fmt.Errorf("send message failed: %v", err)
 	}
 
-	// readandprocessmessage
+	// read and process message
 	startTs := time.Now().UnixMilli()
 	var firstFrameTs bool
 	i := 0
@@ -255,24 +255,24 @@ func (p *XiaozhiProvider) handleTTSConnection(ctx context.Context, text string, 
 	for {
 		select {
 		case <-ctx.Done():
-			log.Debugf("xiaozhiserver-sidemessagectx.Done(), deviceID: %s", deviceId)
+			log.Debugf("xiaozhi server-side message ctx.Done(), deviceID: %s", deviceId)
 			return nil
 		default:
 		}
 		msgType, msg, err := conn.ReadMessage()
 		if err != nil {
-			// joinout错
-			log.Errorf("readcancel息error: %v，deviceID: %s", err, deviceId)
+			// connection error
+			log.Errorf("read message error: %v, deviceID: %s", err, deviceId)
 
-			// ifornoreceive任何audio frame，instructionjoinmayhave问题，willdeviceIdadd to禁uselist
+			// if no audio frame received, indicates connection may have problem, add deviceId to block list
 			if !receivedFrames {
 				blockDeviceId(deviceId)
 			}
 
-			return fmt.Errorf("readcancel息error: %v", err)
+			return fmt.Errorf("read message error: %v", err)
 		}
 		if msgType == websocket.TextMessage {
-			log.Debugf("receivexiaozhiserver-sidemessage: %s", string(msg))
+			log.Debugf("receive xiaozhi server-side message: %s", string(msg))
 			var recvMsg RecvMsg
 			err := json.Unmarshal(msg, &recvMsg)
 			if err != nil {
@@ -280,7 +280,7 @@ func (p *XiaozhiProvider) handleTTSConnection(ctx context.Context, text string, 
 			}
 			if recvMsg.Type == "tts" {
 				if recvMsg.State == "stop" {
-					log.Debugf("xiaozhiserver-sidemessagetts stopmessage")
+					log.Debugf("xiaozhi server-side message tts stop message")
 					return nil
 				}
 			}
@@ -288,22 +288,22 @@ func (p *XiaozhiProvider) handleTTSConnection(ctx context.Context, text string, 
 			receivedFrames = true
 			if !firstFrameTs {
 				firstFrameTs = true
-				log.Debugf("ttstime consumptioncount: xiaozhiservicetts nthaaudio frametime: %d", time.Now().UnixMilli()-startTs)
+				log.Debugf("tts time consumption count: xiaozhi service tts first audio frame time: %d", time.Now().UnixMilli()-startTs)
 			}
 			outputChan <- msg
 			if i%20 == 0 {
-				log.Debugf("xiaozhiserver-sideaudiomessage, alreadyreceive%d个audio frame", i)
+				log.Debugf("xiaozhi server-side audio message, already received %d audio frames", i)
 			}
 			i++
 		}
 	}
 }
 
-// TextToSpeechStream implementstreaming TTS，returnopusaudio framechan
+// TextToSpeechStream implement streaming TTS, return opus audio frame chan
 func (p *XiaozhiProvider) TextToSpeechStream(ctx context.Context, text string, sampleRate int, channels int, frameDuration int) (chan []byte, error) {
 	outputChan := make(chan []byte, 1000)
 
-	// tryprocessTTSjoin，supportretry
+	// try process TTS connection, support retry
 	go func() {
 		defer close(outputChan)
 
@@ -311,37 +311,37 @@ func (p *XiaozhiProvider) TextToSpeechStream(ctx context.Context, text string, s
 		maxRetries := 2
 		var lastError error
 
-		// at mosttrymaxRetriestimes
+		// at most try maxRetries times
 		for retryCount <= maxRetries {
 			if retryCount > 0 {
-				log.Infof("tryregetjoin，nth %d/%d timesretry", retryCount, maxRetries)
+				log.Infof("try re-get connection, attempt %d/%d retry", retryCount, maxRetries)
 
-				// atretrybeforeinspectcontextwhetheralreadycancel
+				// before retry check if context already cancelled
 				select {
 				case <-ctx.Done():
-					log.Debugf("contextalreadycancel，stopretry")
+					log.Debugf("context already cancelled, stop retry")
 					return
 				default:
-					// continueretry
+					// continue retry
 				}
 			}
 
-			// processTTSjoin
+			// process TTS connection
 			err := p.handleTTSConnection(ctx, text, outputChan)
 
 			if err == nil {
-				// joinprocesssuccessful，noneedretry
+				// connection process successful, no need to retry
 				return
 			}
 
 			lastError = err
-			log.Errorf("TTSjoinprocessfailed: %v (retry: %d/%d)", err, retryCount, maxRetries)
+			log.Errorf("TTS connection process failed: %v (retry: %d/%d)", err, retryCount, maxRetries)
 
 			retryCount++
 		}
 
 		if retryCount > maxRetries {
-			log.Warnf("reachtomaximumretrytimescount %d，abortretry，最aftererror: %v", maxRetries, lastError)
+			log.Warnf("reached maximum retry count %d, abort retry, last error: %v", maxRetries, lastError)
 		}
 	}()
 
@@ -358,22 +358,22 @@ func (p *XiaozhiProvider) GetVoiceInfo() map[string]interface{} {
 	}
 }
 
-// SetVoice setvoiceparameter（Xiaozhi Provider unsupporteddynamicsetvoice）
+// SetVoice set voice parameter (Xiaozhi Provider does not support dynamic voice setting)
 func (p *XiaozhiProvider) SetVoice(voiceConfig map[string]interface{}) error {
-	return fmt.Errorf("Xiaozhi TTS Provider unsupporteddynamicsetvoice")
+	return fmt.Errorf("Xiaozhi TTS Provider does not support dynamic voice setting")
 }
 
-// Close closeresource（nostate Provider，noneedclose）
+// Close close resource (stateless Provider, no need to close)
 func (p *XiaozhiProvider) Close() error {
 	return nil
 }
 
-// IsValid inspectresourcewhethervalid
+// IsValid check if resource is valid
 func (p *XiaozhiProvider) IsValid() bool {
 	return p != nil
 }
 
-// TextToSpeech implement BaseTTSProvider interface，directaggregatestreamingframe
+// TextToSpeech implement BaseTTSProvider interface, directly aggregate streaming frames
 func (p *XiaozhiProvider) TextToSpeech(ctx context.Context, text string, sampleRate int, channels int, frameDuration int) ([][]byte, error) {
 	ch, err := p.TextToSpeechStream(ctx, text, sampleRate, channels, frameDuration)
 	if err != nil {

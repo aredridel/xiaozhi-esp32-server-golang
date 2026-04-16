@@ -7,36 +7,36 @@ import (
 	"github.com/cloudwego/eino/schema"
 )
 
-// AddMessageEvent unifiedofmessageaddevent
+// AddMessageEvent unified of message add event
 type AddMessageEvent struct {
-	// client-sidestate
+	// client-side state
 	ClientState *ClientState
 
-	// messageinside容（unifieduse schema.Message）
-	// schema.Message yesstandardofLLM messageformat，include：
-	// - Role: messagerole（User/Assistant/System/Tool）
-	// - Content: messagetextinside容
-	// - ToolCalls: toolcalllist（optional）
-	// - ToolCallID: toolcallID（Tool roleuse）
+	// message content (unified use schema.Message)
+	// schema.Message is standard of LLM message format, include:
+	// - Role: message role (User/Assistant/System/Tool)
+	// - Content: message text content
+	// - ToolCalls: tool call list (optional)
+	// - ToolCallID: tool call ID (Tool role use)
 	Msg schema.Message
 
-	// messageID（used forrelate两阶段save）
+	// message ID (used for relate two phase save)
 	MessageID string
 
-	// audio data（optional，nobelong to schema.Message standardformat）
-	// first阶段：AudioData = nil（onlysavetext）
-	// nth二阶段：AudioData != nil（updateaudio）
-	AudioData [][]byte // TTS/ASR audio framearray（OpusformatorPCMformat）
-	AudioSize int      // audiosize（byte）
+	// audio data (optional, not belong to schema.Message standard format)
+	// first phase: AudioData = nil (only save text)
+	// second phase: AudioData != nil (update audio)
+	AudioData [][]byte // TTS/ASR audio frame array (Opus format or PCM format)
+	AudioSize int      // audio size (byte)
 
-	// audioformatinfo（nobelong to schema.Message standardformat）
-	SampleRate int // sampling率
-	Channels   int // channelcount
+	// audio format info (not belong to schema.Message standard format)
+	SampleRate int // sampling rate
+	Channels   int // channel count
 
-	// 元data（nobelong to schema.Message standardformat）
+	// meta data (not belong to schema.Message standard format)
 	Timestamp   time.Time
-	TTSDuration int // TTS time consumption（毫second）
+	TTSDuration int // TTS time consumption (millisecond)
 
-	// 阶段标识
-	IsUpdate bool // true=updateaudio，false=新增message
+	// phase mark
+	IsUpdate bool // true=update audio, false=add new message
 }

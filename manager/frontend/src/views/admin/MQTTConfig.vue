@@ -1,29 +1,29 @@
 <template>
   <div class="mqtt-config">
-    <!-- 页面头部 -->
+    <!-- Page Header -->
     <div class="page-header">
       <div class="header-content">
         <div class="title-section">
           <el-icon class="title-icon">
             <Connection />
           </el-icon>
-          <h1 class="page-title">MQTT配置管理</h1>
+          <h1 class="page-title">MQTT Configuration Management</h1>
         </div>
       </div>
     </div>
 
-    <!-- 配置说明 -->
+    <!-- Configuration Description -->
     <div class="config-description">
       <el-alert
-        title="配置说明"
-        description="配置MQTT连接参数和认证信息。此配置页面是主程序以mqtt client角色连接mqtt server的配置信息，可以是程序自带的mqtt server，也可以配置连接外部emqx"
+        title="Configuration Instructions"
+        description="Configure MQTT connection parameters and authentication information. This configuration page is for the main program to connect to the MQTT server as an MQTT client, which can be the built-in MQTT server or an external EMQX."
         type="info"
         :closable="false"
         show-icon
       />
     </div>
 
-    <!-- 表单容器 -->
+    <!-- Form Container -->
     <div class="form-container">
       <el-form
         ref="formRef"
@@ -32,91 +32,91 @@
         class="config-form"
         v-loading="loading"
       >
-        <!-- 基础配置卡片 -->
+        <!-- Basic Configuration Card -->
         <el-card class="config-card basic-config" shadow="never">
           <template #header>
             <div class="card-header">
               <el-icon class="card-icon">
                 <Setting />
               </el-icon>
-              <span class="card-title">基础配置</span>
+              <span class="card-title">Basic Configuration</span>
             </div>
           </template>
           
           <div class="form-grid">
-            <el-form-item label="启用MQTT" prop="enable" class="form-item">
+            <el-form-item label="Enable MQTT" prop="enable" class="form-item">
               <el-switch v-model="form.enable" />
             </el-form-item>
           </div>
         </el-card>
 
-        <!-- 连接配置卡片 -->
+        <!-- Connection Configuration Card -->
         <el-card class="config-card connection-config" shadow="never">
           <template #header>
             <div class="card-header">
               <el-icon class="card-icon connection-icon">
                 <Link />
               </el-icon>
-              <span class="card-title">连接配置</span>
+              <span class="card-title">Connection Configuration</span>
             </div>
           </template>
           
           <div class="form-grid">
-            <el-form-item label="配置名称" prop="name" class="form-item">
-              <el-input v-model="form.name" placeholder="请输入配置名称" />
+            <el-form-item label="Configuration Name" prop="name" class="form-item">
+              <el-input v-model="form.name" placeholder="Please enter configuration name" />
             </el-form-item>
             
-            <el-form-item label="Broker地址" prop="broker" class="form-item">
-              <el-input v-model="form.broker" placeholder="请输入MQTT Broker地址" />
+            <el-form-item label="Broker Address" prop="broker" class="form-item">
+              <el-input v-model="form.broker" placeholder="Please enter MQTT Broker address" />
             </el-form-item>
             
-            <el-form-item label="连接类型" prop="type" class="form-item">
-              <el-select v-model="form.type" placeholder="请选择连接类型" style="width: 100%">
+            <el-form-item label="Connection Type" prop="type" class="form-item">
+              <el-select v-model="form.type" placeholder="Please select connection type" style="width: 100%">
                 <el-option label="TCP" value="tcp" />
                 <el-option label="WebSocket" value="websocket" />
                 <el-option label="SSL/TLS" value="ssl" />
               </el-select>
             </el-form-item>
             
-            <el-form-item label="端口" prop="port" class="form-item">
-              <el-input-number v-model="form.port" :min="1" :max="65535" placeholder="请输入端口号" style="width: 100%" />
+            <el-form-item label="Port" prop="port" class="form-item">
+              <el-input-number v-model="form.port" :min="1" :max="65535" placeholder="Please enter port number" style="width: 100%" />
             </el-form-item>
             
-            <el-form-item label="客户端ID" prop="client_id" class="form-item">
-              <el-input v-model="form.client_id" placeholder="请输入客户端ID" />
+            <el-form-item label="Client ID" prop="client_id" class="form-item">
+              <el-input v-model="form.client_id" placeholder="Please enter client ID" />
             </el-form-item>
           </div>
         </el-card>
 
-        <!-- 认证配置卡片 -->
+        <!-- Authentication Configuration Card -->
         <el-card class="config-card auth-config" shadow="never">
           <template #header>
             <div class="card-header">
               <el-icon class="card-icon auth-icon">
                 <User />
               </el-icon>
-              <span class="card-title">认证配置</span>
-              <el-tooltip content="连接mqtt server的用户名密码，需要具有任意订阅权限" placement="top">
+              <span class="card-title">Authentication Configuration</span>
+              <el-tooltip content="Username and password for connecting to MQTT server, needs to have subscribe permissions" placement="top">
                 <el-icon class="help-icon"><QuestionFilled /></el-icon>
               </el-tooltip>
             </div>
           </template>
           
           <div class="form-grid">
-            <el-form-item label="用户名" prop="username" class="form-item">
-              <el-input v-model="form.username" placeholder="请输入用户名" />
+            <el-form-item label="Username" prop="username" class="form-item">
+              <el-input v-model="form.username" placeholder="Please enter username" />
             </el-form-item>
             
-            <el-form-item label="密码" prop="password" class="form-item">
-              <el-input v-model="form.password" type="password" placeholder="请输入密码" show-password />
+            <el-form-item label="Password" prop="password" class="form-item">
+              <el-input v-model="form.password" type="password" placeholder="Please enter password" show-password />
             </el-form-item>
           </div>
         </el-card>
 
-        <!-- 操作按钮 -->
+        <!-- Action Buttons -->
         <div class="action-section">
           <el-button type="primary" @click="handleSave" :loading="saving" class="save-button">
-            保存配置
+            Save Configuration
           </el-button>
         </div>
       </el-form>
@@ -136,7 +136,7 @@ const configId = ref(null)
 const formRef = ref()
 
 const form = reactive({
-  name: 'MQTT配置',
+  name: 'MQTT Configuration',
   is_default: true,
   enable: true,
   broker: '',
@@ -160,36 +160,36 @@ const generateConfig = () => {
 }
 
 const rules = {
-  name: [{ required: true, message: '请输入配置名称', trigger: 'blur' }],
-  broker: [{ required: true, message: '请输入MQTT Broker地址', trigger: 'blur' }],
-  type: [{ required: true, message: '请选择连接类型', trigger: 'change' }],
+  name: [{ required: true, message: 'Please enter configuration name', trigger: 'blur' }],
+  broker: [{ required: true, message: 'Please enter MQTT Broker address', trigger: 'blur' }],
+  type: [{ required: true, message: 'Please select connection type', trigger: 'change' }],
   port: [
-    { required: true, message: '请输入端口号', trigger: 'blur' },
-    { type: 'number', min: 1, max: 65535, message: '端口号必须在1-65535之间', trigger: 'blur' }
+    { required: true, message: 'Please enter port number', trigger: 'blur' },
+    { type: 'number', min: 1, max: 65535, message: 'Port number must be between 1-65535', trigger: 'blur' }
   ],
-  client_id: [{ required: true, message: '请输入客户端ID', trigger: 'blur' }]
+  client_id: [{ required: true, message: 'Please enter client ID', trigger: 'blur' }]
 }
 
 const loadConfig = async () => {
   loading.value = true
   try {
-    console.log('开始加载MQTT配置...')
+    console.log('Starting to load MQTT configuration...')
     const response = await api.get('/admin/mqtt-configs')
-    console.log('MQTT配置API响应:', response)
+    console.log('MQTT configuration API response:', response)
     const configs = response.data.data || []
-    console.log('解析的配置列表:', configs)
+    console.log('Parsed configuration list:', configs)
     
-    // 如果有配置，加载第一个配置
+    // If there is a configuration, load the first one
     if (configs.length > 0) {
       const config = configs[0]
-      console.log('加载配置:', config)
+      console.log('Loading configuration:', config)
       configId.value = config.id
       form.name = config.name
       form.is_default = config.is_default
       
       try {
         const configData = JSON.parse(config.json_data || '{}')
-        console.log('解析的配置数据:', configData)
+        console.log('Parsed configuration data:', configData)
         form.enable = configData.enable || true
         form.broker = configData.broker || ''
         form.type = configData.type || 'tcp'
@@ -198,15 +198,15 @@ const loadConfig = async () => {
         form.username = configData.username || ''
         form.password = configData.password || ''
       } catch (error) {
-        console.error('解析配置失败:', error)
-        ElMessage.warning('配置格式错误，已重置为默认值')
+        console.error('Failed to parse configuration:', error)
+        ElMessage.warning('Configuration format error, reset to default values')
       }
     } else {
-      console.log('没有找到配置，使用默认值')
+      console.log('No configuration found, using default values')
     }
   } catch (error) {
-    console.error('加载配置失败:', error)
-    ElMessage.error('加载配置失败')
+    console.error('Failed to load configuration:', error)
+    ElMessage.error('Failed to load configuration')
   } finally {
     loading.value = false
   }
@@ -219,23 +219,23 @@ const handleSave = async () => {
     if (valid) {
       saving.value = true
       try {
-        // 生成config_id，格式为"类型_名称"
+        // Generate config_id, format is "type_name"
         const generatedConfigId = `mqtt_${form.name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}`
 
         let configData, isUpdate = false
 
-        // 如果是更新操作，先获取现有配置，只更新 enable 字段，保留其他配置
+        // If it's an update operation, first get existing configuration, only update enable field, keep other configurations
         if (configId.value) {
           const response = await api.get('/admin/mqtt-configs')
           const configs = response.data.data || []
           const existingConfig = configs.find(c => c.id === configId.value)
 
           if (existingConfig) {
-            // 解析现有配置，保留其他字段，只更新 enable
+            // Parse existing configuration, keep other fields, only update enable
             const existingData = JSON.parse(existingConfig.json_data || '{}')
             existingData.enable = form.enable
 
-            // 同时更新其他字段（如果表单有值则用表单值）
+            // Also update other fields (if form has values, use form values)
             if (form.broker) existingData.broker = form.broker
             if (form.type) existingData.type = form.type
             if (form.port) existingData.port = form.port
@@ -251,7 +251,7 @@ const handleSave = async () => {
             }
             isUpdate = true
           } else {
-            // 配置不存在，走新建逻辑
+            // Configuration does not exist, create new
             configData = {
               name: form.name,
               config_id: generatedConfigId,
@@ -260,7 +260,7 @@ const handleSave = async () => {
             }
           }
         } else {
-          // 新建配置，使用完整表单数据
+          // Create new configuration, use complete form data
           configData = {
             name: form.name,
             config_id: generatedConfigId,
@@ -270,17 +270,17 @@ const handleSave = async () => {
         }
 
         if (isUpdate) {
-          // 更新现有配置
+          // Update existing configuration
           await api.put(`/admin/mqtt-configs/${configId.value}`, configData)
-          ElMessage.success('更新成功')
+          ElMessage.success('Update successful')
         } else {
-          // 创建新配置
+          // Create new configuration
           const response = await api.post('/admin/mqtt-configs', configData)
           configId.value = response.data.data.id
-          ElMessage.success('保存成功')
+          ElMessage.success('Save successful')
         }
       } catch (error) {
-        ElMessage.error(error.response?.data?.message || '保存失败')
+        ElMessage.error(error.response?.data?.message || 'Save failed')
       } finally {
         saving.value = false
       }
@@ -300,7 +300,7 @@ onMounted(() => {
   padding: 24px;
 }
 
-/* 页面头部 */
+/* Page Header */
 .page-header {
   margin-bottom: 24px;
 }
@@ -333,13 +333,13 @@ onMounted(() => {
   background-clip: text;
 }
 
-/* 配置说明 */
+/* Configuration Description */
 .config-description {
   max-width: 1200px;
   margin: 0 auto 24px;
 }
 
-/* 表单容器 */
+/* Form Container */
 .form-container {
   max-width: 1200px;
   margin: 0 auto;
@@ -351,7 +351,7 @@ onMounted(() => {
   gap: 24px;
 }
 
-/* 配置卡片 */
+/* Configuration Card */
 .config-card {
   background: rgba(255, 255, 255, 0.95);
   border: 1px solid #e5e7eb;
@@ -378,7 +378,7 @@ onMounted(() => {
   border-left: 4px solid #e6a23c;
 }
 
-/* 卡片头部 */
+/* Card Header */
 .card-header {
   display: flex;
   align-items: center;
@@ -415,7 +415,7 @@ onMounted(() => {
   color: #6366f1;
 }
 
-/* 表单网格 */
+/* Form Grid */
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -427,7 +427,7 @@ onMounted(() => {
   margin-bottom: 0;
 }
 
-/* Element Plus 组件深度样式 */
+/* Element Plus Component Deep Styles */
 :deep(.el-form-item__label) {
   font-weight: 500;
   color: #374151;
@@ -470,7 +470,7 @@ onMounted(() => {
   padding: 0;
 }
 
-/* 操作按钮区域 */
+/* Action Button Area */
 .action-section {
   display: flex;
   justify-content: center;
@@ -493,7 +493,7 @@ onMounted(() => {
   box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
-/* 响应式设计 */
+/* Responsive Design */
 @media (max-width: 768px) {
   .mqtt-config {
     padding: 16px;

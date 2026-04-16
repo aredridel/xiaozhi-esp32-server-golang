@@ -14,8 +14,8 @@ import (
 )
 
 // EdgeTTSProvider Edge TTS provider
-// supportatimes性andstreaming TTS，outputOpusframe
-// configparameter：voice, rate, volume, pitch, connectTimeout, receiveTimeout
+// support at once and streaming TTS, output Opus frame
+// config parameter: voice, rate, volume, pitch, connectTimeout, receiveTimeout
 type EdgeTTSProvider struct {
 	Voice          string
 	Rate           string
@@ -25,7 +25,7 @@ type EdgeTTSProvider struct {
 	ReceiveTimeout int
 }
 
-// NewEdgeTTSProvider createEdgeTTSProvider
+// NewEdgeTTSProvider create Edge TTS Provider
 func NewEdgeTTSProvider(config map[string]interface{}) *EdgeTTSProvider {
 	voice, _ := config["voice"].(string)
 	rate, _ := config["rate"].(string)
@@ -58,10 +58,10 @@ func NewEdgeTTSProvider(config map[string]interface{}) *EdgeTTSProvider {
 	}
 }
 
-// TextToSpeech atimes性合成，returnOpusframe
+// TextToSpeech at once synthesis, return Opus frame
 func (p *EdgeTTSProvider) TextToSpeech(ctx context.Context, text string, sampleRate int, channels int, frameDuration int) ([][]byte, error) {
 	startTs := time.Now().UnixMilli()
-	// 临whenMP3file
+	// temp MP3 file
 	tmpFile := fmt.Sprintf("/tmp/edge-tts-%d.mp3", time.Now().UnixNano())
 	defer os.Remove(tmpFile)
 
@@ -76,31 +76,31 @@ func (p *EdgeTTSProvider) TextToSpeech(ctx context.Context, text string, sampleR
 		p.ReceiveTimeout,
 	)
 	if err != nil {
-		log.Errorf("EdgeTTS Communicatecreatefailed: %v", err)
+		log.Errorf("EdgeTTS Communicate create failed: %v", err)
 		return nil, err
 	}
-	// saveMP3
+	// save MP3
 	err = comm.Save(ctx, tmpFile, "")
 	if err != nil {
-		log.Errorf("EdgeTTSsaveMP3failed: %v", err)
+		log.Errorf("EdgeTTS save MP3 failed: %v", err)
 		return nil, err
 	}
-	// MP3转Opus
+	// MP3 to Opus
 	f, err := os.Open(tmpFile)
 	if err != nil {
-		return nil, fmt.Errorf("openMP3failed: %v", err)
+		return nil, fmt.Errorf("open MP3 failed: %v", err)
 	}
 	defer f.Close()
 	pipeReader, pipeWriter := io.Pipe()
 	outputChan := make(chan []byte, 1000)
-	// writeMP3datatopipe
+	// write MP3 data to pipe
 	go func() {
 		_, _ = io.Copy(pipeWriter, f)
 		pipeWriter.Close()
 	}()
 	mp3Decoder, err := util.CreateAudioDecoder(ctx, pipeReader, outputChan, frameDuration, "mp3")
 	if err != nil {
-		return nil, fmt.Errorf("createMP3 decoderfailed: %v", err)
+		return nil, fmt.Errorf("create MP3 decoder failed: %v", err)
 	}
 	var opusFrames [][]byte
 	done := make(chan struct{})
@@ -111,13 +111,13 @@ func (p *EdgeTTSProvider) TextToSpeech(ctx context.Context, text string, sampleR
 		done <- struct{}{}
 	}()
 	if err := mp3Decoder.Run(startTs); err != nil {
-		return nil, fmt.Errorf("MP3decodefailed: %v", err)
+		return nil, fmt.Errorf("MP3 decode failed: %v", err)
 	}
 	<-done
 	return opusFrames, nil
 }
 
-// TextToSpeechStream streaming合成，returnOpusframechan
+// TextToSpeechStream streaming synthesis, return Opus frame chan
 func (p *EdgeTTSProvider) TextToSpeechStream(ctx context.Context, text string, sampleRate int, channels int, frameDuration int) (chan []byte, error) {
 	startTs := time.Now().UnixMilli()
 	comm, err := communicate.NewCommunicate(
@@ -131,20 +131,20 @@ func (p *EdgeTTSProvider) TextToSpeechStream(ctx context.Context, text string, s
 		p.ReceiveTimeout,
 	)
 	if err != nil {
-		log.Errorf("EdgeTTS Communicatecreatefailed: %v", err)
+		log.Errorf("EdgeTTS Communicate create failed: %v", err)
 		return nil, err
 	}
 
 	chunkChan, errChan := comm.Stream(ctx)
 	outputChan := make(chan []byte, 100)
 	pipeReader, pipeWriter := io.Pipe()
-	// MP3转Opusdecoder
+	// MP3 to Opus decoder
 	go func() {
 		defer func() {
 			pipeWriter.Close()
-			log.Debugf("EdgeTTSstreaming合成end, time consumption: %d ms", time.Now().UnixMilli()-startTs)
+			log.Debugf("EdgeTTS streaming synthesis end, time consumption: %d ms", time.Now().UnixMilli()-startTs)
 			if err := <-errChan; err != nil {
-				log.Errorf("EdgeTTSstreaming合成out错: %v", err)
+				log.Errorf("EdgeTTS streaming synthesis error: %v", err)
 			}
 		}()
 		for {
@@ -167,36 +167,36 @@ func (p *EdgeTTSProvider) TextToSpeechStream(ctx context.Context, text string, s
 		}
 
 	}()
-	// startMP3→Opusdecode
+	// start MP3->Opus decode
 	go func() {
 		mp3Decoder, err := util.CreateAudioDecoder(ctx, pipeReader, outputChan, frameDuration, "mp3")
 		if err != nil {
-			log.Errorf("EdgeTTS MP3 decodercreatefailed: %v", err)
+			log.Errorf("EdgeTTS MP3 decoder create failed: %v", err)
 			return
 		}
 		if err := mp3Decoder.Run(startTs); err != nil {
-			log.Errorf("EdgeTTS MP3decodefailed: %v", err)
+			log.Errorf("EdgeTTS MP3 decode failed: %v", err)
 		}
-		log.Debugf("EdgeTTS MP3decodeend, time consumption: %d ms", time.Now().UnixMilli()-startTs)
+		log.Debugf("EdgeTTS MP3 decode end, time consumption: %d ms", time.Now().UnixMilli()-startTs)
 	}()
 	return outputChan, nil
 }
 
-// SetVoice setvoiceparameter
+// SetVoice set voice parameter
 func (p *EdgeTTSProvider) SetVoice(voiceConfig map[string]interface{}) error {
 	if voice, ok := voiceConfig["voice"].(string); ok && voice != "" {
 		p.Voice = voice
 		return nil
 	}
-	return fmt.Errorf("invalidofvoiceconfig: Missing voice")
+	return fmt.Errorf("invalid of voice config: Missing voice")
 }
 
-// Close closeresource（nostate Provider，noneedclose）
+// Close close resource (no state Provider, no need close)
 func (p *EdgeTTSProvider) Close() error {
 	return nil
 }
 
-// IsValid inspectresourcewhethervalid
+// IsValid inspect resource whether valid
 func (p *EdgeTTSProvider) IsValid() bool {
 	return p != nil
 }

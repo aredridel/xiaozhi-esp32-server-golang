@@ -33,7 +33,7 @@ type Config struct {
 	Timeout      time.Duration
 }
 
-// DefaultConfig returndefaultconfig
+// DefaultConfig return default config
 func DefaultConfig() Config {
 	return Config{
 		WsURL:        defaultWsURL,
@@ -48,21 +48,21 @@ func DefaultConfig() Config {
 	}
 }
 
-// ConfigFromMap fromconfig map mergegenerateconfig（supportconfigfile + inside控system）
+// ConfigFromMap from config map merge generate config (support config file + internal control system)
 func ConfigFromMap(cfg map[string]interface{}) Config {
 	conf := DefaultConfig()
 
-	// firstmergeconfigfileinofdefault values
+	// first merge config file default values
 	applyViperDefaults(&conf)
 
-	// 兼容老format：if传入 { aliyun_qwen3: { ... } }，thenpriority取internal map
+	// compatible with old format: if passed { aliyun_qwen3: { ... } }, then priority take internal map
 	if nested, ok := cfg["aliyun_qwen3"].(map[string]interface{}); ok {
 		cfg = nested
 	}
 
 	applyMapOverrides(&conf, cfg)
 
-	// api_key allowisemptywhen回退environmentvariable
+	// api_key allow empty when fallback to environment variable
 	if conf.APIKey == "" {
 		conf.APIKey = os.Getenv("DASHSCOPE_API_KEY")
 	}

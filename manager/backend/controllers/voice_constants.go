@@ -319,9 +319,9 @@ var VoiceOptions = map[string][]VoiceOption{
 		{Value: "Maia", Label: "Siyue"},
 		{Value: "Kai", Label: "Kai"},
 		{Value: "Nofish", Label: "No Fish"},
-		{Value: "Bella", Label: "Cute Baby"},
+		{Value: "Bella", Label: "Mengbao"},
 		{Value: "Jennifer", Label: "Jennifer"},
-		{Value: "Ryan", Label: "Sweet Tea"},
+		{Value: "Ryan", Label: "Tiancha"},
 	},
 
 	// iFlytek online TTS voice list
@@ -366,10 +366,10 @@ var VoiceOptions = map[string][]VoiceOption{
 		{Value: "tongtong", Label: "Tongtong (Default Voice)"},
 		{Value: "chuichui", Label: "Chuichui"},
 		{Value: "xiaochen", Label: "Xiaochen"},
-		{Value: "jam", Label: "Dongdong Animal Circle Jam Voice"},
-		{Value: "kazi", Label: "Dongdong Animal Circle Kazi Voice"},
-		{Value: "douji", Label: "Dongdong Animal Circle Douji Voice"},
-		{Value: "luodo", Label: "Dongdong Animal Circle Luodo Voice"},
+		{Value: "jam", Label: "Dongdong Animal Circle Jam"},
+		{Value: "kazi", Label: "Dongdong Animal Circle Kazi"},
+		{Value: "douji", Label: "Dongdong Animal Circle Douji"},
+		{Value: "luodo", Label: "Dongdong Animal Circle Luodo"},
 	},
 }
 
@@ -386,18 +386,18 @@ func GetVoiceOptionsByProvider(provider string) []VoiceOption {
 func GetAliyunQwenVoicesByModel(model string) []VoiceOption {
 	model = strings.TrimSpace(model)
 	if model == "" {
-		// 如果没有模型，返回基础列表
+		// If no model, return base list
 		return GetVoiceOptionsByProvider("aliyun_qwen")
 	}
 
-	// 使用本地函数获取模型对应的音色列表
+	// Use local function to get voice list for the model
 	voices := GetVoicesByModel(model)
 	if voices == nil || len(voices) == 0 {
-		// 如果找不到对应模型的音色，返回基础列表
+		// If voice not found for model, return base list
 		return GetVoiceOptionsByProvider("aliyun_qwen")
 	}
 
-	// 将 VoiceInfo 转换为 VoiceOption
+	// Convert VoiceInfo to VoiceOption
 	result := make([]VoiceOption, 0, len(voices))
 	for _, v := range voices {
 		result = append(result, VoiceOption{

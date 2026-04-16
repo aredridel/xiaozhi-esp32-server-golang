@@ -12,21 +12,21 @@ import (
 )
 
 var (
-	// globalRedisclient-sideinstance
+	// global Redis client instance
 	globalClient *redis.Client
-	// ensureonlyinitializeatimes
+	// ensure only initialize once
 	once sync.Once
-	// readwritelockprotectedinstanceaccess
+	// read-write lock protected instance access
 	mu sync.RWMutex
 )
 
-// Config Redisconfigstructurebody
+// Config Redis config struct
 type Config struct {
 	Host     string `mapstructure:"host" json:"host"`
 	Port     int    `mapstructure:"port" json:"port"`
 	Password string `mapstructure:"password" json:"password"`
 	DB       int    `mapstructure:"db" json:"db"`
-	// joinpoolconfig
+	// connection pool config
 	PoolSize     int           `mapstructure:"pool_size" json:"pool_size"`
 	MinIdleConns int           `mapstructure:"min_idle_conns" json:"min_idle_conns"`
 	MaxRetries   int           `mapstructure:"max_retries" json:"max_retries"`
@@ -51,7 +51,7 @@ func DefaultConfig() *Config {
 	}
 }
 
-// Init initializeRedisclient-side
+// Init initialize Redis client
 func Init(config *Config) error {
 	var initErr error
 
@@ -60,7 +60,7 @@ func Init(config *Config) error {
 			config = DefaultConfig()
 		}
 
-		// createRedisclient-side
+		// create Redis client
 		options := &redis.Options{
 			Addr:         fmt.Sprintf("%s:%d", config.Host, config.Port),
 			Password:     config.Password,
@@ -75,7 +75,7 @@ func Init(config *Config) error {
 
 		client := redis.NewClient(options)
 
-		// testjoin
+		// test connection
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
@@ -88,26 +88,26 @@ func Init(config *Config) error {
 		globalClient = client
 		mu.Unlock()
 
-		log.Log().Info("Redisclient-sideinitializesuccessful")
+		log.Log().Info("Redis client initialized successfully")
 	})
 
 	return initErr
 }
 
-// GetClient getRedisclient-sideinstance
+// GetClient get Redis client instance
 func GetClient() *redis.Client {
 	mu.RLock()
 	defer mu.RUnlock()
 
 	if globalClient == nil {
-		log.Log().Warn("Redisclient-sidenot initialized")
+		log.Log().Warn("Redis client not initialized")
 		return nil
 	}
 
 	return globalClient
 }
 
-// GetClientWithOptions usespecifyconfiggetRedisclient-side
+// GetClientWithOptions use specified config to get Redis client
 func GetClientWithOptions(options *redis.Options) *redis.Client {
 	if options == nil {
 		return GetClient()
@@ -115,19 +115,19 @@ func GetClientWithOptions(options *redis.Options) *redis.Client {
 
 	client := redis.NewClient(options)
 
-	// testjoin
+	// test connection
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if err := client.Ping(ctx).Err(); err != nil {
-		log.Log().Errorf("Redisjoinfailed: %v", err)
+		log.Log().Errorf("Redis connection failed: %v", err)
 		return nil
 	}
 
 	return client
 }
 
-// IsHealthy inspectRedisjoin健康state
+// IsHealthy check Redis connection health status
 func IsHealthy() bool {
 	client := GetClient()
 	if client == nil {
@@ -140,7 +140,7 @@ func IsHealthy() bool {
 	return client.Ping(ctx).Err() == nil
 }
 
-// Close closeRedisclient-sidejoin
+// Close close Redis client connection
 func Close() error {
 	mu.Lock()
 	defer mu.Unlock()
@@ -149,16 +149,16 @@ func Close() error {
 		err := globalClient.Close()
 		globalClient = nil
 		if err != nil {
-			log.Log().Errorf("closeRedisjoinfailed: %v", err)
+			log.Log().Errorf("close Redis connection failed: %v", err)
 			return err
 		}
-		log.Log().Info("Redisjoinalreadyclose")
+		log.Log().Info("Redis connection closed")
 	}
 
 	return nil
 }
 
-// GetKeyWithPrefix get带before缀ofkeyname
+// GetKeyWithPrefix get key name with prefix
 func GetKeyWithPrefix(prefix, key string) string {
 	if prefix == "" {
 		return key
@@ -166,24 +166,24 @@ func GetKeyWithPrefix(prefix, key string) string {
 	return fmt.Sprintf("%s:%s", prefix, key)
 }
 
-// Reconnect rejoinRedis（used forjoindisconnectafterofreconnect）
+// Reconnect reconnect to Redis (used for reconnecting after connection disconnect)
 func Reconnect() error {
 	mu.Lock()
 	defer mu.Unlock()
 
 	if globalClient != nil {
-		// close现havejoin
+		// close existing connection
 		_ = globalClient.Close()
 		globalClient = nil
 	}
 
-	// resetonce，allowreinitialize
+	// reset once, allow reinitialize
 	once = sync.Once{}
 
 	return nil
 }
 
-// Stats getRedisjoinpoolcountinfo
+// Stats get Redis connection pool stats info
 func Stats() *redis.PoolStats {
 	client := GetClient()
 	if client == nil {
@@ -194,14 +194,14 @@ func Stats() *redis.PoolStats {
 	return stats
 }
 
-// LogStats recordRedisjoinpoolcountinfo
+// LogStats record Redis connection pool stats info
 func LogStats() {
 	stats := Stats()
 	if stats == nil {
-		log.Log().Warn("no法getRedisjoinpoolcountinfo")
+		log.Log().Warn("unable to get Redis connection pool stats info")
 		return
 	}
 
-	log.Log().Infof("Redisjoinpoolcount - 总join: %d, empty闲join: %d, expirejoin: %d, 命in: %d, not命in: %d, timeout: %d",
+	log.Log().Infof("Redis connection pool stats - total connections: %d, idle connections: %d, stale connections: %d, hits: %d, misses: %d, timeouts: %d",
 		stats.TotalConns, stats.IdleConns, stats.StaleConns, stats.Hits, stats.Misses, stats.Timeouts)
 }

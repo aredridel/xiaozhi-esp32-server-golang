@@ -14,15 +14,15 @@ import (
 )
 
 func TestOpenAITTS(t *testing.T) {
-	// skipactualofnetworkrequesttest，除nonsetenvironmentvariable
+	// skip actual network request test, unless environment variable is set
 	if os.Getenv("RUN_OPENAI_TEST") != "1" {
-		t.Skip("skipOpenAI APItest，setenvironmentvariableRUN_OPENAI_TEST=1以启use")
+		t.Skip("skip OpenAI API test, set environment variable RUN_OPENAI_TEST=1 to enable")
 	}
 
-	// fromenvironmentvariablegetAPIkey
+	// get API key from environment variable
 	apiKey := os.Getenv("OPENAI_API_KEY")
 	if apiKey == "" {
-		t.Skip("skipOpenAI APItest，needsetenvironmentvariableOPENAI_API_KEY")
+		t.Skip("skip OpenAI API test, need to set environment variable OPENAI_API_KEY")
 	}
 
 	config := map[string]interface{}{
@@ -37,34 +37,34 @@ func TestOpenAITTS(t *testing.T) {
 
 	provider := NewOpenAITTSProvider(config)
 
-	// testtext转voice
+	// test text to speech
 	t.Run("TestTextToSpeech", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
 		frames, err := provider.TextToSpeech(ctx, "Hello, this is a test of OpenAI text to speech.", 16000, 1, 60)
 		if err != nil {
-			t.Fatalf("TextToSpeechfailed: %v", err)
+			t.Fatalf("TextToSpeech failed: %v", err)
 		}
 
 		if len(frames) == 0 {
-			t.Error("notreturn任何audio frame")
+			t.Error("did not return any audio frames")
 		}
 
-		t.Logf("successfulgenerate %d 个audio frame", len(frames))
+		t.Logf("Successfully generated %d audio frames", len(frames))
 	})
 
-	// teststreamingtext转voice
+	// test streaming text to speech
 	t.Run("TestTextToSpeechStream", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
 		outputChan, err := provider.TextToSpeechStream(ctx, "Hello, this is a test of OpenAI streaming text to speech.", 16000, 1, 60)
 		if err != nil {
-			t.Fatalf("TextToSpeechStreamfailed: %v", err)
+			t.Fatalf("TextToSpeechStream failed: %v", err)
 		}
 
-		// receiveallframe
+		// receive all frames
 		var receivedFrames [][]byte
 		timeout := time.After(20 * time.Second)
 
@@ -77,19 +77,19 @@ func TestOpenAITTS(t *testing.T) {
 				}
 				receivedFrames = append(receivedFrames, frame)
 			case <-timeout:
-				t.Error("receiveaudio frametimeout")
+				t.Error("receive audio frame timeout")
 				break receiveLoop
 			}
 		}
 
 		if len(receivedFrames) == 0 {
-			t.Error("notreceiveto任何audio frame")
+			t.Error("did not receive any audio frames")
 		}
 
-		t.Logf("successfulreceive %d 个audio frame", len(receivedFrames))
+		t.Logf("Successfully received %d audio frames", len(receivedFrames))
 	})
 
-	// testnoat the same timeofvoice
+	// test different voices
 	t.Run("TestDifferentVoices", func(t *testing.T) {
 		voices := []string{"alloy", "echo", "fable", "onyx", "nova", "shimmer"}
 
@@ -109,20 +109,20 @@ func TestOpenAITTS(t *testing.T) {
 
 				frames, err := provider.TextToSpeech(ctx, "Testing voice: "+voice, 16000, 1, 60)
 				if err != nil {
-					t.Errorf("usevoice %s failed: %v", voice, err)
+					t.Errorf("use voice %s failed: %v", voice, err)
 					return
 				}
 
 				if len(frames) == 0 {
-					t.Errorf("voice %s notreturn任何audio frame", voice)
+					t.Errorf("voice %s did not return any audio frames", voice)
 				}
 
-				t.Logf("voice %s successfulgenerate %d 个audio frame", voice, len(frames))
+				t.Logf("voice %s successfully generated %d audio frames", voice, len(frames))
 			})
 		}
 	})
 
-	// testnoat the same timeofspeed
+	// test different speeds
 	t.Run("TestDifferentSpeeds", func(t *testing.T) {
 		speeds := []float64{0.5, 1.0, 1.5, 2.0}
 
@@ -142,21 +142,21 @@ func TestOpenAITTS(t *testing.T) {
 
 				frames, err := provider.TextToSpeech(ctx, "Testing speed", 16000, 1, 60)
 				if err != nil {
-					t.Errorf("usespeed %.1f failed: %v", speed, err)
+					t.Errorf("use speed %.1f failed: %v", speed, err)
 					return
 				}
 
 				if len(frames) == 0 {
-					t.Errorf("speed %.1f notreturn任何audio frame", speed)
+					t.Errorf("speed %.1f did not return any audio frames", speed)
 				}
 
-				t.Logf("speed %.1f successfulgenerate %d 个audio frame", speed, len(frames))
+				t.Logf("speed %.1f successfully generated %d audio frames", speed, len(frames))
 			})
 		}
 	})
 }
 
-// TestOpenAITTSProviderDefaults testdefault values
+// TestOpenAITTSProviderDefaults test default values
 func TestOpenAITTSProviderDefaults(t *testing.T) {
 	config := map[string]interface{}{
 		"api_key": "test-key",
@@ -165,23 +165,23 @@ func TestOpenAITTSProviderDefaults(t *testing.T) {
 	provider := NewOpenAITTSProvider(config)
 
 	if provider.APIURL != "https://api.openai.com/v1/audio/speech" {
-		t.Errorf("期望defaultAPI URLis https://api.openai.com/v1/audio/speech，actualis %s", provider.APIURL)
+		t.Errorf("expected default API URL is https://api.openai.com/v1/audio/speech, actual is %s", provider.APIURL)
 	}
 
 	if provider.Model != "tts-1" {
-		t.Errorf("期望defaultmodelis tts-1，actualis %s", provider.Model)
+		t.Errorf("expected default model is tts-1, actual is %s", provider.Model)
 	}
 
 	if provider.Voice != "alloy" {
-		t.Errorf("期望defaultvoiceis alloy，actualis %s", provider.Voice)
+		t.Errorf("expected default voice is alloy, actual is %s", provider.Voice)
 	}
 
 	if provider.ResponseFormat != "mp3" {
-		t.Errorf("期望defaultrespondformatis mp3，actualis %s", provider.ResponseFormat)
+		t.Errorf("expected default response format is mp3, actual is %s", provider.ResponseFormat)
 	}
 
 	if provider.Speed != 1.0 {
-		t.Errorf("期望defaultspeedis 1.0，actualis %.1f", provider.Speed)
+		t.Errorf("expected default speed is 1.0, actual is %.1f", provider.Speed)
 	}
 }
 
@@ -198,7 +198,7 @@ func TestOpenAITTSProviderSupportsOpusResponse(t *testing.T) {
 
 	opusBytes, err := util.PCM16ToOggOpus(pcm, sampleRate, 1, 20)
 	if err != nil {
-		t.Fatalf("generatetest Ogg Opus failed: %v", err)
+		t.Fatalf("generate test Ogg Opus failed: %v", err)
 	}
 
 	requestErrCh := make(chan error, 1)
@@ -212,7 +212,7 @@ func TestOpenAITTSProviderSupportsOpusResponse(t *testing.T) {
 			return
 		}
 		if req.ResponseFormat != "opus" {
-			requestErrCh <- fmt.Errorf("期望 response_format=opus，actualis %s", req.ResponseFormat)
+			requestErrCh <- fmt.Errorf("expected response_format=opus, actual is %s", req.ResponseFormat)
 			http.Error(w, "unexpected response_format", http.StatusBadRequest)
 			return
 		}
@@ -236,24 +236,24 @@ func TestOpenAITTSProviderSupportsOpusResponse(t *testing.T) {
 
 	outputChan, err := provider.TextToSpeechStream(ctx, "test opus output", sampleRate, 1, 60)
 	if err != nil {
-		t.Fatalf("TextToSpeechStream returnerror: %v", err)
+		t.Fatalf("TextToSpeechStream return error: %v", err)
 	}
 
 	frameCount := 0
 	for frame := range outputChan {
 		if len(frame) == 0 {
-			t.Fatal("receiveempty Opus frame")
+			t.Fatal("received empty Opus frame")
 		}
 		frameCount++
 	}
 
 	if frameCount == 0 {
-		t.Fatal("not receivedto任何 Opus frame")
+		t.Fatal("did not receive any Opus frames")
 	}
 
 	select {
 	case err := <-requestErrCh:
-		t.Fatalf("mock server verifyfailed: %v", err)
+		t.Fatalf("mock server verify failed: %v", err)
 	default:
 	}
 }

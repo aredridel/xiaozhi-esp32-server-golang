@@ -6,18 +6,18 @@ import (
 	. "xiaozhi-esp32-server-golang/internal/data/client"
 )
 
-// ExitChatEvent exitchatevent
+// ExitChatEvent exit chat event
 type ExitChatEvent struct {
-	// client-sidestate
+	// client-side state
 	ClientState *ClientState
 
-	// exitreason
-	Reason string // "user actively exited"、"toolcallexit"、"timeoutexit" etc
+	// exit reason
+	Reason string // "user actively exited", "tool call exit", "timeout exit" etc
 
-	// exittrigger方式
-	TriggerType string // "exit_words"（exit词detect）、"tool_call"（toolcall）、"timeout"（timeout）etc
+	// exit trigger method
+	TriggerType string // "exit_words" (exit word detect), "tool_call" (tool call), "timeout" (timeout) etc
 
-	// userinputoforiginaltext（ifhave）
+	// user input of original text (if have)
 	UserText string
 
 	// timestamp

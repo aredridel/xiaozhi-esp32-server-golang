@@ -7,61 +7,61 @@ import (
 	log "xiaozhi-esp32-server-golang/logger"
 )
 
-// ClientEvent client-sidesendeventfoundationstructure
+// ClientEvent client-side send event foundation structure
 type ClientEvent struct {
-	EventID string      `json:"event_id,omitempty"`
-	Type    string      `json:"type"`
-	Session *Session    `json:"session,omitempty"`
-	Audio   string      `json:"audio,omitempty"` // Base64 encodeofaudio data
+	EventID string   `json:"event_id,omitempty"`
+	Type    string   `json:"type"`
+	Session *Session `json:"session,omitempty"`
+	Audio   string   `json:"audio,omitempty"` // Base64 encoded audio data
 }
 
-// Session session.update eventinof session config
+// Session session.update event session config
 type Session struct {
-	Modalities                 []string               `json:"modalities"`
-	InputAudioFormat           string                 `json:"input_audio_format,omitempty"`
-	SampleRate                 int                    `json:"sample_rate,omitempty"`
-	InputAudioTranscription    *InputAudioTranscription `json:"input_audio_transcription,omitempty"`
-	TurnDetection              *TurnDetection         `json:"turn_detection"`
+	Modalities              []string                 `json:"modalities"`
+	InputAudioFormat        string                   `json:"input_audio_format,omitempty"`
+	SampleRate              int                      `json:"sample_rate,omitempty"`
+	InputAudioTranscription *InputAudioTranscription `json:"input_audio_transcription,omitempty"`
+	TurnDetection           *TurnDetection           `json:"turn_detection"`
 }
 
-// InputAudioTranscription audio转录config
+// InputAudioTranscription audio transcription config
 type InputAudioTranscription struct {
 	Language string `json:"language,omitempty"`
 }
 
 // TurnDetection VAD config
 type TurnDetection struct {
-	Type               string  `json:"type,omitempty"`               // "server_vad" ornoset
-	Threshold          float64 `json:"threshold,omitempty"`          // VAD 阈value
-	SilenceDurationMs  int     `json:"silence_duration_ms,omitempty"` // silence持continuetime（毫second）
+	Type              string  `json:"type,omitempty"`                // "server_vad" or not set
+	Threshold         float64 `json:"threshold,omitempty"`           // VAD threshold value
+	SilenceDurationMs int     `json:"silence_duration_ms,omitempty"` // silence duration (milliseconds)
 }
 
-// ServerEvent server-siderespondeventfoundationstructure
+// ServerEvent server-side response event foundation structure
 type ServerEvent struct {
-	Type      string         `json:"type"`
-	EventID   string         `json:"event_id,omitempty"`
-	PreviousEventID string   `json:"previous_event_id,omitempty"`
-	Session   *Session       `json:"session,omitempty"`
-	Item      *Item          `json:"item,omitempty"`
-	Transcript string        `json:"transcript,omitempty"`
-	Error     *ErrorInfo     `json:"error,omitempty"`
+	Type            string     `json:"type"`
+	EventID         string     `json:"event_id,omitempty"`
+	PreviousEventID string     `json:"previous_event_id,omitempty"`
+	Session         *Session   `json:"session,omitempty"`
+	Item            *Item      `json:"item,omitempty"`
+	Transcript      string     `json:"transcript,omitempty"`
+	Error           *ErrorInfo `json:"error,omitempty"`
 }
 
-// Item session项（如inputaudio转录result）
+// Item session item (e.g. input audio transcription result)
 type Item struct {
-	ID        int     `json:"id,omitempty"`
-	Type      string  `json:"type,omitempty"`
-	Status    string  `json:"status,omitempty"`
+	ID            int            `json:"id,omitempty"`
+	Type          string         `json:"type,omitempty"`
+	Status        string         `json:"status,omitempty"`
 	Transcription *Transcription `json:"transcription,omitempty"`
 }
 
-// Transcription 转录result
+// Transcription transcription result
 type Transcription struct {
-	Text             string  `json:"text,omitempty"`
-	Language         string  `json:"language,omitempty"`
+	Text     string `json:"text,omitempty"`
+	Language string `json:"language,omitempty"`
 }
 
-// ErrorInfo errorinfo
+// ErrorInfo error info
 type ErrorInfo struct {
 	Message string `json:"message,omitempty"`
 	Code    string `json:"code,omitempty"`
@@ -70,10 +70,10 @@ type ErrorInfo struct {
 // NewSessionUpdateEvent create session.update event
 func NewSessionUpdateEvent(config Config) *ClientEvent {
 	session := &Session{
-		Modalities:               []string{"text"},
-		InputAudioFormat:         config.Format,
-		SampleRate:               config.SampleRate,
-		InputAudioTranscription:  &InputAudioTranscription{Language: config.Language},
+		Modalities:              []string{"text"},
+		InputAudioFormat:        config.Format,
+		SampleRate:              config.SampleRate,
+		InputAudioTranscription: &InputAudioTranscription{Language: config.Language},
 	}
 
 	if config.AutoEnd {
@@ -92,7 +92,7 @@ func NewSessionUpdateEvent(config Config) *ClientEvent {
 		Session: session,
 	}
 
-	// debug：打印 session.update event
+	// debug: print session.update event
 	if jsonBytes, err := json.Marshal(event); err == nil {
 		log.Debugf("[aliyun_qwen3] session.update JSON: %s", string(jsonBytes))
 	}
@@ -125,18 +125,18 @@ func NewSessionFinishEvent() *ClientEvent {
 	}
 }
 
-// IsTranscriptionEvent determine ifis转录event
+// IsTranscriptionEvent determine if is transcription event
 func IsTranscriptionEvent(event *ServerEvent) bool {
 	return event.Type == "conversation.item.input_audio_transcription.text" ||
 		event.Type == "conversation.item.input_audio_transcription.completed"
 }
 
-// IsFinalTranscription determine ifisfinally转录result
+// IsFinalTranscription determine if is final transcription result
 func IsFinalTranscription(event *ServerEvent) bool {
 	return event.Type == "conversation.item.input_audio_transcription.completed"
 }
 
-// GetTranscriptionText get转录text
+// GetTranscriptionText get transcription text
 func GetTranscriptionText(event *ServerEvent) string {
 	if event == nil {
 		return ""

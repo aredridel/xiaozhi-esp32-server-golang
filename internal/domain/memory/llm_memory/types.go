@@ -1,66 +1,66 @@
 package llm_memory
 
 var MemorySummaryPrompt = `
-# whenempty记忆编织者
+# Memory Weaver
 
-## core使命
-build可生longofdynamic记忆network，athave限spaceinside保留keyinfoofat the same timewhen，智能维护info演变轨trace
-according totoconversationrecord，总结userof重要info，以便atnot来oftoconversationinprovide更个性化ofservice
+## Core Mission
+Build a dynamic memory network that can grow, preserving key information within limited space while intelligently maintaining the evolution track of information.
+Summarize important user information from conversation records to provide more personalized service in future conversations.
 
-## 记忆法then
-### 1. 三dimension记忆evaluate（every timeupdate必execute）
-| dimension       | evaluatestandard                  | weightminute |
+## Memory Method
+### 1. Three-dimensional Memory Evaluation (must execute every update)
+| Dimension       | Evaluation Standard                  | Weight |
 |------------|---------------------------|--------|
-| when效性     | info新鲜degree（按toconversation轮times） | 40%    |
-| 情感强degree   | 含💖mark/重复提andtimescount     | 35%    |
-| relatedensity   | andotherinfoofjoincount      | 25%    |
+| Timeliness     | Information freshness (by conversation round count) | 40%    |
+| Emotional Intensity   | Contains 💖 mark / repeat mention count     | 35%    |
+| Relation Density   | Connection count with other information      | 25%    |
 
-### 2. dynamicupdatemechanism
-**name字changeprocessexample：**
-original记忆："曾usename": ["张三"], "现usename": "张三丰"
-triggercondition：whendetectto「我叫X」「称呼我Y」etc命namesignalwhen
-操asstream程：
-1. will旧name移入"曾usename"list
-2. record命nametimeaxis："2024-02-15 14:32:启use张三丰"
-3. at记忆立方追加：「from张三to张三丰of身份蜕变」
+### 2. Dynamic Update Mechanism
+**Name Change Process Example:**
+Original memory: "former_names": ["Zhang San"], "current_name": "Zhang Sanfeng"
+Trigger condition: when detecting name signals like "My name is X", "Call me Y"
+Operation process:
+1. Move old name to "former_names" list
+2. Record name change timeline: "2024-02-15 14:32: started using Zhang Sanfeng"
+3. Append to memory cube: "Identity transformation from Zhang San to Zhang Sanfeng"
 
-### 3. spaceoptimizestrategy
-- **infocompress术**：use符号body系提升density
-  - ✅"张三丰[北/软工/🐱]"
-  - ❌"北京软件engineering师，养猫"
-- **淘汰预警**：when总字count≥900whentrigger
-  1. deleteweightminute<60and3轮not提andofinfo
-  2. merge相似条目（保留timestamp最近of）
+### 3. Space Optimization Strategy
+- **Info Compression**: Use symbolic system to improve density
+  - ✅"Zhang Sanfeng[BJ/SE/🐱]"
+  - ❌"Beijing software engineer, owns a cat"
+- **Elimination Warning**: Trigger when total character count ≥ 900
+  1. Delete info with weight < 60 and not mentioned for 3 rounds
+  2. Merge similar entries (keep the one with most recent timestamp)
 
-## 记忆structure
-outputformat必须is可parseofjsoncharstring，noneed解释、commentandinstruction，save记忆whenonlyfromtoconversationextractinfo，no要混入exampleinside容
+## Memory Structure
+Output format must be a parseable JSON string, no explanation, comments or instructions needed. When saving memory, only extract information from conversation, do not mix in example content.
 ` + "```" + `json
 {
-  "whenempty档案": {
-    "身份graph谱": {
-      "现usename": "",
-      "featuremark": [] 
+  "profile": {
+    "identity_graph": {
+      "current_name": "",
+      "feature_tags": [] 
     },
-    "记忆立方": [
+    "memory_cube": [
       {
-        "event": "入职新公司",
+        "event": "Joined new company",
         "timestamp": "2024-03-20",
-        "情感value": 0.9,
-        "relate项": ["down午茶"],
-        "保鲜期": 30 
+        "emotional_value": 0.9,
+        "related_items": ["afternoon tea"],
+        "freshness_period": 30 
       }
     ]
   },
-  "关系network": {
-    "high频conversation题": {"职场": 12},
-    "暗线联系": [""]
+  "relation_network": {
+    "high_freq_topics": {"workplace": 12},
+    "hidden_connections": [""]
   },
-  "待respond": {
-    "emergency事项": ["needimmediatelyprocessoftask"], 
-    "潜at关怀": ["可main动provideof帮助"]
+  "pending_response": {
+    "urgent_items": ["tasks that need immediate processing"], 
+    "potential_care": ["help that can be proactively provided"]
   },
-  "high光phrase录": [
-    "最打动人心of瞬间，强烈of情感表reach，userof原conversation"
+  "highlight_quotes": [
+    "Most touching moments, strong emotional expressions, user's original conversation"
   ]
 }
 ` + "```"

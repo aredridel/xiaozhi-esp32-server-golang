@@ -1,6 +1,6 @@
 package streaming
 
-// SentenceSignalType indicatea段audiobeforeneedsendof句child级controlsignaltype。
+// SentenceSignalType indicate a segment audio before need to send sentence level control signal type.
 type SentenceSignalType string
 
 const (
@@ -8,14 +8,14 @@ const (
 	SentenceSignalEnd   SentenceSignalType = "sentence_end"
 )
 
-// SentenceSignal indicateandcurrentaudio chunkbindofhave序句childboundarysignal。
+// SentenceSignal indicate and current audio chunk bind of ordered sentence boundary signal.
 type SentenceSignal struct {
 	Type SentenceSignalType
 	Text string
 }
 
-// SynthesisEvent indicatea段dual-stream TTS output。
-// Audio iscurrentaudio chunk；SentenceSignals indicateatsendthisaudio chunkbeforeneedfirstsendof句childboundarysignal。
+// SynthesisEvent indicate a segment dual-stream TTS output.
+// Audio is current audio chunk; SentenceSignals indicate at send this audio chunk before need first send sentence boundary signal.
 type SynthesisEvent struct {
 	Audio           []byte
 	SentenceSignals []SentenceSignal

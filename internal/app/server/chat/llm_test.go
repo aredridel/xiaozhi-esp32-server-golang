@@ -16,7 +16,7 @@ import (
 func TestHandleToolResultAcceptsPlainText(t *testing.T) {
 	manager := &LLMManager{}
 
-	result, ok := manager.handleToolResult("普通textreturn")
+	result, ok := manager.handleToolResult("normal text return")
 	if !ok {
 		t.Fatal("expected plain text tool result to be accepted")
 	}
@@ -34,7 +34,7 @@ func TestHandleToolResultAcceptsPlainText(t *testing.T) {
 		t.Fatalf("expected text content, got %T", result.Content[0])
 	}
 
-	if textContent.Text != "普通textreturn" {
+	if textContent.Text != "normal text return" {
 		t.Fatalf("expected original text to be preserved, got %q", textContent.Text)
 	}
 }
@@ -42,7 +42,7 @@ func TestHandleToolResultAcceptsPlainText(t *testing.T) {
 func TestHandleToolResultAcceptsMCPJSON(t *testing.T) {
 	manager := &LLMManager{}
 
-	result, ok := manager.handleToolResult(`{"content":[{"type":"text","text":"jsonreturn"}],"isError":false}`)
+	result, ok := manager.handleToolResult(`{"content":[{"type":"text","text":"json return"}],"isError":false}`)
 	if !ok {
 		t.Fatal("expected MCP JSON tool result to be accepted")
 	}
@@ -56,14 +56,14 @@ func TestHandleToolResultAcceptsMCPJSON(t *testing.T) {
 		t.Fatalf("expected text content, got %T", result.Content[0])
 	}
 
-	if textContent.Text != "jsonreturn" {
+	if textContent.Text != "json return" {
 		t.Fatalf("expected parsed text content, got %q", textContent.Text)
 	}
 }
 
 func TestGetMessagesUsesToolRoundMessagesInNoneMode(t *testing.T) {
 	manager := newTestLLMManager(data_client.MemoryModeNone)
-	user := schema.UserMessage("帮我查adownup海天气")
+	user := schema.UserMessage("help me check Shanghai weather")
 	assistant := schema.AssistantMessage("", []schema.ToolCall{
 		{
 			ID:   "call_weather_1",
@@ -74,7 +74,7 @@ func TestGetMessagesUsesToolRoundMessagesInNoneMode(t *testing.T) {
 			},
 		},
 	})
-	toolMsg := schema.ToolMessage("up海今天多云，22degree", "call_weather_1")
+	toolMsg := schema.ToolMessage("Shanghai is cloudy today, 22 degrees", "call_weather_1")
 
 	ctx := appendToolRoundMessagesToContext(context.Background(), []*schema.Message{user, assistant, toolMsg})
 	messages := manager.GetMessages(ctx, nil, 10, nil)
@@ -94,7 +94,7 @@ func TestGetMessagesUsesToolRoundMessagesInNoneMode(t *testing.T) {
 }
 
 func TestAppendToolRoundMessagesAccumulatesInOrder(t *testing.T) {
-	user := schema.UserMessage("帮我订闹钟")
+	user := schema.UserMessage("help me set an alarm")
 	assistant := schema.AssistantMessage("", []schema.ToolCall{
 		{
 			ID:   "call_alarm_1",
@@ -105,7 +105,7 @@ func TestAppendToolRoundMessagesAccumulatesInOrder(t *testing.T) {
 			},
 		},
 	})
-	toolMsg := schema.ToolMessage("闹钟alreadysetisearlyup7point半", "call_alarm_1")
+	toolMsg := schema.ToolMessage("alarm already set for 7:30 AM", "call_alarm_1")
 
 	ctx := context.Background()
 	ctx = appendToolRoundMessagesToContext(ctx, []*schema.Message{user})
@@ -122,11 +122,11 @@ func TestAppendToolRoundMessagesAccumulatesInOrder(t *testing.T) {
 
 func TestGetMessagesIgnoresToolRoundMessagesOutsideNoneMode(t *testing.T) {
 	manager := newTestLLMManager(data_client.MemoryModeShort)
-	historyUser := schema.UserMessage("historymessage")
+	historyUser := schema.UserMessage("history message")
 	manager.clientState.AddMessage(historyUser)
 
 	ctx := appendToolRoundMessagesToContext(context.Background(), []*schema.Message{
-		schema.UserMessage("toolchain临whenmessage"),
+		schema.UserMessage("tool chain temp message"),
 	})
 	messages := manager.GetMessages(ctx, nil, 10, nil)
 
@@ -238,7 +238,7 @@ func newTestLLMManager(memoryMode string) *LLMManager {
 			DeviceConfig: config_types.UConfig{
 				MemoryMode: memoryMode,
 			},
-			SystemPrompt: "你yesatest助手",
+			SystemPrompt: "you are a test assistant",
 		},
 	}
 }

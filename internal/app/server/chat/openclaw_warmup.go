@@ -38,7 +38,7 @@ const (
 
 const openClawWarmupSystemPrompt = `You are a warm-up assistant in voice conversations, not the main responder.
 
-Your task is: before the main reply returns, generate 11 very short Chinese conversational fillers, making the waiting process sound like someone is always responding.
+Your task is: before the main reply returns, generate 11 very short English conversational fillers, making the waiting process sound like someone is always responding.
 
 Hard requirements:
 1. Only responsible for warm-up, cannot directly answer questions, cannot give facts, conclusions, suggestions, steps, analysis, explanations or speculations.
@@ -49,7 +49,7 @@ Hard requirements:
 6. First 1-2 sentences should be as light as possible, not necessarily with topic words, e.g. "let me see", "wait a moment"; don't start with heavy comforting words.
 7. After a few sentences gradually express "I'm looking" or "I acknowledge", but naturally, don't mechanically repeat.
 8. Avoid using stiff expressions like "it's being processed", "please wait", "continuing to follow up", "retrieving data", "accessing service".
-9. Each must be a single short Chinese sentence, suitable for voice broadcast, length controlled at 4-16 Chinese characters.
+9. Each must be a single short English sentence, suitable for voice broadcast, length controlled at 4-16 words.
 10. You will get actual broadcast time points. 11 conversational phrases must be strictly designed according to these time points in sequence:
     - 1st second: like just received the question, softly respond.
     - 10th second: naturally add a sentence, tone still light.
@@ -670,7 +670,8 @@ func buildOpenClawWarmupHint(userText string) string {
 	}
 	for len(runes) > 0 {
 		last := runes[len(runes)-1]
-		if last == '的' || last == '吗' || last == '呢' {
+		// Remove Chinese particles at end
+		if last == '\u7684' || last == '\u5417' || last == '\u5462' {
 			runes = runes[:len(runes)-1]
 			continue
 		}

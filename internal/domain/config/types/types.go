@@ -38,7 +38,7 @@ type SpeakerGroupInfo struct {
 	Uuids       []string `json:"uuids"`
 	TTSConfigID *string  `json:"tts_config_id"`
 	Voice       *string  `json:"voice"`
-	// whenvoice来自复刻when，runningwhenused for覆盖 TTS model。
+	// when voice comes from cloning, used to override TTS model at runtime.
 	VoiceModelOverride *string `json:"voice_model_override,omitempty"`
 }
 

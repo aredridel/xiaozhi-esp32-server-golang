@@ -5,20 +5,20 @@ import (
 	"time"
 )
 
-// ManagerClient Managerafterendpoint专useHTTPclient-side
+// ManagerClient Manager endpoint dedicated HTTP client
 type ManagerClient struct {
 	client *Client
 }
 
-// ManagerClientConfig Managerclient-sideconfig
+// ManagerClientConfig Manager client configuration
 type ManagerClientConfig struct {
-	BaseURL   string        // Managerafterendpointaddress
-	AuthToken string        // authenticateToken（optional）
-	Timeout   time.Duration // requesttimeouttime
-	MaxRetries int          // maximumretrytimescount
+	BaseURL    string        // Manager endpoint address
+	AuthToken  string        // authentication token (optional)
+	Timeout    time.Duration // request timeout
+	MaxRetries int           // maximum retry count
 }
 
-// NewManagerClient createManagerafterendpointHTTPclient-side
+// NewManagerClient create Manager endpoint HTTP client
 func NewManagerClient(cfg ManagerClientConfig) *ManagerClient {
 	client := NewClient(ClientConfig{
 		BaseURL:    cfg.BaseURL,
@@ -32,13 +32,12 @@ func NewManagerClient(cfg ManagerClientConfig) *ManagerClient {
 	}
 }
 
-// DoRequest executeHTTPrequest（encapsulation通useclient-sideofDoRequest）
+// DoRequest execute HTTP request (wrapper for client's DoRequest)
 func (m *ManagerClient) DoRequest(ctx context.Context, opts RequestOptions) error {
 	return m.client.DoRequest(ctx, opts)
 }
 
-// DoRequestRaw executeHTTPrequestandreturnoriginalrespond
+// DoRequestRaw execute HTTP request and return raw response
 func (m *ManagerClient) DoRequestRaw(ctx context.Context, opts RequestOptions) ([]byte, error) {
 	return m.client.DoRequestRaw(ctx, opts)
 }
-

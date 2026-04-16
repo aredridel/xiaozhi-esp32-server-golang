@@ -45,6 +45,6 @@ app.use(Icon)
 
 app.use(createPinia())
 app.use(router)
-app.use(ElementPlus)  // 桌面端使用
+app.use(ElementPlus)  // Desktop use
 
 app.mount('#app')

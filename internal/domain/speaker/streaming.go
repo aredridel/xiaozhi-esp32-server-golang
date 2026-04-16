@@ -15,7 +15,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// StreamingClient WebSocket streaming recognizeclient-side
+// StreamingClient WebSocket streaming recognize client
 type StreamingClient struct {
 	wsURL      string
 	conn       *websocket.Conn
@@ -39,7 +39,7 @@ type peekResponse struct {
 	err       error
 }
 
-// NewStreamingClient createstreaming recognizeclient-side
+// NewStreamingClient create streaming recognize client
 func NewStreamingClient(baseURL string) *StreamingClient {
 	wsURL := deriveWebSocketURL(baseURL)
 	return &StreamingClient{
@@ -47,11 +47,11 @@ func NewStreamingClient(baseURL string) *StreamingClient {
 	}
 }
 
-// deriveWebSocketURL from HTTP base_url push导 WebSocket URL
+// deriveWebSocketURL derive WebSocket URL from HTTP base_url
 func deriveWebSocketURL(baseURL string) string {
 	u, err := url.Parse(baseURL)
 	if err != nil {
-		log.Errorf("parse base_url failed: %v, usedefault values", err)
+		log.Errorf("parse base_url failed: %v, use default value", err)
 		return "ws://localhost:8080/api/v1/speaker/identify_ws"
 	}
 
@@ -63,95 +63,95 @@ func deriveWebSocketURL(baseURL string) string {
 	return fmt.Sprintf("%s://%s/api/v1/speaker/identify_ws", scheme, u.Host)
 }
 
-// Connect jointovoiceprintrecognizeserviceof WebSocket
+// Connect connect to voiceprint recognition service WebSocket
 func (sc *StreamingClient) Connect(sampleRate int, agentId string, threshold float32) error {
 	sc.mutex.Lock()
 	defer sc.mutex.Unlock()
 
 	sc.sampleRate = sampleRate
 
-	// ifalready存atjoin，use Ping detectjoinwhetherstill然valid
+	// if connection already exists, use Ping to check if connection is still valid
 	if sc.conn != nil {
 		if sc.pingConnectionLocked() {
-			// joinvalid，复use现havejoin
+			// connection valid, reuse existing connection
 			return nil
 		}
-		// joinalreadydisconnect，close旧joinpreparereconnect
-		log.Debugf("detectto旧joinalreadydisconnect，willre建立join")
+		// connection already disconnected, close old connection and prepare to reconnect
+		log.Debugf("detected old connection already disconnected, will re-establish connection")
 		sc.closeConnectionLocked()
 	}
 
-	// build WebSocket URL，includesampling率、agent_id and threshold parameter
+	// build WebSocket URL, include sample rate, agent_id and threshold parameter
 	wsURL := fmt.Sprintf("%s?sample_rate=%d", sc.wsURL, sampleRate)
 	if agentId != "" {
 		wsURL += fmt.Sprintf("&agent_id=%s", url.QueryEscape(agentId))
 	}
-	// if阈valuegreater 0，then传递阈valueparameter
+	// if threshold greater than 0, then pass threshold parameter
 	if threshold > 0 {
 		wsURL += fmt.Sprintf("&threshold=%.6f", threshold)
 	}
 
-	// join WebSocket
+	// connect WebSocket
 	dialer := websocket.Dialer{
 		HandshakeTimeout: 10 * time.Second,
 	}
 
 	conn, _, err := dialer.Dial(wsURL, nil)
 	if err != nil {
-		return fmt.Errorf("WebSocket joinfailed: %v", err)
+		return fmt.Errorf("WebSocket connection failed: %v", err)
 	}
 
 	sc.conn = conn
 	sc.finishWait = nil
 	sc.peekWaits = make(map[string]chan peekResponse)
 
-	// setreadtimeout
+	// set read timeout
 	conn.SetReadDeadline(time.Now().Add(30 * time.Second))
 
-	// receivejoinacknowledgemessage
+	// receive connection acknowledge message
 	var connectionMsg map[string]interface{}
 	if err := conn.ReadJSON(&connectionMsg); err != nil {
 		conn.Close()
 		sc.conn = nil
-		return fmt.Errorf("readjoinacknowledgemessagefailed: %v", err)
+		return fmt.Errorf("read connection acknowledge message failed: %v", err)
 	}
 
 	if msgType, ok := connectionMsg["type"].(string); !ok || msgType != "connection" {
 		conn.Close()
 		sc.conn = nil
-		return fmt.Errorf("意outsideofjoinmessage: %v", connectionMsg)
+		return fmt.Errorf("unexpected connection message: %v", connectionMsg)
 	}
 	conn.SetReadDeadline(time.Time{})
 
-	log.Debugf("voiceprintrecognize WebSocket joinsuccessful，sampling率: %d Hz, agent_id: %s, 阈value: %.4f", sampleRate, agentId, threshold)
+	log.Debugf("voiceprint recognition WebSocket connection successful, sample rate: %d Hz, agent_id: %s, threshold: %.4f", sampleRate, agentId, threshold)
 	go sc.readLoop(conn)
 	return nil
 }
 
-// SendAudioChunk sendaudio datablock
+// SendAudioChunk send audio data block
 func (sc *StreamingClient) SendAudioChunk(audioData []float32) error {
 	conn := sc.getConn()
 	if conn == nil {
 		return fmt.Errorf("not connected")
 	}
 
-	// will float32 arrayconvertis二systembyte
+	// convert float32 array to binary bytes
 	chunkBytes := float32ToBytes(audioData)
 
-	// send二systemmessage
+	// send binary message
 	sc.writeMu.Lock()
 	err := conn.WriteMessage(websocket.BinaryMessage, chunkBytes)
 	sc.writeMu.Unlock()
 	if err != nil {
-		// sendfailedwhenclosejoin
-		sc.failConnection(conn, fmt.Errorf("sendaudio datafailed: %v", err))
-		return fmt.Errorf("sendaudio datafailed: %v", err)
+		// when send failed, close connection
+		sc.failConnection(conn, fmt.Errorf("send audio data failed: %v", err))
+		return fmt.Errorf("send audio data failed: %v", err)
 	}
 
 	return nil
 }
 
-// FinishAndIdentify completeinputandgetrecognizeresult
+// FinishAndIdentify complete input and get recognize result
 func (sc *StreamingClient) FinishAndIdentify(ctx context.Context) (*IdentifyResult, error) {
 	if ctx == nil {
 		ctx = context.Background()
@@ -172,7 +172,7 @@ func (sc *StreamingClient) FinishAndIdentify(ctx context.Context) (*IdentifyResu
 	conn := sc.conn
 	sc.mutex.Unlock()
 
-	// sendcompletecommand
+	// send complete command
 	finishCmd := map[string]interface{}{
 		"action": "finish",
 	}
@@ -181,8 +181,8 @@ func (sc *StreamingClient) FinishAndIdentify(ctx context.Context) (*IdentifyResu
 	sc.writeMu.Unlock()
 	if err != nil {
 		sc.clearFinishWait(resultCh)
-		sc.failConnection(conn, fmt.Errorf("sendcompletecommandfailed: %v", err))
-		return nil, fmt.Errorf("sendcompletecommandfailed: %v", err)
+		sc.failConnection(conn, fmt.Errorf("send complete command failed: %v", err))
+		return nil, fmt.Errorf("send complete command failed: %v", err)
 	}
 
 	timer := time.NewTimer(15 * time.Second)
@@ -196,12 +196,12 @@ func (sc *StreamingClient) FinishAndIdentify(ctx context.Context) (*IdentifyResu
 		return nil, ctx.Err()
 	case <-timer.C:
 		sc.clearFinishWait(resultCh)
-		return nil, fmt.Errorf("waitfinallyrecognizeresulttimeout")
+		return nil, fmt.Errorf("wait for final recognize result timeout")
 	}
 }
 
-// PeekAndIdentify getmiddlerecognizeresult（noendcurrent轮times）
-// return: recognizeresult, whetherbeserver-sidedebounce, error
+// PeekAndIdentify get middle recognize result (not ending current round)
+// return: recognize result, whether server-side debounce, error
 func (sc *StreamingClient) PeekAndIdentify(ctx context.Context, requestID string) (*IdentifyResult, bool, error) {
 	if ctx == nil {
 		ctx = context.Background()
@@ -246,8 +246,8 @@ func (sc *StreamingClient) PeekAndIdentify(ctx context.Context, requestID string
 	sc.writeMu.Unlock()
 	if err != nil {
 		sc.removePeekWait(requestID, respCh)
-		sc.failConnection(conn, fmt.Errorf("sendpeekcommandfailed: %v", err))
-		return nil, false, fmt.Errorf("sendpeekcommandfailed: %v", err)
+		sc.failConnection(conn, fmt.Errorf("send peek command failed: %v", err))
+		return nil, false, fmt.Errorf("send peek command failed: %v", err)
 	}
 
 	timer := time.NewTimer(1500 * time.Millisecond)
@@ -261,11 +261,11 @@ func (sc *StreamingClient) PeekAndIdentify(ctx context.Context, requestID string
 		return nil, false, ctx.Err()
 	case <-timer.C:
 		sc.removePeekWait(requestID, respCh)
-		return nil, false, fmt.Errorf("waitpeekresulttimeout")
+		return nil, false, fmt.Errorf("wait peek result timeout")
 	}
 }
 
-// Close closejoin
+// Close close connection
 func (sc *StreamingClient) Close() error {
 	sc.mutex.Lock()
 	conn := sc.conn
@@ -275,15 +275,15 @@ func (sc *StreamingClient) Close() error {
 
 	if conn != nil {
 		if err := conn.Close(); err != nil {
-			sc.signalPending(finishWait, peekWaits, fmt.Errorf("joinalreadyclose: %v", err))
+			sc.signalPending(finishWait, peekWaits, fmt.Errorf("connection already closed: %v", err))
 			return err
 		}
 	}
-	sc.signalPending(finishWait, peekWaits, fmt.Errorf("joinalreadyclose"))
+	sc.signalPending(finishWait, peekWaits, fmt.Errorf("connection already closed"))
 	return nil
 }
 
-// closeConnectionLocked closejoin（必须atalready持have mutex ofsituationdowncall）
+// closeConnectionLocked close connection (must be called while holding mutex)
 func (sc *StreamingClient) closeConnectionLocked() error {
 	if sc.conn != nil {
 		err := sc.conn.Close()
@@ -293,20 +293,20 @@ func (sc *StreamingClient) closeConnectionLocked() error {
 	return nil
 }
 
-// IsConnected check ifalreadyjoin
+// IsConnected check if already connected
 func (sc *StreamingClient) IsConnected() bool {
 	sc.mutex.Lock()
 	defer sc.mutex.Unlock()
 	return sc.conn != nil
 }
 
-// pingConnectionLocked use Ping detectjoinwhethervalid（必须atalready持have mutex ofsituationdowncall）
+// pingConnectionLocked use Ping to check if connection is valid (must be called while holding mutex)
 func (sc *StreamingClient) pingConnectionLocked() bool {
 	if sc.conn == nil {
 		return false
 	}
 
-	// use Ping messagedetectjoin活性
+	// use Ping message to detect connection activity
 	sc.writeMu.Lock()
 	sc.conn.SetWriteDeadline(time.Now().Add(1000 * time.Millisecond))
 	err := sc.conn.WriteMessage(websocket.PingMessage, nil)
@@ -384,7 +384,7 @@ func (sc *StreamingClient) readLoop(conn *websocket.Conn) {
 	for {
 		messageType, message, err := conn.ReadMessage()
 		if err != nil {
-			sc.failConnection(conn, fmt.Errorf("readcancel息failed: %v", err))
+			sc.failConnection(conn, fmt.Errorf("read message failed: %v", err))
 			return
 		}
 		if messageType != websocket.TextMessage {
@@ -393,7 +393,7 @@ func (sc *StreamingClient) readLoop(conn *websocket.Conn) {
 
 		var msg map[string]interface{}
 		if err := json.Unmarshal(message, &msg); err != nil {
-			log.Warnf("parsevoiceprintmessagefailed: %v", err)
+			log.Warnf("parse voiceprint message failed: %v", err)
 			continue
 		}
 
@@ -451,19 +451,19 @@ func (sc *StreamingClient) dispatchMessage(msg map[string]interface{}) bool {
 	case "error":
 		return false
 	default:
-		// audio_received/connection/ready/cancelled/closing etcmessageonlyused forstatehint，这indirectignore
+		// audio_received/connection/ready/cancelled/closing etc messages only used for state hint, ignore here
 		return true
 	}
 }
 
 func parseServerError(msg map[string]interface{}) error {
 	if errMsg, ok := msg["message"].(string); ok && errMsg != "" {
-		return fmt.Errorf("servererror: %s", errMsg)
+		return fmt.Errorf("server error: %s", errMsg)
 	}
-	return fmt.Errorf("servererror: %v", msg)
+	return fmt.Errorf("server error: %v", msg)
 }
 
-// float32ToBytes will float32 arrayconvertis二systembyte（smallendpoint序）
+// float32ToBytes convert float32 array to binary bytes (little-endian)
 func float32ToBytes(samples []float32) []byte {
 	buf := make([]byte, len(samples)*4)
 	for i, sample := range samples {
@@ -473,7 +473,7 @@ func float32ToBytes(samples []float32) []byte {
 	return buf
 }
 
-// auxiliaryfunction：from map in安全getvalue
+// auxiliary function: safely get value from map
 func getString(m map[string]interface{}, key string) string {
 	if v, ok := m[key].(string); ok {
 		return v

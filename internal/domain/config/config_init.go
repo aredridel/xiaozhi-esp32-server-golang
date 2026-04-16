@@ -13,28 +13,28 @@ import (
 )
 
 var (
-	// managerSystemConfigHandlers receive WebSocket system_config pushwhenofcallbacklist，mainprogram可multiple timesregister（如mergeto viper、热更service）
+	// managerSystemConfigHandlers receive WebSocket system_config push callback list, main program can register multiple times (e.g. merge to viper, hot update service)
 	managerSystemConfigHandlers []func(map[string]interface{})
 )
 
-// RegisterManagerSystemConfigHandler register manager patterndownsystemconfigpushofcallback，应at InitConfigSystem 之beforecall；可multiple timescall以追加multiplecallback
+// RegisterManagerSystemConfigHandler register manager pattern down system config push callback, should be called before InitConfigSystem; can be called multiple times to append multiple callbacks
 func RegisterManagerSystemConfigHandler(fn func(map[string]interface{})) {
 	managerSystemConfigHandlers = append(managerSystemConfigHandlers, fn)
 }
 
-// InitConfigSystem initializeconfigsystem
-// according toconfig_provider.typeofvaluecallto应configpackageofInitmethod
+// InitConfigSystem initialize config system
+// according to config_provider.type value call corresponding config package Init method
 func InitConfigSystem(ctx context.Context) error {
-	// getconfigprovide者type
+	// get config provider type
 	providerType := viper.GetString("config_provider.type")
 	if providerType == "" {
-		providerType = "redis" // defaultuseredis
+		providerType = "redis" // default use redis
 		log.Infof("config_provider.type not set, using default: redis")
 	}
 
 	log.Infof("Initializing config system with provider: %s", providerType)
 
-	// according toconfigprovide者typecallcorrespondingInitmethod
+	// according to config provider type call corresponding Init method
 	switch providerType {
 	case "manager":
 		manager.SetSystemConfigPushHandler(func(data map[string]interface{}) {

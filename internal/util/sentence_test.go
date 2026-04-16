@@ -3,7 +3,7 @@ package util
 import "testing"
 
 func TestExtractSmartSentencesKeepsTimeTogether(t *testing.T) {
-	text := "according tosystemtime，现atyes2026year3month20day 星期五 02:37:04。"
+	text := "according to system time, now is 2026 year 3 month 20 day Friday 02:37:04."
 
 	sentences, remaining := ExtractSmartSentences(text, 2, 100, false)
 
@@ -19,11 +19,11 @@ func TestExtractSmartSentencesKeepsTimeTogether(t *testing.T) {
 }
 
 func TestContainsSentenceSeparatorIgnoresStreamingTimeColon(t *testing.T) {
-	if ContainsSentenceSeparator("现atyes2026year3month20day 星期五 02:", false) {
+	if ContainsSentenceSeparator("now is 2026 year 3 month 20 day Friday 02:", false) {
 		t.Fatal("expected trailing time colon not to trigger sentence split")
 	}
 
-	if !ContainsSentenceSeparator("现atyes2026year3month20day 星期五 02:37:04。", false) {
+	if !ContainsSentenceSeparator("now is 2026 year 3 month 20 day Friday 02:37:04.", false) {
 		t.Fatal("expected final period to trigger sentence split")
 	}
 }

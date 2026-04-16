@@ -2,8 +2,8 @@ package types
 
 import "context"
 
-// IConn yesprotocolirrelevantofjoininterface，by websocket/mqtt_udp etcprotocoladapterimplement
-// 你canaccording toactualneedextendmethod
+// IConn is protocol-agnostic connection interface, implemented by websocket/mqtt_udp etc protocol adapters
+// you can extend methods according to actual needs
 
 const (
 	TransportTypeWebsocket = "websocket"
@@ -11,13 +11,13 @@ const (
 )
 
 type IConn interface {
-	// sendcommand/信令data
+	// send command/signal data
 	SendCmd(msg []byte) error
-	// receivecommand/信令data
+	// receive command/signal data
 	RecvCmd(ctx context.Context, timeout int) ([]byte, error)
-	// sendvoicedata
+	// send voice data
 	SendAudio(audio []byte) error
-	// receivevoicedata
+	// receive voice data
 	RecvAudio(ctx context.Context, timeout int) ([]byte, error)
 
 	GetDeviceID() string
@@ -29,7 +29,7 @@ type IConn interface {
 
 	GetTransportType() string
 
-	//getprivatedata
+	// get private data
 	GetData(key string) (interface{}, error)
 }
 

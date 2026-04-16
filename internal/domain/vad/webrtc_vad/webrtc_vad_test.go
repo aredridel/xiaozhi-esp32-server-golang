@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestNewWebRTCVAD testcreate WebRTC VAD instance
+// TestNewWebRTCVAD test create WebRTC VAD instance
 func TestNewWebRTCVAD(t *testing.T) {
 	vad := NewWebRTCVAD()
 	require.NotNil(t, vad)
@@ -19,14 +19,14 @@ func TestNewWebRTCVAD(t *testing.T) {
 	assert.Equal(t, DefaultMode, webrtcVAD.mode)
 	assert.False(t, webrtcVAD.initialized)
 
-	// cleanupresource
+	// cleanup resource
 	err := vad.Close()
 	assert.NoError(t, err)
 }
 
-// TestNewWebRTCVADWithConfig testuseconfigcreate WebRTC VAD instance
+// TestNewWebRTCVADWithConfig test use config create WebRTC VAD instance
 func TestNewWebRTCVADWithConfig(t *testing.T) {
-	// testvalidconfig
+	// test valid config
 	vad, err := NewWebRTCVADWithConfig(8000, 1)
 	require.NoError(t, err)
 	require.NotNil(t, vad)
@@ -39,77 +39,77 @@ func TestNewWebRTCVADWithConfig(t *testing.T) {
 	err = vad.Close()
 	assert.NoError(t, err)
 
-	// testinvalidsampling率
+	// test invalid sample rate
 	vad, err = NewWebRTCVADWithConfig(22050, 1)
 	assert.Error(t, err)
 	assert.Nil(t, vad)
 
-	// testinvalidpattern
+	// test invalid mode
 	vad, err = NewWebRTCVADWithConfig(16000, 5)
 	assert.Error(t, err)
 	assert.Nil(t, vad)
 }
 
-// TestWebRTCVAD_IsVAD testvoice活动detect
+// TestWebRTCVAD_IsVAD test voice activity detection
 func TestWebRTCVAD_IsVAD(t *testing.T) {
 	vad := NewWebRTCVAD()
 	require.NotNil(t, vad)
 	defer vad.Close()
 
-	// testemptydata
+	// test empty data
 	isActive, err := vad.IsVAD([]float32{})
 	assert.NoError(t, err)
 	assert.False(t, isActive)
 
-	// testsilencedata（全zero）
+	// test silence data (all zeros)
 	silentData := make([]float32, 1600) // 100ms at 16kHz
 	isActive, err = vad.IsVAD(silentData)
 	assert.NoError(t, err)
-	// silencedata通常nowillbedetectisvoice活动，but这取决于 VAD ofimplement
+	// silence data usually will not be detected as voice activity, but this depends on VAD implementation
 
-	// test合成voicedata（positive弦波）
-	speechData := generateSineWave(16000, 440, 1.0, 0.5) // 1second 440Hz positive弦波
+	// test synthetic voice data (sine wave)
+	speechData := generateSineWave(16000, 440, 1.0, 0.5) // 1 second 440Hz sine wave
 	isActive, err = vad.IsVAD(speechData)
 	assert.NoError(t, err)
-	// positive弦波maybedetectisvoice活动，but这取决于 VAD algorithm
+	// sine wave may be detected as voice activity, but this depends on VAD algorithm
 
-	// testdataamountno足aframeofsituation
-	shortData := make([]float32, 100) // 少于aframeofdata
+	// test data amount not enough for a frame
+	shortData := make([]float32, 100) // less than a frame of data
 	isActive, err = vad.IsVAD(shortData)
 	assert.NoError(t, err)
 	assert.False(t, isActive)
 }
 
-// TestWebRTCVAD_Reset testresetfunction
+// TestWebRTCVAD_Reset test reset function
 func TestWebRTCVAD_Reset(t *testing.T) {
 	vad := NewWebRTCVAD()
 	require.NotNil(t, vad)
 	defer vad.Close()
 
-	// initialize之beforereset
+	// reset before initialize
 	err := vad.Reset()
 	assert.NoError(t, err)
 
-	// firstuse VAD performinitialize
+	// first use VAD to perform initialize
 	testData := make([]float32, 1600) // 100ms at 16kHz
 	_, err = vad.IsVAD(testData)
 	assert.NoError(t, err)
 
-	// initializeafterreset
+	// reset after initialize
 	err = vad.Reset()
 	assert.NoError(t, err)
 }
 
-// TestWebRTCVAD_Close testclosefunction
+// TestWebRTCVAD_Close test close function
 func TestWebRTCVAD_Close(t *testing.T) {
 	vad := NewWebRTCVAD()
 	require.NotNil(t, vad)
 
-	// not initializedwhenclose
+	// close when not initialized
 	err := vad.Close()
 	assert.NoError(t, err)
 
-	// initializeafterclose
+	// close after initialize
 	testData := make([]float32, 1600)
 	_, err = vad.IsVAD(testData)
 	assert.NoError(t, err)
@@ -117,12 +117,12 @@ func TestWebRTCVAD_Close(t *testing.T) {
 	err = vad.Close()
 	assert.NoError(t, err)
 
-	// 重复close
+	// close again
 	err = vad.Close()
 	assert.NoError(t, err)
 }
 
-// TestWebRTCVAD_SetMode testsetpattern
+// TestWebRTCVAD_SetMode test set mode
 func TestWebRTCVAD_SetMode(t *testing.T) {
 	vad := NewWebRTCVAD()
 	require.NotNil(t, vad)
@@ -131,14 +131,14 @@ func TestWebRTCVAD_SetMode(t *testing.T) {
 	webrtcVAD, ok := vad.(*WebRTCVAD)
 	require.True(t, ok)
 
-	// testvalidpattern
+	// test valid mode
 	for mode := 0; mode <= 3; mode++ {
 		err := webrtcVAD.SetMode(mode)
 		assert.NoError(t, err)
 		assert.Equal(t, mode, webrtcVAD.GetMode())
 	}
 
-	// testinvalidpattern
+	// test invalid mode
 	err := webrtcVAD.SetMode(-1)
 	assert.Error(t, err)
 
@@ -146,7 +146,7 @@ func TestWebRTCVAD_SetMode(t *testing.T) {
 	assert.Error(t, err)
 }
 
-// TestWebRTCVAD_SetSampleRate testsetsampling率
+// TestWebRTCVAD_SetSampleRate test set sample rate
 func TestWebRTCVAD_SetSampleRate(t *testing.T) {
 	vad := NewWebRTCVAD()
 	require.NotNil(t, vad)
@@ -155,7 +155,7 @@ func TestWebRTCVAD_SetSampleRate(t *testing.T) {
 	webrtcVAD, ok := vad.(*WebRTCVAD)
 	require.True(t, ok)
 
-	// testvalidsampling率
+	// test valid sample rate
 	validRates := []int{8000, 16000, 32000, 48000}
 	for _, rate := range validRates {
 		err := webrtcVAD.SetSampleRate(rate)
@@ -163,7 +163,7 @@ func TestWebRTCVAD_SetSampleRate(t *testing.T) {
 		assert.Equal(t, rate, webrtcVAD.GetSampleRate())
 	}
 
-	// testinvalidsampling率
+	// test invalid sample rate
 	err := webrtcVAD.SetSampleRate(22050)
 	assert.Error(t, err)
 
@@ -171,7 +171,7 @@ func TestWebRTCVAD_SetSampleRate(t *testing.T) {
 	assert.Error(t, err)
 }
 
-// TestFloat32ToPCMBytes testdatatypeconvert
+// TestFloat32ToPCMBytes test data type conversion
 func TestFloat32ToPCMBytes(t *testing.T) {
 	vad := NewWebRTCVAD()
 	require.NotNil(t, vad)
@@ -180,13 +180,13 @@ func TestFloat32ToPCMBytes(t *testing.T) {
 	webrtcVAD, ok := vad.(*WebRTCVAD)
 	require.True(t, ok)
 
-	// testboundaryvalue
+	// test boundary values
 	testData := []float32{-1.0, 0.0, 1.0, 1.5, -1.5}
 	pcmBytes := webrtcVAD.float32ToPCMBytes(testData)
 
 	assert.Equal(t, len(testData)*2, len(pcmBytes))
 
-	// inspectconvertresult
+	// inspect conversion result
 	// -1.0 -> -32768
 	// 0.0 -> 0
 	// 1.0 -> 32767
@@ -194,22 +194,22 @@ func TestFloat32ToPCMBytes(t *testing.T) {
 	// -1.5 -> -32768 (clipped)
 }
 
-// TestIsValidSampleRate testsampling率validate
+// TestIsValidSampleRate test sample rate validation
 func TestIsValidSampleRate(t *testing.T) {
-	// validsampling率
+	// valid sample rates
 	validRates := []int{8000, 16000, 32000, 48000}
 	for _, rate := range validRates {
 		assert.True(t, isValidSampleRate(rate))
 	}
 
-	// invalidsampling率
+	// invalid sample rates
 	invalidRates := []int{11025, 22050, 44100, 96000}
 	for _, rate := range invalidRates {
 		assert.False(t, isValidSampleRate(rate))
 	}
 }
 
-// generateSineWave generatepositive弦波dataused fortest
+// generateSineWave generate sine wave data for test
 func generateSineWave(sampleRate int, frequency float64, duration float64, amplitude float64) []float32 {
 	numSamples := int(float64(sampleRate) * duration)
 	samples := make([]float32, numSamples)

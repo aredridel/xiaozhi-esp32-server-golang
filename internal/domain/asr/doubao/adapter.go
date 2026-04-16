@@ -19,7 +19,7 @@ func NewDoubaoV2Adapter(config map[string]interface{}) (*DoubaoV2Adapter, error)
 	// create doubao ASR config
 	doubaoConfig := DefaultConfig
 
-	// frommapingetconfig项
+	// frommapingetconfigitem
 	if appID, ok := config["appid"].(string); ok && appID != "" {
 		doubaoConfig.AppID = appID
 	}
@@ -87,7 +87,7 @@ func NewDoubaoV2Adapter(config map[string]interface{}) (*DoubaoV2Adapter, error)
 	}, nil
 }
 
-// Process implementatimes性processwhole segmentaudio，return完bodyrecognizeresult
+// Process implements synchronous processing of whole segment audio, returns complete recognition result
 func (d *DoubaoV2Adapter) Process(pcmData []float32) (string, error) {
 	return "", nil
 }

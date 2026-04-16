@@ -6,8 +6,8 @@ import (
 	"github.com/cloudwego/eino/schema"
 )
 
-// NoMemoProvider emptyof记忆provide者implement
-// used forwhenusernoneed记忆functionwhenuse，allmethodareyesemptyimplement
+// NoMemoProvider empty memory provider implement
+// used for when user no need memory function, all methods are empty implement
 type NoMemoProvider struct{}
 
 // Get get NoMemoProvider instance
@@ -15,38 +15,38 @@ func Get() *NoMemoProvider {
 	return &NoMemoProvider{}
 }
 
-// AddMessage adda条messageto记忆（emptyimplement）
+// AddMessage add a message to memory (empty implement)
 func (n *NoMemoProvider) AddMessage(ctx context.Context, agentID string, msg schema.Message) error {
-	// emptyimplement，noexecute任何操as
+	// empty implementation, no operation executed
 	return nil
 }
 
-// GetMessages getuserofhistorymessage（emptyimplement）
+// GetMessages get user history message (empty implement)
 func (n *NoMemoProvider) GetMessages(ctx context.Context, agentId string, count int) ([]*schema.Message, error) {
-	// returnemptyofmessagelist
+	// return empty message list
 	return []*schema.Message{}, nil
 }
 
-// GetContext getuserofcontextinfo（emptyimplement）
+// GetContext get user context info (empty implement)
 func (n *NoMemoProvider) GetContext(ctx context.Context, agentId string, maxToken int) (string, error) {
-	// returnemptycharstring
+	// return empty string
 	return "", nil
 }
 
-// Search searchuserof记忆（emptyimplement）
+// Search search user memory (empty implement)
 func (n *NoMemoProvider) Search(ctx context.Context, agentId string, query string, topK int, timeRangeDays int64) (string, error) {
-	// returnemptycharstring
+	// return empty string
 	return "", nil
 }
 
-// Flush refreshuserof记忆（emptyimplement）
+// Flush refresh user memory (empty implement)
 func (n *NoMemoProvider) Flush(ctx context.Context, agentId string) error {
-	// emptyimplement，noexecute任何操as
+	// empty implementation, no operation executed
 	return nil
 }
 
-// ResetMemory resetuserof记忆（emptyimplement）
+// ResetMemory reset user memory (empty implement)
 func (n *NoMemoProvider) ResetMemory(ctx context.Context, agentId string) error {
-	// emptyimplement，noexecute任何操as
+	// empty implementation, no operation executed
 	return nil
 }

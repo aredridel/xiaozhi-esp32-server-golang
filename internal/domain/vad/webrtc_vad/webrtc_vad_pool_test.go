@@ -10,13 +10,13 @@ import (
 )
 
 func TestWebRTCVADPool(t *testing.T) {
-	// createVADconfig
+	// create VAD config
 	vadConfig := WebRTCVADConfig{
 		SampleRate: 16000,
 		Mode:       2,
 	}
 
-	// createpoolconfig
+	// create pool config
 	poolConfig := &util.PoolConfig{
 		MaxSize:          3,
 		MinSize:          1,
@@ -27,23 +27,23 @@ func TestWebRTCVADPool(t *testing.T) {
 		ValidateOnReturn: true,
 	}
 
-	// createVADresourcepool
+	// create VAD resource pool
 	pool, err := NewWebRTCVADPool(vadConfig, poolConfig)
 	if err != nil {
 		t.Fatalf("Failed to create WebRTC VAD pool: %v", err)
 	}
 	defer pool.Close()
 
-	// testgetandreleaseVAD
+	// test acquire and release VAD
 	vad, err := pool.AcquireVAD()
 	if err != nil {
 		t.Fatalf("Failed to acquire VAD: %v", err)
 	}
 
-	// testVADfunction
-	testData := make([]float32, 320) // 20msof16kHzaudio data
+	// test VAD function
+	testData := make([]float32, 320) // 20ms of 16kHz audio data
 	for i := range testData {
-		testData[i] = 0.1 // 填充a些testdata
+		testData[i] = 0.1 // fill with some test data
 	}
 
 	active, err := vad.IsVAD(testData)
@@ -53,13 +53,13 @@ func TestWebRTCVADPool(t *testing.T) {
 
 	t.Logf("VAD result: %v", active)
 
-	// releaseVAD
+	// release VAD
 	err = pool.ReleaseVAD(vad)
 	if err != nil {
 		t.Errorf("Failed to release VAD: %v", err)
 	}
 
-	// inspectcountinfo
+	// inspect count info
 	stats := pool.Stats()
 	t.Logf("Pool stats: %+v", stats)
 }
@@ -84,7 +84,7 @@ func TestWebRTCVADPoolConcurrency(t *testing.T) {
 	}
 	defer pool.Close()
 
-	// concurrenttest
+	// concurrent test
 	numWorkers := 10
 	numIterations := 5
 	var wg sync.WaitGroup
@@ -109,23 +109,23 @@ func TestWebRTCVADPoolConcurrency(t *testing.T) {
 				default:
 				}
 
-				// getVADinstance
+				// acquire VAD instance
 				vad, err := pool.AcquireVAD()
 				if err != nil {
 					t.Errorf("Worker %d iteration %d: Failed to acquire VAD: %v", workerID, j, err)
 					return
 				}
 
-				// useVAD
+				// use VAD
 				_, err = vad.IsVAD(testData)
 				if err != nil {
 					t.Errorf("Worker %d iteration %d: VAD detection failed: %v", workerID, j, err)
 				}
 
-				// mocka些processtime
+				// mock some process time
 				time.Sleep(10 * time.Millisecond)
 
-				// releaseVAD
+				// release VAD
 				err = pool.ReleaseVAD(vad)
 				if err != nil {
 					t.Errorf("Worker %d iteration %d: Failed to release VAD: %v", workerID, j, err)
@@ -136,7 +136,7 @@ func TestWebRTCVADPoolConcurrency(t *testing.T) {
 
 	wg.Wait()
 
-	// inspectfinallycountinfo
+	// inspect final count info
 	stats := pool.Stats()
 	t.Logf("Final pool stats: %+v", stats)
 }
@@ -149,20 +149,20 @@ func TestWebRTCVADFactory(t *testing.T) {
 
 	factory := NewWebRTCVADFactory(config)
 
-	// testcreateresource
+	// test create resource
 	resource, err := factory.Create()
 	if err != nil {
 		t.Fatalf("Failed to create resource: %v", err)
 	}
 	defer resource.Close()
 
-	// validateresourcetype
+	// validate resource type
 	vad, ok := resource.(*WebRTCVAD)
 	if !ok {
 		t.Fatalf("Created resource is not WebRTCVAD type")
 	}
 
-	// validateconfig
+	// validate config
 	if vad.GetSampleRate() != config.SampleRate {
 		t.Errorf("Expected sample rate %d, got %d", config.SampleRate, vad.GetSampleRate())
 	}
@@ -171,18 +171,18 @@ func TestWebRTCVADFactory(t *testing.T) {
 		t.Errorf("Expected mode %d, got %d", config.Mode, vad.GetMode())
 	}
 
-	// testvalidatefunction
+	// test validate function
 	if !factory.Validate(resource) {
 		t.Error("Factory validation failed for valid resource")
 	}
 
-	// testresetfunction
+	// test reset function
 	err = factory.Reset(resource)
 	if err != nil {
 		t.Errorf("Factory reset failed: %v", err)
 	}
 
-	// testresourcevalid性
+	// test resource validity
 	if !resource.IsValid() {
 		t.Error("Resource should be valid after reset")
 	}
@@ -195,10 +195,10 @@ func TestWebRTCVADPoolTimeout(t *testing.T) {
 	}
 
 	poolConfig := &util.PoolConfig{
-		MaxSize:        1, // onlyallowaresource
+		MaxSize:        1, // only allow one resource
 		MinSize:        1,
 		MaxIdle:        1,
-		AcquireTimeout: 100 * time.Millisecond, // shorttimeouttime
+		AcquireTimeout: 100 * time.Millisecond, // short timeout
 		IdleTimeout:    1 * time.Minute,
 	}
 
@@ -208,13 +208,13 @@ func TestWebRTCVADPoolTimeout(t *testing.T) {
 	}
 	defer pool.Close()
 
-	// getnthaVADinstance
+	// acquire first VAD instance
 	vad1, err := pool.AcquireVAD()
 	if err != nil {
 		t.Fatalf("Failed to acquire first VAD: %v", err)
 	}
 
-	// trygetnth二个VADinstance，shouldtimeout
+	// try to acquire second VAD instance, should timeout
 	start := time.Now()
 	vad2, err := pool.AcquireVAD()
 	elapsed := time.Since(start)
@@ -228,13 +228,13 @@ func TestWebRTCVADPoolTimeout(t *testing.T) {
 		t.Errorf("Expected timeout around 100ms, but got %v", elapsed)
 	}
 
-	// releasenthaVAD
+	// release first VAD
 	err = pool.ReleaseVAD(vad1)
 	if err != nil {
 		t.Errorf("Failed to release VAD: %v", err)
 	}
 
-	// 现atshould能够getVAD
+	// now should be able to acquire VAD
 	vad3, err := pool.AcquireVAD()
 	if err != nil {
 		t.Errorf("Failed to acquire VAD after release: %v", err)
@@ -242,7 +242,7 @@ func TestWebRTCVADPoolTimeout(t *testing.T) {
 	pool.ReleaseVAD(vad3)
 }
 
-// BenchmarkWebRTCVADPool performancetest
+// BenchmarkWebRTCVADPool performance test
 func BenchmarkWebRTCVADPool(b *testing.B) {
 	vadConfig := WebRTCVADConfig{
 		SampleRate: 16000,

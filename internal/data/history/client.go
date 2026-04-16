@@ -22,10 +22,10 @@ const (
 
 // HistoryClientConfig client-sideconfig
 type HistoryClientConfig struct {
-	BaseURL   string        // Managerafterendpointaddress
-	AuthToken string        // authenticateToken
-	Timeout   time.Duration // requesttimeout
-	Enabled   bool          // whether启use
+	BaseURL   string        // Manager backend endpoint address
+	AuthToken string        // authenticate token
+	Timeout   time.Duration // request timeout
+	Enabled   bool          // whether enabled
 }
 
 // HistoryClient chat historyHTTPclient-side
@@ -40,7 +40,7 @@ func NewHistoryClient(cfg HistoryClientConfig) *HistoryClient {
 		BaseURL:    cfg.BaseURL,
 		AuthToken:  cfg.AuthToken,
 		Timeout:    cfg.Timeout,
-		MaxRetries: 3, // defaultretry3times
+		MaxRetries: 3, // default retry 3 times
 	})
 
 	return &HistoryClient{
@@ -57,9 +57,9 @@ type SaveMessageRequest struct {
 	SessionID     string                 `json:"session_id,omitempty"`
 	Role          MessageType            `json:"role"`
 	Content       string                 `json:"content"`
-	ToolCallID    string                 `json:"tool_call_id,omitempty"`    // toolcallID（Toolroleuse）
-	ToolCallsJSON *string                `json:"tool_calls_json,omitempty"` // toolcalllistJSON（Assistantroleuse），nil indicate NULL
-	AudioData     string                 `json:"audio_data,omitempty"`      // base64encode
+	ToolCallID    string                 `json:"tool_call_id,omitempty"`    // tool call ID (Tool role use)
+	ToolCallsJSON *string                `json:"tool_calls_json,omitempty"` // tool call list JSON (Assistant role use), nil indicate NULL
+	AudioData     string                 `json:"audio_data,omitempty"`      // base64 encode
 	AudioFormat   string                 `json:"audio_format,omitempty"`
 	AudioDuration int                    `json:"audio_duration,omitempty"`
 	AudioSize     int                    `json:"audio_size,omitempty"`
@@ -104,7 +104,7 @@ type GetMessagesRequest struct {
 	DeviceID  string `json:"device_id"`
 	AgentID   string `json:"agent_id"`
 	SessionID string `json:"session_id,omitempty"`
-	Limit     int    `json:"limit"` // limitcount
+	Limit     int    `json:"limit"` // limit count
 }
 
 // GetMessagesResponse getmessagerespond
@@ -112,23 +112,23 @@ type GetMessagesResponse struct {
 	Messages []MessageItem `json:"messages"`
 }
 
-// MessageItem message项（used forinitializeload，noincludeaudio）
+// MessageItem message item (used for initialize load, not include audio)
 type MessageItem struct {
 	MessageID  string            `json:"message_id"`
 	Role       string            `json:"role"` // user/assistant/tool/system
 	Content    string            `json:"content"`
-	ToolCallID string            `json:"tool_call_id,omitempty"` // Tool roleuse
-	ToolCalls  []schema.ToolCall `json:"tool_calls,omitempty"`   // Assistant roleuse
+	ToolCallID string            `json:"tool_call_id,omitempty"` // Tool role use
+	ToolCalls  []schema.ToolCall `json:"tool_calls,omitempty"`   // Assistant role use
 	CreatedAt  string            `json:"created_at"`
 }
 
-// GetMessages from Manager datalibrarygetmessage（used forinitializeload）
+// GetMessages from Manager database get message (used for initialize load)
 func (c *HistoryClient) GetMessages(ctx context.Context, req *GetMessagesRequest) (*GetMessagesResponse, error) {
 	if !c.enabled {
 		return nil, fmt.Errorf("history client is disabled")
 	}
 
-	// buildqueryparameter
+	// build query parameter
 	queryParams := map[string]string{
 		"device_id": req.DeviceID,
 		"agent_id":  req.AgentID,

@@ -1,28 +1,28 @@
 package domain
 
-// messagetypeconstant
+// message type constants
 const (
-	MessageTypeHello  = "hello"  // 握手message
-	MessageTypeAbort  = "abort"  // in止message
-	MessageTypeListen = "listen" // listenmessage
-	MessageTypeIot    = "iot"    // 物联网message
+	MessageTypeHello  = "hello"  // handshake message
+	MessageTypeAbort  = "abort"  // abort message
+	MessageTypeListen = "listen" // listen message
+	MessageTypeIot    = "iot"    // IoT message
 )
 
-// servermessagetypeconstant
+// server message type constants
 const (
-	ServerMessageTypeHello = "hello" // 握手message
-	ServerMessageTypeStt   = "stt"   // voice转text
-	ServerMessageTypeTts   = "tts"   // text转voice
-	ServerMessageTypeIot   = "iot"   // 物联网message
-	ServerMessageTypeLlm   = "llm"   // largelanguagemodel
-	ServerMessageTypeText  = "text"  // textmessage
+	ServerMessageTypeHello = "hello" // handshake message
+	ServerMessageTypeStt   = "stt"   // voice to text
+	ServerMessageTypeTts   = "tts"   // text to voice
+	ServerMessageTypeIot   = "iot"   // IoT message
+	ServerMessageTypeLlm   = "llm"   // large language model
+	ServerMessageTypeText  = "text"  // text message
 )
 
-// messagestateconstant
+// message state constants
 const (
-	MessageStateStart   = "start"   // startstate
-	MessageStateStop    = "stop"    // stopstate
-	MessageStateDetect  = "detect"  // detectstate
-	MessageStateAbort   = "abort"   // in止state
-	MessageStateSuccess = "success" // successfulstate
+	MessageStateStart   = "start"   // start state
+	MessageStateStop    = "stop"    // stop state
+	MessageStateDetect  = "detect"  // detect state
+	MessageStateAbort   = "abort"   // abort state
+	MessageStateSuccess = "success" // success state
 )

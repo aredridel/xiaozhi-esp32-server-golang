@@ -6,32 +6,32 @@ import (
 	"math"
 )
 
-// PCM16BytesToFloat32 will16bitPCMsmallendpoint字throttleconvertisfloat32slice（range-1.0~1.0）
+// PCM16BytesToFloat32 converts 16-bit PCM little-endian bytes to float32 slice (range -1.0~1.0)
 func PCM16BytesToFloat32(pcm []byte) []float32 {
 	n := len(pcm) / 2
 	out := make([]float32, n)
 	for i := 0; i < n; i++ {
-		// 取两个byte，按smallendpoint序转isint16
+		// take two bytes, convert to int16 using little-endian order
 		sample := int16(binary.LittleEndian.Uint16(pcm[i*2 : i*2+2]))
 		out[i] = float32(sample) / float32(math.MaxInt16)
 	}
 	return out
 }
 
-// float32ToPCMBytes will float32 arrayconvertis 16-bit PCM bytearray
+// float32ToPCMBytes converts float32 array to 16-bit PCM byte array
 func Float32ToPCMBytes(samples []float32, pcmBytes []byte) {
 	for i, sample := range samples {
-		// will float32 (-1.0 to 1.0) convertis int16 (-32768 to 32767)
+		// convert float32 (-1.0 to 1.0) to int16 (-32768 to 32767)
 		intSample := float32ToInt16(sample)
 
-		// smallendpoint序writebytearray
+		// write to byte array in little-endian order
 		binary.LittleEndian.PutUint16(pcmBytes[i*2:], uint16(intSample))
 	}
 
 	return
 }
 
-// Float32ToInt16 willfloat32valueconvertisint16value（range-1.0~1.0convertis-32768~32767）
+// Float32ToInt16 converts float32 value to int16 value (range -1.0~1.0 converts to -32768~32767)
 func float32ToInt16(sample float32) int16 {
 	if sample > 1.0 {
 		return 32767
@@ -42,7 +42,7 @@ func float32ToInt16(sample float32) int16 {
 	}
 }
 
-// Float32SliceToInt16Slice willfloat32sliceconvertisint16slice
+// Float32SliceToInt16Slice converts float32 slice to int16 slice
 func Float32SliceToInt16Slice(samples []float32) []int16 {
 	result := make([]int16, len(samples))
 	for i, sample := range samples {
@@ -51,7 +51,7 @@ func Float32SliceToInt16Slice(samples []float32) []int16 {
 	return result
 }
 
-// int16SliceToBytes willint16sliceconvertis[]byte（smallendpoint序）
+// int16SliceToBytes converts int16 slice to []byte (little-endian)
 func Int16SliceToBytes(samples []int16) []byte {
 	buf := new(bytes.Buffer)
 	for _, s := range samples {
@@ -79,7 +79,7 @@ func ResampleLinearFloat32(input []float32, inRate, outRate int) []float32 {
 	return output
 }
 
-// Float32SliceToBytes will float32 arrayconvertisbytearray（smallendpoint序，每个float32占4byte）
+// Float32SliceToBytes converts float32 array to byte array (little-endian, each float32 occupies 4 bytes)
 func Float32SliceToBytes(data []float32) []byte {
 	if len(data) == 0 {
 		return nil

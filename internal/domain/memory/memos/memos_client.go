@@ -20,7 +20,7 @@ const (
 	defaultTimeoutMS = 10000
 )
 
-// Client yes MemOS independent provider client-sideimplement。
+// Client is MemOS independent provider client implementation.
 type Client struct {
 	baseURL         string
 	apiKey          string
@@ -30,8 +30,8 @@ type Client struct {
 	searchThreshold float64
 }
 
-// GetWithConfig useconfiginitialize MemOS client-side。
-// actualrequest URL = base_url + fixedpath
+// GetWithConfig use config to initialize MemOS client.
+// actual request URL = base_url + fixed path
 func GetWithConfig(config map[string]interface{}) (*Client, error) {
 	if config == nil {
 		config = map[string]interface{}{}
@@ -45,7 +45,7 @@ func GetWithConfig(config map[string]interface{}) (*Client, error) {
 	searchThreshold := getFloat(config, "search_threshold", 0.5)
 
 	if strings.TrimSpace(baseURL) == "" {
-		return nil, fmt.Errorf("memos.base_url config缺失orisempty")
+		return nil, fmt.Errorf("memos.base_url config missing or is empty")
 	}
 	if searchTopK <= 0 {
 		searchTopK = 3
@@ -63,7 +63,7 @@ func GetWithConfig(config map[string]interface{}) (*Client, error) {
 		searchThreshold: searchThreshold,
 	}
 
-	log.Log().Infof("MemOS client-sideinitializesuccessful, base_url: %s", client.baseURL)
+	log.Log().Infof("MemOS client initialized successfully, base_url: %s", client.baseURL)
 	return client, nil
 }
 
@@ -146,7 +146,7 @@ func (c *Client) Search(ctx context.Context, agentID string, query string, topK 
 	payload["query"] = query
 	payload["memory_limit_number"] = topK
 	payload["relativity"] = c.searchThreshold
-	_ = timeRangeDays // documentationcurrentno time_range_days field，保留sign兼容
+	_ = timeRangeDays // Documentation currently has no time_range_days field, keep for compatibility
 	data, err := c.requestJSON(ctx, http.MethodPost, "/search/memory", payload)
 	if err != nil {
 		return "", fmt.Errorf("memos search failed: %w", err)
@@ -204,7 +204,7 @@ func (c *Client) newIdentityPayload(agentID string) (map[string]interface{}, err
 		"conversation_id": identity,
 	}
 
-	// agent_id at MemOS documentationinisoptionalfield，onlyathavevaluewhen传递
+	// agent_id is an optional field in MemOS documentation, only passed when it has a value
 	if identity != "" {
 		payload["agent_id"] = identity
 	}

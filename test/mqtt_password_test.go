@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	// 测试参数
+	// Test parameters
 	deviceId := "02:4A:7D:E3:89:BF"
 	clientId := "e3b0c442-98fc-4e1a-8c3d-6a5b6a5b6a5b"
 	ip := "1.202.193.194"

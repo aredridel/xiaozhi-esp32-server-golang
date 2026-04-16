@@ -13,7 +13,7 @@ import (
 )
 
 func HandleVllm(deviceId string, file []byte, text string) (string, error) {
-	//usedeviceIdcorrespondingvllm provider
+	// use deviceId corresponding vllm provider
 	provider := viper.GetString("vision.vllm.provider")
 	vllmConfig := viper.GetStringMap(fmt.Sprintf("vision.vllm.%s", provider))
 
@@ -21,12 +21,12 @@ func HandleVllm(deviceId string, file []byte, text string) (string, error) {
 
 	llmProvider, err := llm.GetLLMProvider(provider, vllmConfig)
 	if err != nil {
-		log.Errorf("getVLLM Providerfailed: %v", err)
+		log.Errorf("get VLLM Provider failed: %v", err)
 		return "", err
 	}
 	responseText, err := llmProvider.ResponseWithVllm(context.Background(), file, text, mimeType)
 	if err != nil {
-		log.Errorf("graph片recognize failed: %v", err)
+		log.Errorf("image recognize failed: %v", err)
 		return "", err
 	}
 

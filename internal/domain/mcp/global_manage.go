@@ -25,7 +25,7 @@ type MCPServerConfig struct {
 	Name         string            `json:"name" mapstructure:"name"`
 	Type         string            `json:"type" mapstructure:"type"`
 	Url          string            `json:"url" mapstructure:"url"`
-	SSEUrl       string            `json:"sse_url" mapstructure:"sse_url"` // toafter兼容 sse_url field
+	SSEUrl       string            `json:"sse_url" mapstructure:"sse_url"` // for backward compatibility sse_url field
 	Enabled      bool              `json:"enabled" mapstructure:"enabled"`
 	Provider     string            `json:"provider,omitempty" mapstructure:"provider"`
 	ServiceID    string            `json:"service_id,omitempty" mapstructure:"service_id"`
@@ -68,7 +68,7 @@ var (
 	once          sync.Once
 )
 
-// GetGlobalMCPManager getglobal MCP managersingleton
+// GetGlobalMCPManager get global MCP manager singleton
 func GetGlobalMCPManager() *GlobalMCPManager {
 	once.Do(func() {
 		ctx, cancel := context.WithCancel(context.Background())
@@ -89,9 +89,9 @@ func GetGlobalMCPManager() *GlobalMCPManager {
 	return globalManager
 }
 
-// Start startglobal MCP manager
+// Start start global MCP manager
 func (g *GlobalMCPManager) Start() error {
-	// 热更scenario：Stop after ctx alreadycancel，need重建以便restartaftermonitorandreconnectnormal
+	// Hot reload scenario: Stop after ctx already cancelled, need rebuild so that restart after monitor and reconnect normal
 	if g.ctx != nil && g.ctx.Err() != nil {
 		g.ctx, g.cancel = context.WithCancel(context.Background())
 		g.reconnectConf = ReconnectConfig{
@@ -100,52 +100,52 @@ func (g *GlobalMCPManager) Start() error {
 		}
 	}
 
-	// firstfirstinspectconfig
+	// first check config
 	CheckMCPConfig()
 
 	if !viper.GetBool("mcp.global.enabled") {
-		log.Info("global MCP manageralreadydisabled")
+		log.Info("global MCP manager already disabled")
 		return nil
 	}
 
 	var serverConfigs []MCPServerConfig
 	if err := viper.UnmarshalKey("mcp.global.servers", &serverConfigs); err != nil {
-		log.Errorf("parseMCPserverconfigfailed: %v", err)
-		return fmt.Errorf("parseMCPserverconfigfailed: %v", err)
+		log.Errorf("parse MCP server config failed: %v", err)
+		return fmt.Errorf("parse MCP server config failed: %v", err)
 	}
 
-	log.Infof("fromconfiginreadto %d 个MCPserverconfig", len(serverConfigs))
+	log.Infof("read %d MCP server config from config", len(serverConfigs))
 
-	// 详细record每个serverconfig
+	// detailed record each server config
 	for i, config := range serverConfigs {
-		log.Infof("MCPserver[%d]: Type=%s, Name=%s, Url=%s, SSEUrl=%s, Enabled=%v",
+		log.Infof("MCP server[%d]: Type=%s, Name=%s, Url=%s, SSEUrl=%s, Enabled=%v",
 			i+1, config.Type, config.Name, config.Url, config.SSEUrl, config.Enabled)
 	}
 
-	// join启useofserver
+	// connect enabled servers
 	connectedCount := 0
 	for _, config := range serverConfigs {
 		if config.Enabled {
 			if err := g.connectToServer(config); err != nil {
-				log.Errorf("jointoMCPserver %s failed: %v", config.Name, err)
+				log.Errorf("connect to MCP server %s failed: %v", config.Name, err)
 			} else {
 				connectedCount++
 			}
 		} else {
-			log.Infof("MCPserver %s alreadydisabled，skipjoin", config.Name)
+			log.Infof("MCP server %s already disabled, skip connect", config.Name)
 		}
 	}
 
-	log.Infof("successfuljoin %d 个MCPserver", connectedCount)
+	log.Infof("successfully connected %d MCP servers", connectedCount)
 
-	// startmonitorgoroutine
+	// start monitor goroutine
 	go g.monitorConnections()
 
-	log.Info("global MCP manageralreadystart")
+	log.Info("global MCP manager already started")
 	return nil
 }
 
-// Stop stopglobal MCP manager
+// Stop stop global MCP manager
 func (g *GlobalMCPManager) Stop() error {
 	g.cancel()
 
@@ -154,24 +154,24 @@ func (g *GlobalMCPManager) Stop() error {
 
 	for name, conn := range g.servers {
 		if err := conn.disconnect(); err != nil {
-			log.Errorf("disconnectMCPserver %s joinfailed: %v", name, err)
+			log.Errorf("disconnect MCP server %s connection failed: %v", name, err)
 		}
 	}
 
 	g.servers = make(map[string]*MCPServerConnection)
 	g.tools = make(map[string]tool.InvokableTool)
 
-	log.Info("global MCP manageralreadystop")
+	log.Info("global MCP manager already stopped")
 	return nil
 }
 
-// createFailedConnection createfailedofjoinobjectused foraftercontinuereconnect
+// createFailedConnection create failed connection object for later reconnect
 func (g *GlobalMCPManager) createFailedConnection(config MCPServerConfig) {
 	conn := &MCPServerConnection{
 		config:     config,
 		tools:      make(map[string]tool.InvokableTool),
 		connected:  false,
-		lastError:  fmt.Errorf("initializejoinfailed"),
+		lastError:  fmt.Errorf("initialize connection failed"),
 		retryCount: 0,
 	}
 
@@ -179,18 +179,18 @@ func (g *GlobalMCPManager) createFailedConnection(config MCPServerConfig) {
 	g.servers[config.Name] = conn
 	g.mu.Unlock()
 
-	log.Infof("alreadyisfailedofMCPservercreatejoinobject: %s", config.Name)
+	log.Infof("create connection object for failed MCP server: %s", config.Name)
 }
 
-// connectToServer jointoMCPserver
+// connectToServer connect to MCP server
 func (g *GlobalMCPManager) connectToServer(config MCPServerConfig) error {
-	// validateconfig
+	// validate config
 	if config.Name == "" {
-		return fmt.Errorf("MCPservernamecannot be empty")
+		return fmt.Errorf("MCP server name cannot be empty")
 	}
 
 	if !config.Enabled {
-		log.Infof("MCPserver %s alreadydisabled，skipjoin", config.Name)
+		log.Infof("MCP server %s already disabled, skip connect", config.Name)
 		return nil
 	}
 
@@ -198,7 +198,7 @@ func (g *GlobalMCPManager) connectToServer(config MCPServerConfig) error {
 	if endpointErr != nil {
 		return endpointErr
 	}
-	log.Infof("isjoinMCPserver: %s (URL: %s)", config.Name, endpoint)
+	log.Infof("connecting to MCP server: %s (URL: %s)", config.Name, endpoint)
 
 	conn := &MCPServerConnection{
 		config: config,
@@ -209,18 +209,18 @@ func (g *GlobalMCPManager) connectToServer(config MCPServerConfig) error {
 	g.servers[config.Name] = conn
 	g.mu.Unlock()
 
-	// jointoserver
+	// connect to server
 	if err := conn.connect(); err != nil {
-		return fmt.Errorf("joinMCPserverfailed: %v", err)
+		return fmt.Errorf("connect MCP server failed: %v", err)
 	}
 
-	log.Infof("alreadyjointoMCPserver: %s", config.Name)
+	log.Infof("already connected to MCP server: %s", config.Name)
 	return nil
 }
 
-// connect jointoMCPserver
+// connect connect to MCP server
 func (conn *MCPServerConnection) connect() error {
-	// usebackgroundcontext，nosettimeout，letSSEjoinlong期keep
+	// use background context, no timeout, let SSE connection long-term keep
 	ctx := context.Background()
 
 	transportInstance, endpoint, err := buildMCPTransport(conn.config)
@@ -228,22 +228,22 @@ func (conn *MCPServerConnection) connect() error {
 		return err
 	}
 
-	// use client.NewClient create MCP client-side
+	// use client.NewClient create MCP client
 	mcpClient := client.NewClient(transportInstance)
 
 	conn.client = mcpClient
 
-	log.Infof("startjoinMCPserver: %s, %s URL: %s", conn.config.Name, conn.config.Type, endpoint)
+	log.Infof("start connecting to MCP server: %s, %s URL: %s", conn.config.Name, conn.config.Type, endpoint)
 
-	// startclient-side
+	// start client
 	if err := conn.client.Start(ctx); err != nil {
-		log.Errorf("startMCPclient-sidefailed，server: %s, error: %v", conn.config.Name, err)
-		return fmt.Errorf("startclient-sidefailed: %v", err)
+		log.Errorf("start MCP client failed, server: %s, error: %v", conn.config.Name, err)
+		return fmt.Errorf("start client failed: %v", err)
 	}
 
-	log.Infof("MCPclient-sidestartsuccessful: %s", conn.config.Name)
+	log.Infof("MCP client start successful: %s", conn.config.Name)
 
-	// initializeclient-side
+	// initialize client
 	initRequest := mcp.InitializeRequest{
 		Params: mcp.InitializeParams{
 			ProtocolVersion: mcp.LATEST_PROTOCOL_VERSION,
@@ -257,19 +257,19 @@ func (conn *MCPServerConnection) connect() error {
 		},
 	}
 
-	log.Infof("isinitializeMCPserver: %s", conn.config.Name)
+	log.Infof("initializing MCP server: %s", conn.config.Name)
 	initResult, err := conn.client.Initialize(ctx, initRequest)
 	if err != nil {
-		log.Errorf("initializeMCPserverfailed，server: %s, error: %v", conn.config.Name, err)
-		return fmt.Errorf("initializefailed: %v", err)
+		log.Errorf("initialize MCP server failed, server: %s, error: %v", conn.config.Name, err)
+		return fmt.Errorf("initialize failed: %v", err)
 	}
 
-	log.Infof("MCPserverinitializesuccessful: %s, result: %+v", conn.config.Name, initResult)
+	log.Infof("MCP server initialize successful: %s, result: %+v", conn.config.Name, initResult)
 
-	// gettoollist
+	// get tool list
 	if err := conn.refreshTools(ctx); err != nil {
-		log.Errorf("gettoollistfailed: %v", err)
-		// nodirectreturnerror，becauseistoollistgetfailednoshouldpreventjoin建立
+		log.Errorf("get tool list failed: %v", err)
+		// don't return error directly, because tool list get failed should not prevent connection establishment
 	}
 
 	conn.mu.Lock()
@@ -278,7 +278,7 @@ func (conn *MCPServerConnection) connect() error {
 	conn.retryCount = 0
 	conn.mu.Unlock()
 
-	log.Infof("MCPserverjoin建立complete: %s", conn.config.Name)
+	log.Infof("MCP server connection establishment complete: %s", conn.config.Name)
 	return nil
 }
 
@@ -311,7 +311,7 @@ func endpointForConfig(config MCPServerConfig) (string, string, error) {
 		if strings.TrimSpace(config.Url) != "" {
 			return transportType, strings.TrimSpace(config.Url), nil
 		}
-		return "", "", fmt.Errorf("MCPserver %s MissingSSE URL", config.Name)
+		return "", "", fmt.Errorf("MCP server %s Missing SSE URL", config.Name)
 	case "streamablehttp":
 		if strings.TrimSpace(config.Url) != "" {
 			return transportType, strings.TrimSpace(config.Url), nil
@@ -319,9 +319,9 @@ func endpointForConfig(config MCPServerConfig) (string, string, error) {
 		if strings.TrimSpace(config.SSEUrl) != "" {
 			return transportType, strings.TrimSpace(config.SSEUrl), nil
 		}
-		return "", "", fmt.Errorf("MCPserver %s MissingStreamableHTTP URL", config.Name)
+		return "", "", fmt.Errorf("MCP server %s Missing StreamableHTTP URL", config.Name)
 	default:
-		return "", "", fmt.Errorf("MCPserver %s typeunsupported: %s", config.Name, config.Type)
+		return "", "", fmt.Errorf("MCP server %s type unsupported: %s", config.Name, config.Type)
 	}
 }
 
@@ -347,7 +347,7 @@ func buildMCPTransport(config MCPServerConfig) (transport.Interface, string, err
 		}
 		sseTransport, err := transport.NewSSE(endpoint, opts...)
 		if err != nil {
-			return nil, "", fmt.Errorf("createSSE传输layerfailed: %v", err)
+			return nil, "", fmt.Errorf("create SSE transport layer failed: %v", err)
 		}
 		return sseTransport, endpoint, nil
 	case "streamablehttp":
@@ -357,11 +357,11 @@ func buildMCPTransport(config MCPServerConfig) (transport.Interface, string, err
 		}
 		httpTransport, err := transport.NewStreamableHTTP(endpoint, opts...)
 		if err != nil {
-			return nil, "", fmt.Errorf("createStreamableHTTP传输layerfailed: %v", err)
+			return nil, "", fmt.Errorf("create StreamableHTTP transport layer failed: %v", err)
 		}
 		return httpTransport, endpoint, nil
 	default:
-		return nil, "", fmt.Errorf("unsupportedofMCP传输type: %s", transportType)
+		return nil, "", fmt.Errorf("unsupported MCP transport type: %s", transportType)
 	}
 }
 
@@ -399,13 +399,13 @@ func filterMCPToolsByAllowList(tools []mcp.Tool, allowedTools []string) []mcp.To
 	return filtered
 }
 
-// refreshTools refreshtoollist
+// refreshTools refresh tool list
 func (conn *MCPServerConnection) refreshTools(ctx context.Context) error {
-	// gettoollist
+	// get tool list
 	listRequest := mcp.ListToolsRequest{}
 	toolsResult, err := conn.client.ListTools(ctx, listRequest)
 	if err != nil {
-		return fmt.Errorf("gettoollistfailed: %v", err)
+		return fmt.Errorf("get tool list failed: %v", err)
 	}
 
 	conn.mu.Lock()
@@ -414,10 +414,10 @@ func (conn *MCPServerConnection) refreshTools(ctx context.Context) error {
 	tools := filterMCPToolsByAllowList(toolsResult.Tools, conn.config.AllowedTools)
 	conn.tools = ConvertMcpToolListToInvokableToolList(tools, conn.config.Name, conn.client)
 
-	// updateglobaltoollist
+	// update global tool list
 	globalManager.updateGlobalTools(conn.config.Name, conn.tools)
 
-	log.Infof("MCPserver %s toollistalreadyupdate，total %d 个tool", conn.config.Name, len(conn.tools))
+	log.Infof("MCP server %s tool list already updated, total %d tools", conn.config.Name, len(conn.tools))
 	return nil
 }
 
@@ -427,13 +427,13 @@ func ConvertMcpToolListToInvokableToolList(tools []mcp.Tool, serverName string, 
 
 		marshaledInputSchema, err := sonic.Marshal(tool.InputSchema)
 		if err != nil {
-			log.Errorf("convert mcp tool to invokeable tool err: %+v", err)
+			log.Errorf("convert mcp tool to invokable tool err: %+v", err)
 			continue
 		}
 		inputSchema := &openapi3.Schema{}
 		err = sonic.Unmarshal(marshaledInputSchema, inputSchema)
 		if err != nil {
-			log.Errorf("convert mcp tool to invokeable tool err: %+v", err)
+			log.Errorf("convert mcp tool to invokable tool err: %+v", err)
 			continue
 		}
 
@@ -451,15 +451,15 @@ func ConvertMcpToolListToInvokableToolList(tools []mcp.Tool, serverName string, 
 	return invokeTools
 }
 
-// disconnect disconnect join
+// disconnect disconnect connection
 func (conn *MCPServerConnection) disconnect() error {
 	conn.mu.Lock()
 	defer conn.mu.Unlock()
 
 	if conn.client != nil {
-		// closeclient-side
+		// close client
 		if err := conn.client.Close(); err != nil {
-			log.Errorf("closeMCPclient-sidefailed: %v", err)
+			log.Errorf("close MCP client failed: %v", err)
 		}
 		conn.client = nil
 	}
@@ -470,25 +470,25 @@ func (conn *MCPServerConnection) disconnect() error {
 	return nil
 }
 
-// updateGlobalTools updateglobaltoollist
+// updateGlobalTools update global tool list
 func (g *GlobalMCPManager) updateGlobalTools(serverName string, tools map[string]tool.InvokableTool) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	// removethisserverof旧tool
+	// remove this server's old tools
 	for name, mcpToolInterface := range g.tools {
 		if mt, ok := mcpToolInterface.(*McpTool); ok && mt.serverName == serverName {
 			delete(g.tools, name)
 		}
 	}
 
-	// add新tool
+	// add new tools
 	for name, mcpToolInterface := range tools {
 		g.tools[fmt.Sprintf("%s_%s", serverName, name)] = mcpToolInterface
 	}
 }
 
-// GetAllTools getallavailabletool
+// GetAllTools get all available tools
 func (g *GlobalMCPManager) GetAllTools() map[string]tool.InvokableTool {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
@@ -500,12 +500,12 @@ func (g *GlobalMCPManager) GetAllTools() map[string]tool.InvokableTool {
 	return result
 }
 
-// GetToolByName according tonamegettool
+// GetToolByName get tool by name
 func (g *GlobalMCPManager) GetToolByName(name string) (tool.InvokableTool, bool) {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
-	//allofserver
+	// all servers
 	for _, conn := range g.servers {
 		sname := fmt.Sprintf("%s_%s", conn.config.Name, name)
 		mcpToolInterface, exists := g.tools[sname]
@@ -564,7 +564,7 @@ func ReconnectServerByName(serverName string) (*client.Client, error) {
 	return GetGlobalMCPManager().reconnectServer(serverName)
 }
 
-// isSessionClosedError determine ifissession closederror
+// isSessionClosedError determine if is session closed error
 func isSessionClosedError(err error) bool {
 	if err == nil {
 		return false
@@ -572,9 +572,9 @@ func isSessionClosedError(err error) bool {
 	return strings.Contains(err.Error(), "session closed")
 }
 
-// monitorConnections monitorjoinstate
+// monitorConnections monitor connection state
 func (g *GlobalMCPManager) monitorConnections() {
-	pingTicker := time.NewTicker(20 * time.Second) // 每60secondpingatimes
+	pingTicker := time.NewTicker(20 * time.Second) // ping every 20 seconds
 	defer pingTicker.Stop()
 
 	for {
@@ -582,7 +582,7 @@ func (g *GlobalMCPManager) monitorConnections() {
 		case <-g.ctx.Done():
 			return
 		case <-pingTicker.C:
-			// executepingdetect
+			// execute ping detect
 			g.mu.RLock()
 			for name, conn := range g.servers {
 				go func(name string, conn *MCPServerConnection) {
@@ -590,17 +590,17 @@ func (g *GlobalMCPManager) monitorConnections() {
 					defer cancel()
 
 					if err := conn.ping(ctx); err != nil {
-						log.Warnf("MCPserver %s pingfailed，startreconnect: %v", name, err)
-						// pingfailedwhendirectmarkisdisconnectandtriggerreconnect
+						log.Warnf("MCP server %s ping failed, start reconnect: %v", name, err)
+						// when ping failed, directly mark as disconnected and trigger reconnect
 						conn.mu.Lock()
 						conn.connected = false
 						conn.lastError = err
 						conn.mu.Unlock()
 
-						// directtriggerreconnect
+						// directly trigger reconnect
 						go g.reconnectServer(name)
 					} else {
-						//log.Debugf("MCPserver %s pingsuccessful", name)
+						//log.Debugf("MCP server %s ping successful", name)
 					}
 				}(name, conn)
 			}
@@ -609,7 +609,7 @@ func (g *GlobalMCPManager) monitorConnections() {
 	}
 }
 
-// reconnectServer reconnectserverandreturnnewclient
+// reconnectServer reconnect server and return new client
 func (g *GlobalMCPManager) reconnectServer(serverName string) (*client.Client, error) {
 	g.mu.RLock()
 	var conn *MCPServerConnection
@@ -622,35 +622,35 @@ func (g *GlobalMCPManager) reconnectServer(serverName string) (*client.Client, e
 	g.mu.RUnlock()
 
 	if conn == nil {
-		return nil, fmt.Errorf("not找toserverjoin: %s", serverName)
+		return nil, fmt.Errorf("not found server connection: %s", serverName)
 	}
 
-	// disconnect join
+	// disconnect connection
 	if err := conn.disconnect(); err != nil {
-		log.Errorf("disconnect joinfailed: %v", err)
+		log.Errorf("disconnect connection failed: %v", err)
 	}
 
-	// waitasmall段timeensureresourcerelease
+	// wait a short time to ensure resource release
 	time.Sleep(time.Second)
 
-	// rejoin
+	// reconnect
 	if err := conn.connect(); err != nil {
-		return nil, fmt.Errorf("reconnectfailed: %v", err)
+		return nil, fmt.Errorf("reconnect failed: %v", err)
 	}
 
 	return conn.client, nil
 }
 
-// ping sendpingrequestdetectjoinstate
+// ping send ping request to detect connection state
 func (conn *MCPServerConnection) ping(ctx context.Context) error {
 	if conn.client == nil {
-		return fmt.Errorf("clientnot initialized")
+		return fmt.Errorf("client not initialized")
 	}
 
-	// useemptyofPingrequestasisping
+	// use empty Ping request as ping
 	err := conn.client.Ping(ctx)
 	if err != nil {
-		return fmt.Errorf("pingfailed: %v", err)
+		return fmt.Errorf("ping failed: %v", err)
 	}
 
 	conn.mu.Lock()

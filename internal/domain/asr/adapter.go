@@ -9,12 +9,12 @@ import (
 	log "xiaozhi-esp32-server-golang/logger"
 )
 
-// FunasrAdapter 适配 funasr packageto asr interface
+// FunasrAdapter adapter for funasr package to asr interface
 type FunasrAdapter struct {
 	engine *funasr.Funasr
 }
 
-// NewFunasrAdapter create anew FunASR adapter
+// NewFunasrAdapter create a new FunASR adapter
 func NewFunasrAdapter(config map[string]interface{}) (AsrProvider, error) {
 	// create FunasrConfig config
 	funasrConfig := funasr.FunasrConfig{
@@ -29,7 +29,7 @@ func NewFunasrAdapter(config map[string]interface{}) (AsrProvider, error) {
 
 	log.Log().Infof("funasr config: %+v", config)
 
-	// from map ingetconfig项
+	// get config items from map
 	if host, ok := config["host"].(string); ok && host != "" {
 		funasrConfig.Host = host
 	}
@@ -67,7 +67,7 @@ func NewFunasrAdapter(config map[string]interface{}) (AsrProvider, error) {
 		funasrConfig.AutoEnd = autoEnd
 	}
 
-	// createFunASR引擎
+	// create FunASR engine
 	engine, err := funasr.NewFunasr(funasrConfig)
 	if err != nil {
 		return nil, err
@@ -80,9 +80,9 @@ func (a *FunasrAdapter) Process(pcmData []float32) (string, error) {
 	return a.engine.Process(pcmData)
 }
 
-// StreamingRecognize implementstreaming recognizeinterface
+// StreamingRecognize implement streaming recognize interface
 func (a *FunasrAdapter) StreamingRecognize(ctx context.Context, audioStream <-chan []float32) (chan types.StreamingResult, error) {
-	// callfunasrpackageofStreamingRecognizemethod
+	// call funasr package StreamingRecognize method
 	resultChan, err := a.engine.StreamingRecognize(ctx, audioStream)
 	if err != nil {
 		return nil, err
@@ -91,12 +91,12 @@ func (a *FunasrAdapter) StreamingRecognize(ctx context.Context, audioStream <-ch
 	return resultChan, nil
 }
 
-// Close closeresource（nostate Provider，noneedclose）
+// Close close resource (no state Provider, no need close)
 func (a *FunasrAdapter) Close() error {
 	return nil
 }
 
-// IsValid inspectresourcewhethervalid
+// IsValid inspect resource whether valid
 func (a *FunasrAdapter) IsValid() bool {
 	return a != nil && a.engine != nil
 }

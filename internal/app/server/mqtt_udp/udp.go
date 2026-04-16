@@ -15,23 +15,23 @@ const (
 	UdpSessionStatusClosed = "closed"
 )
 
-// Session indicateaUDPsession
+// Session indicates a UDP session
 type UdpSession struct {
 	ID          string
-	Conn        *net.UDPConn //udp conn
+	Conn        *net.UDPConn // udp conn
 	ConnId      string
 	ClientId    string
 	DeviceId    string
-	AesKey      [16]byte // random32bit
-	Nonce       [8]byte  // storeoriginalnoncetemplate 16bit
+	AesKey      [16]byte // random 16 bytes
+	Nonce       [8]byte  // store original nonce template 8 bytes
 	CreatedAt   time.Time
 	LastActive  time.Time
-	RemoteAddr  *net.UDPAddr //remote addr
+	RemoteAddr  *net.UDPAddr // remote addr
 	LocalSeq    uint32
 	Block       cipher.Block
 	RemoteSeq   uint32
-	RecvChannel chan []byte //sendofaudio data
-	SendChannel chan []byte //receiveofaudio data
+	RecvChannel chan []byte // receive audio data
+	SendChannel chan []byte // send audio data
 	Status      string
 	Lock        sync.Mutex
 }
@@ -87,22 +87,22 @@ func (s *UdpSession) DrainPendingAudio() int {
 	}
 }
 
-// decrypt decryptdata
+// decrypt decrypt data
 func (s *UdpSession) Decrypt(data []byte) ([]byte, error) {
-	// detachnonceand密文
-	nonce := data[:16] // use16bytenonce
+	// detach nonce and ciphertext
+	nonce := data[:16] // use 16 byte nonce
 	ciphertext := data[16:]
 
-	// extract序列号
+	// extract sequence number
 	seqNum := binary.BigEndian.Uint32(data[12:16])
 
-	// inspect序列号
+	// inspect sequence number
 	/*if seqNum < s.RemoteSeq {
-		return nil, fmt.Errorf("序列号expire: got %d, expected >= %d", seqNum, s.RemoteSeq)
+		return nil, fmt.Errorf("sequence number expired: got %d, expected >= %d", seqNum, s.RemoteSeq)
 	}*/
 	s.RemoteSeq = seqNum
 
-	// decryptdata
+	// decrypt data
 	stream := cipher.NewCTR(s.Block, nonce)
 	decrypted := make([]byte, len(ciphertext))
 	stream.XORKeyStream(decrypted, ciphertext)
@@ -110,30 +110,30 @@ func (s *UdpSession) Decrypt(data []byte) ([]byte, error) {
 	return decrypted, nil
 }
 
-// encrypt encryptdata
+// encrypt encrypt data
 func (s *UdpSession) Encrypt(data []byte) ([]byte, error) {
-	// 预dispatchmemory，avoid扩容
+	// pre-allocate memory, avoid expansion
 	encrypted := make([]byte, 16+len(data))
 
-	// buildnonce (16byte)
-	encrypted[0] = 0x01                                          // packagetype
-	binary.BigEndian.PutUint16(encrypted[2:], uint16(len(data))) // datalength
-	copy(encrypted[4:12], s.Nonce[:])                            // 8bytenonce
+	// build nonce (16 byte)
+	encrypted[0] = 0x01                                          // package type
+	binary.BigEndian.PutUint16(encrypted[2:], uint16(len(data))) // data length
+	copy(encrypted[4:12], s.Nonce[:])                            // 8 byte nonce
 	s.LocalSeq++
-	binary.BigEndian.PutUint32(encrypted[12:], s.LocalSeq) // 序列号
+	binary.BigEndian.PutUint32(encrypted[12:], s.LocalSeq) // sequence number
 
-	// encryptdata
-	stream := cipher.NewCTR(s.Block, encrypted[:16]) // use16byteasisIV
+	// encrypt data
+	stream := cipher.NewCTR(s.Block, encrypted[:16]) // use 16 byte as IV
 	stream.XORKeyStream(encrypted[16:], data)
 
 	return encrypted, nil
 }
 
 func (s *UdpSession) GetAesKeyAndNonce() (string, string) {
-	//process
+	// process
 	strAesKey := hex.EncodeToString(s.AesKey[:])
 
-	// construct fullNonce: before缀2byte0100 + length2byte0000 + realnonce(8byte) + seq(4byte00000000)
+	// construct fullNonce: prefix 2 bytes 0100 + length 2 bytes 0000 + real nonce (8 bytes) + seq (4 bytes 00000000)
 	prefix := []byte{0x01, 0x00}
 	length := []byte{0x00, 0x00}
 	seq := []byte{0x00, 0x00, 0x00, 0x00}
@@ -157,7 +157,7 @@ func (s *UdpSession) RecvData(data []byte) (bool, error) {
 	}
 }
 
-// SendAudioData sendaudio data
+// SendAudioData send audio data
 func (s *UdpSession) SendAudioData(data []byte) (bool, error) {
 	s.Lock.Lock()
 	defer s.Lock.Unlock()

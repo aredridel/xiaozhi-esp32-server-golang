@@ -13,7 +13,7 @@ import (
 
 func main() {
 	// Parse command line arguments
-	text := flag.String("text", "真正的危险不是计算机开始像人一样思考，而是人开始像计算机一样思考。计算机只是可以帮我们处理一些简单事务。", "Text to synthesize")
+	text := flag.String("text", "The real danger is not that computers will begin to think like humans, but that humans will begin to think like computers. Computers can only help us handle some simple tasks.", "Text to synthesize")
 	outputFile := flag.String("output", "output.mp3", "Output audio file name")
 	apiKey := flag.String("api_key", "", "Minimax API Key (if not provided, will be read from MINIMAX_API_KEY environment variable)")
 	model := flag.String("model", "speech-2.8-hd", "Model name")

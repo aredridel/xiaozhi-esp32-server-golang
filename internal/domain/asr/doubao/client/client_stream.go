@@ -29,10 +29,10 @@ type AsrWsClient struct {
 	requestOptions request.FullClientRequestOptions
 	mu             sync.RWMutex // Protects connect from concurrent access
 
-	// delayjoinrelevantfield
-	connectOnce  sync.Once     // ensurejoinonly建立atimes
-	connectReady chan struct{} // notifyreceive goroutine joinalready建立
-	connectErr   error         // join建立whenoferror
+	// delayconnectionrelevantfield
+	connectOnce  sync.Once     // ensureconnectiononlyestablishatimes
+	connectReady chan struct{} // notifyreceive goroutine connectionalreadyestablish
+	connectErr   error         // connectionestablishwhenerror
 	connectErrMu sync.Mutex    // protected connectErr
 }
 
@@ -104,7 +104,7 @@ func (c *AsrWsClient) CreateConnection(ctx context.Context) error {
 			logID = resp.Header.Get("x-tt-logid")
 		}
 	}
-	log.Debugf("%s websocket join建立successful: connect_id=%s, logid=%s", c.logPrefix(), c.connectID, logID)
+	log.Debugf("%s websocket connectionestablishsuccessful: connect_id=%s, logid=%s", c.logPrefix(), c.connectID, logID)
 	c.mu.Lock()
 	c.connect = conn
 	c.mu.Unlock()
@@ -136,27 +136,27 @@ func (c *AsrWsClient) SendFullClientRequest() error {
 	return nil
 }
 
-// ensureConnection ensurejoinalready建立（delayjoin，带retrymechanism）
+// ensureConnection ensureconnectionalreadyestablish（delayconnection，withretrymechanism）
 func (c *AsrWsClient) ensureConnection(ctx context.Context) error {
 	var err error
 	c.connectOnce.Do(func() {
-		log.Debugf("%s delay建立join：receiventhaaudiopackage，start建立join", c.logPrefix())
+		log.Debugf("%s delayestablishconnection：receiventhaudiopackage，startestablishconnection", c.logPrefix())
 
 		// retryconfig
 		const (
-			maxRetries = 3                      // maximumretrytimescount（总totaltry4times：initial1times + retry3times）
+			maxRetries = 3                      // maximumretrytimescount（totaltotaltry4times：initial1times + retry3times）
 			retryDelay = 500 * time.Millisecond // retrydelay
 		)
 
 		for attempt := 1; attempt <= maxRetries+1; attempt++ {
-			// try建立join
+			// tryestablishconnection
 			err = c.CreateConnection(ctx)
 			if err != nil {
 				if attempt <= maxRetries {
-					log.Warnf("%s delay建立joinfailed(nth%dtimes): %v，%vafterretry", c.logPrefix(), attempt, err, retryDelay)
+					log.Warnf("%s delayestablishconnectionfailed(nth%dtimes): %v, %vafterretry", c.logPrefix(), attempt, err, retryDelay)
 					select {
 					case <-ctx.Done():
-						err = fmt.Errorf("join建立becancel: %w", ctx.Err())
+						err = fmt.Errorf("connectionestablishbecancel: %w", ctx.Err())
 						c.connectErrMu.Lock()
 						c.connectErr = err
 						c.connectErrMu.Unlock()
@@ -166,8 +166,8 @@ func (c *AsrWsClient) ensureConnection(ctx context.Context) error {
 					}
 					continue
 				} else {
-					// 最afteratimesretryfailed
-					log.Errorf("%s delay建立joinfailed(nth%dtimes，alreadyreachmaximumretrytimescount): %v", c.logPrefix(), attempt, err)
+					// finalatimesretryfailed
+					log.Errorf("%s delayestablishconnectionfailed(nth%dtimes, alreadyreachmaximumretrytimescount): %v", c.logPrefix(), attempt, err)
 					c.connectErrMu.Lock()
 					c.connectErr = err
 					c.connectErrMu.Unlock()
@@ -175,18 +175,18 @@ func (c *AsrWsClient) ensureConnection(ctx context.Context) error {
 				}
 			}
 
-			// join建立successful，sendinitializerequest
+			// connectionestablishsuccessful，sendinitializerequest
 			err = c.SendFullClientRequest()
 			if err != nil {
-				// sendinitializerequestfailed，closejoinandretry
+				// sendinitializerequestfailed，closeconnectionandretry
 				log.Warnf("%s sendinitializerequestfailed(nth%dtimes): %v", c.logPrefix(), attempt, err)
 				c.Close()
 
 				if attempt <= maxRetries {
-					log.Warnf("%s %vafterretry建立join", c.logPrefix(), retryDelay)
+					log.Warnf("%s %vafterretryestablishconnection", c.logPrefix(), retryDelay)
 					select {
 					case <-ctx.Done():
-						err = fmt.Errorf("join建立becancel: %w", ctx.Err())
+						err = fmt.Errorf("connectionestablishbecancel: %w", ctx.Err())
 						c.connectErrMu.Lock()
 						c.connectErr = err
 						c.connectErrMu.Unlock()
@@ -196,8 +196,8 @@ func (c *AsrWsClient) ensureConnection(ctx context.Context) error {
 					}
 					continue
 				} else {
-					// 最afteratimesretryfailed
-					log.Errorf("%s sendinitializerequestfailed(nth%dtimes，alreadyreachmaximumretrytimescount): %v", c.logPrefix(), attempt, err)
+					// finalatimesretryfailed
+					log.Errorf("%s sendinitializerequestfailed(nth%dtimes, alreadyreachmaximumretrytimescount): %v", c.logPrefix(), attempt, err)
 					c.connectErrMu.Lock()
 					c.connectErr = err
 					c.connectErrMu.Unlock()
@@ -205,13 +205,13 @@ func (c *AsrWsClient) ensureConnection(ctx context.Context) error {
 				}
 			}
 
-			// joinandinitializearesuccessful
+			// connectionandinitializearesuccessful
 			if attempt > 1 {
-				log.Infof("%s delay建立joinsuccessful(nth%dtimestry)", c.logPrefix(), attempt)
+				log.Infof("%s delayestablishconnectionsuccessful(nth%dtimestry)", c.logPrefix(), attempt)
 			} else {
-				log.Debugf("%s delay建立joinsuccessful", c.logPrefix())
+				log.Debugf("%s delayestablishconnectionsuccessful", c.logPrefix())
 			}
-			// notifyreceive goroutine joinalready建立
+			// notifyreceive goroutine connectionalreadyestablish
 			close(c.connectReady)
 			return
 		}
@@ -267,28 +267,28 @@ func (c *AsrWsClient) SendMessages(ctx context.Context, audioStream <-chan []flo
 			if !ok {
 				exitReason = "audio_stream_closed"
 				log.Debugf("%s sendMessages audioStream closed", c.logPrefix())
-				// ifjoinnot建立（silencesituation），directreturn
+				// ifconnectionnotestablish（silencesituation），directreturn
 				c.mu.RLock()
 				conn := c.connect
 				c.mu.RUnlock()
 				if conn == nil {
-					log.Debugf("%s audioStream closeandjoinnot建立，directreturn（silencesituation）", c.logPrefix())
+					log.Debugf("%s audioStream closeandconnectionnotestablish, directreturn（silencesituation）", c.logPrefix())
 					return nil
 				}
-				// joinalready建立，sendendmessage
+				// connectionalreadyestablish，sendendmessage
 				endMessage := request.NewAudioOnlyRequest(-c.seq, []byte{})
 				messageChan <- endMessage
 				log.Debugf("%s sendendaudiopackage: seq=%d", c.logPrefix(), -c.seq)
 				return nil
 			}
 
-			// receiventhaaudiopackagewhen，建立join
+			// receiventhaudiopackagewhen，establishconnection
 			if firstPacket {
 				firstPacket = false
 				err := c.ensureConnection(ctx)
 				if err != nil {
 					exitReason = "ensure_connection_failed"
-					log.Errorf("%s 建立joinfailed: %v", c.logPrefix(), err)
+					log.Errorf("%s establishconnectionfailed: %v", c.logPrefix(), err)
 					return fmt.Errorf("ensure connection err: %w", err)
 				}
 			}
@@ -367,11 +367,11 @@ func (c *AsrWsClient) recvMessages(ctx context.Context, resChan chan<- *response
 		case resChan <- resp:
 		}
 		if resp.IsLastPackage {
-			log.Debugf("%s receive最afterarespondpackage，stopreceive: recv_count=%d", c.logPrefix(), recvCount)
+			log.Debugf("%s receivefinalaresponsepackage，stopreceive: recv_count=%d", c.logPrefix(), recvCount)
 			return
 		}
 		if resp.Code != 0 {
-			log.Warnf("%s respondpackagereturnerror码，notifysend goroutinestop: recv_count=%d, code=%d", c.logPrefix(), recvCount, resp.Code)
+			log.Warnf("%s responsepackagereturnerrorcode, notifysend goroutinestop: recv_count=%d, code=%d", c.logPrefix(), recvCount, resp.Code)
 			close(stopChan)
 			return
 		}
@@ -380,7 +380,7 @@ func (c *AsrWsClient) recvMessages(ctx context.Context, resChan chan<- *response
 
 func (c *AsrWsClient) StartAudioStream(ctx context.Context, audioStream <-chan []float32, resChan chan<- *response.AsrResponse) error {
 	stopChan := make(chan struct{})
-	sendDoneChan := make(chan error, 1) // sendcompletenotify（nilindicatenormalcomplete，errorindicateout错）
+	sendDoneChan := make(chan error, 1) // sendcompletenotify（nilindicatenormalcomplete，errorindicateerror）
 	log.Debugf("%s StartAudioStream begin", c.logPrefix())
 
 	// startsend goroutine
@@ -390,30 +390,30 @@ func (c *AsrWsClient) StartAudioStream(ctx context.Context, audioStream <-chan [
 		sendDoneChan <- err
 	}()
 
-	// waitjoin建立orsendcomplete
+	// waitconnectestablishorsendcomplete
 	select {
 	case <-ctx.Done():
 		log.Debugf("%s StartAudioStream context done before connect", c.logPrefix())
 		return fmt.Errorf("start audio stream context done")
 	case <-c.connectReady:
-		// joinalready建立，startreceive goroutine
-		log.Debugf("%s joinalready建立，startreceive goroutine", c.logPrefix())
+		// connectionalreadyestablish，startreceive goroutine
+		log.Debugf("%s connectionalreadyestablish, startreceive goroutine", c.logPrefix())
 		c.recvMessages(ctx, resChan, stopChan)
 		return nil
 	case err := <-sendDoneChan:
-		// sendcomplete（mayyesnormalcompleteorout错）
+		// sendcomplete（maybenormalcompleteorerror）
 		if err != nil {
-			// sendpast程inout错
+			// sendprocessinerror
 			log.Errorf("%s sendaudio streamfailed: %v", c.logPrefix(), err)
 			return err
 		}
-		// check ifyessilencesituation（joinnot建立）
+		// check ifsilencesituation（connectionnotestablish）
 		c.mu.RLock()
 		conn := c.connect
 		c.mu.RUnlock()
 		if conn == nil {
-			// silencesituation：audioStream closebutjoinnot建立
-			log.Debugf("%s silencesituation：joinnot建立，sendemptyresult", c.logPrefix())
+			// silencesituation: audioStream closebutconnectionnotestablish
+			log.Debugf("%s silencesituation: connectionnotestablish, sendemptyresult", c.logPrefix())
 			payload := &response.AsrResponsePayload{}
 			payload.Result.Text = ""
 			resChan <- &response.AsrResponse{
@@ -423,8 +423,8 @@ func (c *AsrWsClient) StartAudioStream(ctx context.Context, audioStream <-chan [
 			}
 			return nil
 		}
-		// joinalready建立，startreceive goroutine（processremainingofrespond）
-		log.Debugf("%s SendMessages alreadyend，startreceiveremainingrespond", c.logPrefix())
+		// connectionalreadyestablish, startreceive goroutine(processremainingofresponse)
+		log.Debugf("%s SendMessages alreadyend, startreceiveremainingresponse", c.logPrefix())
 		c.recvMessages(ctx, resChan, stopChan)
 		return nil
 	}

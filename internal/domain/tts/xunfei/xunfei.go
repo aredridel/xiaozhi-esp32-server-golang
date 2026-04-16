@@ -152,7 +152,7 @@ func NewXunfeiTTSProvider(config map[string]interface{}) *XunfeiTTSProvider {
 
 	aue, expectedPayloadLen, err := mapXunfeiAudioEncoding(provider.AudioEncoding, provider.SampleRate)
 	if err != nil {
-		log.Warnf("initialize xunfei TTS configfailed，回退to raw/16k: %v", err)
+		log.Warnf("initialize xunfei TTS config failed, fallback to raw/16k: %v", err)
 		provider.AudioEncoding = defaultXunfeiAudioEncoding
 		provider.SampleRate = defaultXunfeiSampleRate
 		aue = "raw"
@@ -175,7 +175,7 @@ func (p *XunfeiTTSProvider) TextToSpeech(ctx context.Context, text string, sampl
 		audioFrames = append(audioFrames, frame)
 	}
 	if len(audioFrames) == 0 {
-		return nil, fmt.Errorf("xunfei TTS returnaudioisempty")
+		return nil, fmt.Errorf("xunfei TTS return audio is empty")
 	}
 	return audioFrames, nil
 }
@@ -204,7 +204,7 @@ func (p *XunfeiTTSProvider) TextToSpeechStream(ctx context.Context, text string,
 
 	go func() {
 		if err := p.streamSynthesis(ctx, text, targetSampleRate, targetFrameDuration, startTs, outputChan); err != nil && ctx.Err() == nil {
-			log.Errorf("xunfei TTS streaming合成failed: %v", err)
+			log.Errorf("xunfei TTS streaming synthesis failed: %v", err)
 		}
 	}()
 
@@ -249,7 +249,7 @@ func (p *XunfeiTTSProvider) streamSynthesis(ctx context.Context, text string, ta
 		_ = pipeReader.Close()
 		_ = pipeWriter.Close()
 		close(outputChan)
-		return fmt.Errorf("create xunfei audio decoderfailed: %v", err)
+		return fmt.Errorf("create xunfei audio decoder failed: %v", err)
 	}
 	decoder.WithFormat(beep.Format{
 		SampleRate:  beep.SampleRate(p.SampleRate),
@@ -260,7 +260,7 @@ func (p *XunfeiTTSProvider) streamSynthesis(ctx context.Context, text string, ta
 	go func() {
 		defer close(decoderDone)
 		if err := decoder.Run(startTs); err != nil && ctx.Err() == nil {
-			log.Errorf("xunfei audiodecodefailed: %v", err)
+			log.Errorf("xunfei audio decode failed: %v", err)
 		}
 	}()
 
@@ -279,7 +279,7 @@ func (p *XunfeiTTSProvider) streamSynthesis(ctx context.Context, text string, ta
 	<-decoderDone
 
 	if streamErr == nil && ctx.Err() == nil {
-		log.Infof("xunfei TTStime consumption: from input togetaudio dataendtime consumption: %d ms", time.Now().UnixMilli()-startTs)
+		log.Infof("xunfei TTS time consumption: from input to get audio data end time consumption: %d ms", time.Now().UnixMilli()-startTs)
 	}
 
 	return streamErr
@@ -309,11 +309,11 @@ func (p *XunfeiTTSProvider) sendSynthesisRequest(conn *websocket.Conn, text stri
 
 	payload, err := json.Marshal(reqBody)
 	if err != nil {
-		return fmt.Errorf("serialize xunfei requestfailed: %v", err)
+		return fmt.Errorf("serialize xunfei request failed: %v", err)
 	}
 
 	if err := conn.WriteMessage(websocket.TextMessage, payload); err != nil {
-		return fmt.Errorf("send xunfei requestfailed: %v", err)
+		return fmt.Errorf("send xunfei request failed: %v", err)
 	}
 	return nil
 }
@@ -335,7 +335,7 @@ func (p *XunfeiTTSProvider) readSynthesisResponse(ctx context.Context, conn *web
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
-			return fmt.Errorf("read xunfei WebSocket messagefailed: %v", err)
+			return fmt.Errorf("read xunfei WebSocket message failed: %v", err)
 		}
 		if messageType != websocket.TextMessage {
 			continue
@@ -343,10 +343,10 @@ func (p *XunfeiTTSProvider) readSynthesisResponse(ctx context.Context, conn *web
 
 		var resp xunfeiResponse
 		if err := json.Unmarshal(message, &resp); err != nil {
-			return fmt.Errorf("parse xunfei respondfailed: %v, body=%s", err, previewString(string(message), 300))
+			return fmt.Errorf("parse xunfei respond failed: %v, body=%s", err, previewString(string(message), 300))
 		}
 		if resp.Code != 0 {
-			return fmt.Errorf("xunfei TTSerror [%d]: %s", resp.Code, strings.TrimSpace(resp.Message))
+			return fmt.Errorf("xunfei TTS error [%d]: %s", resp.Code, strings.TrimSpace(resp.Message))
 		}
 		if resp.Data == nil {
 			continue
@@ -361,16 +361,16 @@ func (p *XunfeiTTSProvider) readSynthesisResponse(ctx context.Context, conn *web
 
 			if p.AudioEncoding == "raw" {
 				if _, err := pipeWriter.Write(chunk); err != nil {
-					return fmt.Errorf("write xunfei PCM datafailed: %v", err)
+					return fmt.Errorf("write xunfei PCM data failed: %v", err)
 				}
 			} else {
 				frames, err := p.decodeXunfeiOpusFrames(chunk)
 				if err != nil {
-					return fmt.Errorf("parse xunfei Opus datafailed: %v", err)
+					return fmt.Errorf("parse xunfei Opus data failed: %v", err)
 				}
 				for _, frame := range frames {
 					if err := util.WriteLengthPrefixedFrame(pipeWriter, frame); err != nil {
-						return fmt.Errorf("write Opus frametoaudiochainfailed: %v", err)
+						return fmt.Errorf("write Opus frame to audio chain failed: %v", err)
 					}
 				}
 			}
@@ -402,7 +402,7 @@ func (p *XunfeiTTSProvider) decodeXunfeiOpusFrames(chunk []byte) ([][]byte, erro
 				copy(frame, chunk[offset:])
 				return [][]byte{frame}, nil
 			}
-			return nil, fmt.Errorf("remainingdatano足以readframeheader: remain=%d", len(chunk)-offset)
+			return nil, fmt.Errorf("remaining data not enough to read frame header: remain=%d", len(chunk)-offset)
 		}
 
 		payloadLen, ok := selectXunfeiPayloadLength(chunk[offset:offset+2], len(chunk)-offset-2, p.ExpectedOpusPayloadLen)
@@ -416,13 +416,13 @@ func (p *XunfeiTTSProvider) decodeXunfeiOpusFrames(chunk []byte) ([][]byte, erro
 			if headerEnd > len(chunk) {
 				headerEnd = len(chunk)
 			}
-			return nil, fmt.Errorf("no法recognizeof Opus framelengthheader: %v", chunk[offset:headerEnd])
+			return nil, fmt.Errorf("no way recognize of Opus frame length header: %v", chunk[offset:headerEnd])
 		}
 
 		start := offset + 2
 		end := start + payloadLen
 		if end > len(chunk) {
-			return nil, fmt.Errorf("Opus framelengthout of bounds: offset=%d payload=%d total=%d", offset, payloadLen, len(chunk))
+			return nil, fmt.Errorf("Opus frame length out of bounds: offset=%d payload=%d total=%d", offset, payloadLen, len(chunk))
 		}
 
 		frame := make([]byte, payloadLen)
@@ -432,7 +432,7 @@ func (p *XunfeiTTSProvider) decodeXunfeiOpusFrames(chunk []byte) ([][]byte, erro
 	}
 
 	if len(frames) == 0 {
-		return nil, fmt.Errorf("notparseout任何 Opus frame")
+		return nil, fmt.Errorf("not parse out any Opus frame")
 	}
 	return frames, nil
 }
@@ -480,7 +480,7 @@ func (p *XunfeiTTSProvider) dial(ctx context.Context) (*websocket.Conn, error) {
 	if err != nil {
 		if resp != nil {
 			body, _ := io.ReadAll(resp.Body)
-			return nil, fmt.Errorf("join xunfei WebSocket failed，state码: %d, respond: %s, err: %v", resp.StatusCode, string(body), err)
+			return nil, fmt.Errorf("join xunfei WebSocket failed, state code: %d, respond: %s, err: %v", resp.StatusCode, string(body), err)
 		}
 		return nil, fmt.Errorf("join xunfei WebSocket failed: %v", err)
 	}
@@ -490,7 +490,7 @@ func (p *XunfeiTTSProvider) dial(ctx context.Context) (*websocket.Conn, error) {
 func (p *XunfeiTTSProvider) buildSignedURL() (string, error) {
 	parsed, err := url.Parse(p.WSURL)
 	if err != nil {
-		return "", fmt.Errorf("invalidof xunfei ws_url: %v", err)
+		return "", fmt.Errorf("invalid of xunfei ws_url: %v", err)
 	}
 
 	host := parsed.Host
@@ -551,7 +551,7 @@ func (p *XunfeiTTSProvider) SetVoice(voiceConfig map[string]interface{}) error {
 		p.Voice = strings.TrimSpace(voice)
 		return nil
 	}
-	return fmt.Errorf("invalidofvoiceconfig: Missing voice")
+	return fmt.Errorf("invalid of voice config: Missing voice")
 }
 
 func (p *XunfeiTTSProvider) Close() error {
@@ -566,7 +566,7 @@ func mapXunfeiAudioEncoding(audioEncoding string, sampleRate int) (string, int, 
 	switch strings.ToLower(strings.TrimSpace(audioEncoding)) {
 	case "", "raw":
 		if sampleRate != 8000 && sampleRate != 16000 {
-			return "", 0, fmt.Errorf("xunfei raw onlysupport 8000/16000 sampling率，current: %d", sampleRate)
+			return "", 0, fmt.Errorf("xunfei raw only support 8000/16000 sampling rate, current: %d", sampleRate)
 		}
 		return "raw", 0, nil
 	case "opus":
@@ -576,10 +576,10 @@ func mapXunfeiAudioEncoding(audioEncoding string, sampleRate int) (string, int, 
 		case 16000:
 			return "opus-wb", 40, nil
 		default:
-			return "", 0, fmt.Errorf("xunfei opus onlysupport 8000/16000 sampling率，current: %d", sampleRate)
+			return "", 0, fmt.Errorf("xunfei opus only support 8000/16000 sampling rate, current: %d", sampleRate)
 		}
 	default:
-		return "", 0, fmt.Errorf("unsupportedof xunfei audio_encoding: %s", audioEncoding)
+		return "", 0, fmt.Errorf("unsupported of xunfei audio_encoding: %s", audioEncoding)
 	}
 }
 

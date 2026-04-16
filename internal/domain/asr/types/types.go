@@ -12,13 +12,13 @@ const (
 	RetryReasonAliyunQwen3ConnectionClosed    = "aliyun_qwen3_connection_closed"
 )
 
-// StreamingResult streaming recognizeresult
+// StreamingResult streaming recognition result
 type StreamingResult struct {
-	Text        string // recognizeoftext
-	IsFinal     bool   // whetherisfinallyresult
-	Error       error  // errorinfo
+	Text        string // recognized text
+	IsFinal     bool   // whether is final result
+	Error       error  // error info
 	AsrType     string // asr type
-	Mode        string // pattern
-	EmptyReason string // emptyresultreason，onlyat Text isemptywhenused for区minuteup游emptyresult/empty转
-	RetryReason string // 可recoveryerrorreason，onlyatneedreleasecurrentresourceandretrywhenuse
+	Mode        string // mode
+	EmptyReason string // empty result reason, only when Text is empty used for distinguishing upstream empty result/empty turn
+	RetryReason string // recoverable error reason, only when need to release current resource and retry
 }

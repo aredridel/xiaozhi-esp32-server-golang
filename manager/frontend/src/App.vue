@@ -92,7 +92,7 @@ body {
   }
 }
 
-/* 全局动画 */
+/* Global animation */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.3s ease;

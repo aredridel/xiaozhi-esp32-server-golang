@@ -181,7 +181,7 @@ func (u *UserConfig) GetUserConfigKey(deviceId string) string {
 	return fmt.Sprintf("%s:userconfig:%s", u.prefix, deviceId)
 }
 
-// getSystemPromptKey generatedevicecorrespondingsystem prompt of Redis key
+// getSystemPromptKey generate device corresponding system prompt of Redis key
 func (u *UserConfig) getSystemPrompt(ctx context.Context, deviceID string) string {
 	key := fmt.Sprintf("%s:llm:system:%s", u.prefix, deviceID)
 
@@ -197,46 +197,46 @@ func (u *UserConfig) getSystemPrompt(ctx context.Context, deviceID string) strin
 	return configPrompt
 }
 
-// get mqtt, mqtt_server, udp, ota, visionconfig
+// get mqtt, mqtt_server, udp, ota, vision config
 func (u *UserConfig) GetSystemConfig(ctx context.Context) (string, error) {
-	//defaultno覆盖
+	// default no override
 	return "", nil
 }
 
-// SwitchDeviceRoleByName Redis patternunsupporteddeviceroleswitch
+// SwitchDeviceRoleByName Redis pattern unsupported device role switch
 func (u *UserConfig) SwitchDeviceRoleByName(ctx context.Context, deviceID string, roleName string) (string, error) {
-	return "", fmt.Errorf("redis configprovide者unsupported按rolenameswitchdevicerole")
+	return "", fmt.Errorf("redis config provider unsupported switch device role by role name")
 }
 
-// RestoreDeviceDefaultRole Redis patternunsupportedrecoverydefaultrole
+// RestoreDeviceDefaultRole Redis pattern unsupported recovery default role
 func (u *UserConfig) RestoreDeviceDefaultRole(ctx context.Context, deviceID string) error {
-	return fmt.Errorf("redis configprovide者unsupportedrecoverydevicedefaultrole")
+	return fmt.Errorf("redis config provider unsupported restore device default role")
 }
 
 func (u *UserConfig) NotifyDeviceEvent(ctx context.Context, eventType string, eventData map[string]interface{}) {
-	// implementdeviceeventnotifylogical
+	// implement device event notify logic
 	return
 }
 
 func (u *UserConfig) RegisterMessageEventHandler(ctx context.Context, deviceID string, handler types.EventHandler) {
-	// implementmessageeventprocesslogical
+	// implement message event process logic
 	return
 }
 
-// Init initializeRedisconfigprovide者
+// Init initialize Redis config provider
 func Init(ctx context.Context) error {
 	log.Log().Info("Redis config provider initialized successfully")
 	return nil
 }
 
-// Close closeRedisconfigprovide者，cleanupresource
+// Close close Redis config provider, cleanup resource
 func Close() error {
 	log.Log().Info("Redis config provider closed")
 	return nil
 }
 
-// IsConnected inspectRedisconfigprovide者whetheralreadyjoin
+// IsConnected inspect Redis config provider whether already join
 func IsConnected() bool {
-	// RedisjoinstatebyglobalRedisclient-sidemanage
+	// Redis join state by global Redis client-side manage
 	return true
 }

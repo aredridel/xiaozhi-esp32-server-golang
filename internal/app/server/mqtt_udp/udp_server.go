@@ -83,7 +83,7 @@ func (s *UdpServer) Close() error {
 
 // handlePackets Process received packets
 func (s *UdpServer) handlePackets() {
-	buffer := make([]byte, 4096) // usedefaultofbuffer区size
+	buffer := make([]byte, 4096) // use default buffer size
 	for {
 		s.RLock()
 		conn := s.conn
@@ -129,7 +129,7 @@ func (s *UdpServer) processPacket(addr *net.UDPAddr, data []byte) {
 	}
 
 	fullNonce := data[:16]
-	connID := fullNonce[4:8] // 取5-8byteasisjoinid
+	connID := fullNonce[4:8] // take bytes 5-8 as connection id
 	strConnID := hex.EncodeToString(connID)
 	udpSession := s.getSessionByNonce(strConnID)
 	if udpSession == nil {

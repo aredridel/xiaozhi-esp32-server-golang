@@ -234,7 +234,7 @@ func (c *WebSocketClient) IsConnected() bool {
 func (c *WebSocketClient) SendRequest(ctx context.Context, method, path string, body map[string]interface{}) (*WebSocketResponse, error) {
 	if !c.IsConnected() {
 		if err := c.Connect(ctx); err != nil {
-			return nil, fmt.Errorf("joinfailed: %v", err)
+			return nil, fmt.Errorf("connection failed: %v", err)
 		}
 	}
 
@@ -267,7 +267,7 @@ func (c *WebSocketClient) SendRequest(ctx context.Context, method, path string, 
 	err := c.conn.WriteJSON(request)
 	c.writeMu.Unlock()
 	if err != nil {
-		return nil, fmt.Errorf("sendrequestfailed: %v", err)
+		return nil, fmt.Errorf("send request failed: %v", err)
 	}
 
 	// waitrespond
@@ -275,13 +275,13 @@ func (c *WebSocketClient) SendRequest(ctx context.Context, method, path string, 
 	case response := <-responseChan:
 		return response, nil
 	case <-time.After(c.requestTimeout):
-		return nil, fmt.Errorf("requesttimeout")
+		return nil, fmt.Errorf("request timeout")
 	case <-ctx.Done():
-		return nil, fmt.Errorf("contextcancel")
+		return nil, fmt.Errorf("context cancelled")
 	}
 }
 
-// 便捷method - useWebSocket原生ping
+// convenient method - use WebSocket native ping
 func (c *WebSocketClient) Ping() error {
 	if !c.IsConnected() {
 		return fmt.Errorf("WebSocketnotjoin")
@@ -301,7 +301,7 @@ func (c *WebSocketClient) Echo(ctx context.Context, message string) (*WebSocketR
 	})
 }
 
-// global便捷method
+// global helper method
 func ConnectManagerWebSocket(ctx context.Context) error {
 	return GetDefaultClient().Connect(ctx)
 }
@@ -309,7 +309,7 @@ func ConnectManagerWebSocket(ctx context.Context) error {
 func DisconnectManagerWebSocket() error {
 	client := GetDefaultClient()
 	client.StopReconnect()
-	return client.disconnect(true) // main动disconnect，notriggerreconnect
+	return client.disconnect(true) // manual disconnect, not trigger reconnect
 }
 
 func SendManagerRequest(ctx context.Context, method, path string, body map[string]interface{}) (*WebSocketResponse, error) {
@@ -336,20 +336,20 @@ func SendDeviceRequest(ctx context.Context, path string, body map[string]interfa
 	return GetDefaultClient().SendRequest(ctx, "POST", path, body)
 }
 
-// startWorkers startmessagesend工asthread
+// startWorkers starts message send worker threads
 func (c *WebSocketClient) startWorkers() {
-	workerCount := 3 // start3个工asthread
+	workerCount := 3 // start 3 worker threads
 
 	for i := 0; i < workerCount; i++ {
 		c.workers.Add(1)
 		go func(workerID int) {
 			defer c.workers.Done()
 
-			log.Debugf("Manager WebSocket工asthread %d alreadystart", workerID)
+			log.Debugf("Manager WebSocket worker thread %d started", workerID)
 
 			for request := range c.messageQueue {
 				if !c.IsConnected() {
-					log.Debugf("工asthread %d: WebSocketnotjoin，discardrequest", workerID)
+					log.Debugf("Worker thread %d: WebSocket not connected, discard request", workerID)
 					continue
 				}
 
@@ -358,33 +358,33 @@ func (c *WebSocketClient) startWorkers() {
 				err := c.conn.WriteJSON(request)
 				c.writeMu.Unlock()
 				if err != nil {
-					log.Debugf("工asthread %d: sendrequestfailed: %v", workerID, err)
+					log.Debugf("Worker thread %d: send request failed: %v", workerID, err)
 					// joinmayalreadydisconnect，triggerreconnect
 					c.handleConnectionError()
 					continue
 				}
 
-				log.Debugf("工asthread %d: alreadysendrequest %s", workerID, request.ID)
+				log.Debugf("Worker thread %d: already sent request %s", workerID, request.ID)
 			}
 
-			log.Debugf("Manager WebSocket工asthread %d alreadystop", workerID)
+			log.Debugf("Manager WebSocket worker thread %d stopped", workerID)
 		}(i)
 	}
 }
 
-// handleConnectionError processjoinerror
+// handleConnectionError processes connection error
 func (c *WebSocketClient) handleConnectionError() {
 	if c.IsConnected() {
-		log.Warn("detecttoWebSocketjoinerror，isdisconnect join...")
+		log.Warn("Detected WebSocket connection error, disconnecting...")
 		c.disconnect(false) // errordisconnect，willtriggerreconnect
 		// triggerreconnect
 		c.triggerReconnect()
 	}
 }
 
-// startHeartbeat start心跳detect
+// startHeartbeat starts heartbeat detection
 func (c *WebSocketClient) startHeartbeat() {
-	ticker := time.NewTicker(30 * time.Second) // 每30secondsend aping
+	ticker := time.NewTicker(30 * time.Second) // Send ping every 30 seconds
 	defer ticker.Stop()
 
 	for {
@@ -400,13 +400,13 @@ func (c *WebSocketClient) startHeartbeat() {
 			c.writeMu.Unlock()
 
 			if err != nil {
-				log.Warnf("sendpingfailed，joinmayalreadydisconnect: %v", err)
-				c.disconnect(false) // errordisconnect，willtriggerreconnect
+				log.Warnf("Send ping failed, connection may already be disconnected: %v", err)
+				c.disconnect(false) // Error disconnect, will trigger reconnect
 				// triggerreconnect
 				c.triggerReconnect()
 				return
 			}
-			log.Debugf("sendpingmessagesuccessful")
+			log.Debugf("Ping message sent successfully")
 
 		case <-c.retryStopChan:
 			return
@@ -414,29 +414,29 @@ func (c *WebSocketClient) startHeartbeat() {
 	}
 }
 
-// triggerReconnect triggerreconnect（non-blocking）
+// triggerReconnect triggers reconnect (non-blocking)
 func (c *WebSocketClient) triggerReconnect() {
 	c.retryMu.Lock()
 	defer c.retryMu.Unlock()
 
-	// ifisclose，notriggerreconnect
+	// If closing, don't trigger reconnect
 	if c.isShuttingDown {
-		log.Debug("isclosein，notriggerreconnect")
+		log.Debug("Closing, not triggering reconnect")
 		return
 	}
 
-	// ifalreadyatreconnect，no重复trigger
+	// If already reconnecting, don't trigger again
 	if c.isRetrying {
 		return
 	}
 
 	c.isRetrying = true
-	// startreconnectgoroutine
+	// Start reconnect goroutine
 	c.retryWg.Add(1)
 	go c.startReconnectLoop()
 }
 
-// startReconnectLoop startreconnectloop（use指countbackoffalgorithm）
+// startReconnectLoop starts reconnect loop (uses exponential backoff algorithm)
 func (c *WebSocketClient) startReconnectLoop() {
 	defer func() {
 		c.retryMu.Lock()
@@ -445,18 +445,18 @@ func (c *WebSocketClient) startReconnectLoop() {
 		c.retryWg.Done()
 	}()
 
-	// 硬encodeofbackoffalgorithmparameter
-	initialDelay := 3 * time.Second // initialdelay3second
-	maxDelay := 1 * time.Minute     // maximumdelay1minute钟
-	backoffMultiplier := 2.0        // backoff倍count
+	// Hardcoded backoff algorithm parameters
+	initialDelay := 3 * time.Second // Initial delay 3 seconds
+	maxDelay := 1 * time.Minute     // Maximum delay 1 minute
+	backoffMultiplier := 2.0        // Backoff multiplier
 
 	delay := initialDelay
 	retryCount := 0
 
-	log.Infof("Manager WebSocketjoinretrygoroutinealreadystart")
+	log.Infof("Manager WebSocket reconnect goroutine started")
 
 	for {
-		// check ifshouldstopreconnect
+		// Check if should stop reconnect
 		select {
 		case <-c.retryStopChan:
 			log.Info("receivestopsignal，stopreconnect")
@@ -464,41 +464,41 @@ func (c *WebSocketClient) startReconnectLoop() {
 		default:
 		}
 
-		// ifisclose，stopreconnect
+		// If closing, stop reconnect
 		c.retryMu.Lock()
 		shuttingDown := c.isShuttingDown
 		c.retryMu.Unlock()
 		if shuttingDown {
-			log.Info("isclosein，stopreconnect")
+			log.Info("Closing, stopping reconnect")
 			return
 		}
 
-		// ifalreadyjoin，stopreconnect
+		// If already connected, stop reconnect
 		if c.IsConnected() {
-			log.Info("Manager WebSocketjoinalreadyrecovery，stopreconnect")
+			log.Info("Manager WebSocket connection recovered, stopping reconnect")
 			return
 		}
 
 		retryCount++
-		log.Warnf("Manager WebSocketjoinfailed (nth%dtimes)，wait %v afterretryjoin...", retryCount, delay)
+		log.Warnf("Manager WebSocket connection failed (attempt %d), will retry after %v...", retryCount, delay)
 
-		// waitdelaytime
+		// Wait for delay time
 		select {
 		case <-time.After(delay):
-			// continuereconnect
+			// Continue reconnect
 		case <-c.retryStopChan:
 			log.Info("receivestopsignal，stopreconnect")
 			return
 		}
 
-		// tryjoin
+		// Try to connect
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		err := c.Connect(ctx)
 		cancel()
 
 		if err != nil {
-			log.Warnf("Manager WebSocketjoinfailed (nth%dtimes): %v", retryCount, err)
-			// calculatedownatimesdelaytime（指countbackoff）
+			log.Warnf("Manager WebSocket connection failed (attempt %d): %v", retryCount, err)
+			// Calculate next delay time (exponential backoff)
 			delay = time.Duration(float64(delay) * backoffMultiplier)
 			if delay > maxDelay {
 				delay = maxDelay
@@ -506,13 +506,13 @@ func (c *WebSocketClient) startReconnectLoop() {
 			continue
 		}
 
-		// joinsuccessful
-		log.Info("Manager WebSocketjoinsuccessful")
+		// Connection successful
+		log.Info("Manager WebSocket connection successful")
 		return
 	}
 }
 
-// StopReconnect stopreconnectgoroutine
+// StopReconnect stops reconnect goroutine
 func (c *WebSocketClient) StopReconnect() {
 	c.retryMu.Lock()
 	c.isShuttingDown = true
@@ -520,23 +520,23 @@ func (c *WebSocketClient) StopReconnect() {
 	c.retryMu.Unlock()
 
 	if shouldClose {
-		// use select avoid重复closechannel
+		// Use select to avoid closing channel repeatedly
 		select {
 		case <-c.retryStopChan:
-			// channelalreadyclose
+			// Channel already closed
 		default:
 			close(c.retryStopChan)
 		}
 		c.retryWg.Wait()
-		log.Info("Manager WebSocketreconnectgoroutinealready优雅close")
+		log.Info("Manager WebSocket reconnect goroutine gracefully stopped")
 	}
 }
 
-// SendRequestWithCallback sendrequestandusecallbackprocessrespond
+// SendRequestWithCallback sends request and uses callback to process response
 func (c *WebSocketClient) SendRequestWithCallback(ctx context.Context, method, path string, body map[string]interface{}, callback func(*WebSocketResponse)) error {
 	if !c.IsConnected() {
 		if err := c.Connect(ctx); err != nil {
-			return fmt.Errorf("joinfailed: %v", err)
+			return fmt.Errorf("connection failed: %v", err)
 		}
 	}
 
@@ -550,7 +550,7 @@ func (c *WebSocketClient) SendRequestWithCallback(ctx context.Context, method, p
 		Body:   body,
 	}
 
-	// registercallback
+	// Register callback
 	c.mu.Lock()
 	c.callbacks[requestID] = callback
 	c.mu.Unlock()
@@ -562,23 +562,23 @@ func (c *WebSocketClient) SendRequestWithCallback(ctx context.Context, method, p
 		c.mu.Unlock()
 	}()
 
-	// willrequestplay入queue
+	// will request play into queue
 	select {
 	case c.messageQueue <- &request:
-		log.Debugf("request %s alreadyadd toqueue", requestID)
+		log.Debugf("Request %s already added to queue", requestID)
 		return nil
 	case <-time.After(5 * time.Second):
-		return fmt.Errorf("messagequeuealreadyfull，requesttimeout")
+		return fmt.Errorf("message queue full, request timeout")
 	case <-ctx.Done():
-		return fmt.Errorf("contextcancel")
+		return fmt.Errorf("context cancelled")
 	}
 }
 
-// SendRequestAsync asynchronizationsendrequest
+// SendRequestAsync sends request asynchronously
 func (c *WebSocketClient) SendRequestAsync(ctx context.Context, method, path string, body map[string]interface{}) (string, error) {
 	if !c.IsConnected() {
 		if err := c.Connect(ctx); err != nil {
-			return "", fmt.Errorf("joinfailed: %v", err)
+			return "", fmt.Errorf("connection failed: %v", err)
 		}
 	}
 
@@ -592,23 +592,23 @@ func (c *WebSocketClient) SendRequestAsync(ctx context.Context, method, path str
 		Body:   body,
 	}
 
-	// willrequestplay入queue
+	// will request play into queue
 	select {
 	case c.messageQueue <- &request:
-		log.Debugf("asynchronizationrequest %s alreadyadd toqueue", requestID)
+		log.Debugf("Async request %s already added to queue", requestID)
 		return requestID, nil
 	case <-time.After(5 * time.Second):
-		return "", fmt.Errorf("messagequeuealreadyfull，requesttimeout")
+		return "", fmt.Errorf("message queue full, request timeout")
 	case <-ctx.Done():
-		return "", fmt.Errorf("contextcancel")
+		return "", fmt.Errorf("context cancelled")
 	}
 }
 
-// GetResponse getspecifyrequestIDofrespond（used forasynchronizationrequest）
+// GetResponse gets response for specified request ID (used for async request)
 func (c *WebSocketClient) GetResponse(requestID string, timeout time.Duration) (*WebSocketResponse, error) {
 	responseChan := make(chan *WebSocketResponse, 1)
 
-	// register临whencallback
+	// Register temporary callback
 	c.mu.Lock()
 	c.callbacks[requestID] = func(response *WebSocketResponse) {
 		responseChan <- response
@@ -627,27 +627,27 @@ func (c *WebSocketClient) GetResponse(requestID string, timeout time.Duration) (
 	case response := <-responseChan:
 		return response, nil
 	case <-time.After(timeout):
-		return nil, fmt.Errorf("waitrespondtimeout")
+		return nil, fmt.Errorf("wait response timeout")
 	}
 }
 
-// handleSystemConfigPush processserver-sidepushofsystemconfigchange，asynchronizationcallalreadyregisterofcallback
+// handleSystemConfigPush processes server-side push of system config change, asynchronously calls registered callback
 func (c *WebSocketClient) handleSystemConfigPush(data map[string]interface{}) {
 	if systemConfigPushHandler == nil {
-		log.Debugf("receive system_config push，butnotregisterprocesscallback")
+		log.Debugf("Received system_config push, but no process callback registered")
 		return
 	}
 	go systemConfigPushHandler(data)
 }
 
-// handleMessages processreceivetoofWebSocketmessage
+// handleMessages processes received WebSocket messages
 func (c *WebSocketClient) handleMessages() {
 	for {
 		if !c.isConnected {
 			return
 		}
 
-		// readcancel息type
+		// Read message type
 		messageType, reader, err := c.conn.NextReader()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
@@ -659,76 +659,76 @@ func (c *WebSocketClient) handleMessages() {
 			return
 		}
 
-		// processnoat the same timetypeofmessage
+		// Process different types of messages
 		switch messageType {
 		case websocket.TextMessage:
-			// processJSONmessage
+			// Process JSON message
 			var rawMessage map[string]interface{}
 			if err := json.NewDecoder(reader).Decode(&rawMessage); err != nil {
 				log.Errorf("parseJSONmessagefailed: %v", err)
 				continue
 			}
 
-			// according tomessagetypejudge：server-sidepush(system_config)、request、respond
+			// Judge by message type: server push (system_config), request, response
 			if msgType, _ := rawMessage["type"].(string); msgType == "system_config" {
 				if data, ok := rawMessage["data"].(map[string]interface{}); ok {
 					c.handleSystemConfigPush(data)
 				} else {
-					log.Warnf("receive system_config pushbut data formatinvalid")
+					log.Warnf("Received system_config push but data format invalid")
 				}
 			} else if method, exists := rawMessage["method"]; exists && method != nil {
-				// 这yesreceiveofrequest
+				// This is received request
 				c.handleIncomingRequest(rawMessage)
 			} else if status, exists := rawMessage["status"]; exists && status != nil {
-				// 这yesreceiveofrespond
+				// This is received response
 				c.handleIncomingResponse(rawMessage)
 			} else {
-				log.Warnf("receive unrecognized WebSocket message: %+v", rawMessage)
+				log.Warnf("Received unrecognized WebSocket message: %+v", rawMessage)
 			}
 
 		case websocket.PingMessage:
-			// processpingmessage，automatic回复pong（usewritelockprotected）
-			log.Debugf("receivepingmessage，automatic回复pong")
+			// Process ping message, auto reply pong (use write lock protection)
+			log.Debugf("Received ping message, auto reply pong")
 			c.writeMu.Lock()
 			err := c.conn.WriteControl(websocket.PongMessage, []byte{}, time.Now().Add(10*time.Second))
 			c.writeMu.Unlock()
 			if err != nil {
-				log.Errorf("sendpongfailed: %v", err)
+				log.Errorf("Send pong failed: %v", err)
 			}
 
 		case websocket.PongMessage:
-			// processpongmessage
-			log.Debugf("receivepongmessage")
+			// Process pong message
+			log.Debugf("Received pong message")
 
 		case websocket.CloseMessage:
-			// processclosemessage
-			log.Debugf("receiveclosemessage")
+			// Process close message
+			log.Debugf("Received close message")
 			c.disconnect(false) // errordisconnect，willtriggerreconnect
 			// triggerreconnect
 			c.triggerReconnect()
 			return
 
 		default:
-			log.Warnf("receivenot知typeofWebSocketmessage: %d", messageType)
+			log.Warnf("Received unknown type of WebSocket message: %d", messageType)
 		}
 	}
 }
 
-// handleIncomingRequest processreceiveofrequest
+// handleIncomingRequest processes received request
 func (c *WebSocketClient) handleIncomingRequest(rawMessage map[string]interface{}) {
 	var request WebSocketRequest
 	if err := mapToStruct(rawMessage, &request); err != nil {
-		log.Errorf("parseWebSocketrequestfailed: %v", err)
+		log.Errorf("Parse WebSocket request failed: %v", err)
 		return
 	}
 
-	log.Debugf("receiverequest: ID=%s, Method=%s, Path=%s", request.ID, request.Method, request.Path)
+	log.Debugf("Received request: ID=%s, Method=%s, Path=%s", request.ID, request.Method, request.Path)
 
-	// ifhaveregisterofrequest handler，callit
+	// If registered request handler exists, call it
 	if c.requestHandler != nil {
 		go c.requestHandler(&request)
 	} else {
-		// ifnoregisterhandler，usedefaulthandlerprocess known paths
+		// If no registered handler, use default handler to process known paths
 		c.handleDefaultRequest(&request)
 	}
 }
@@ -740,19 +740,19 @@ func (c *WebSocketClient) RegisterMessageHandler(ctx context.Context, path strin
 	c.messageHandle.Set(path, f)
 }
 
-// handleDefaultRequest defaultrequest handler
+// handleDefaultRequest is the default request handler
 func (c *WebSocketClient) handleDefaultRequest(request *WebSocketRequest) {
 	switch request.Path {
 	case "/api/config/test":
-		// configtestmayrelativelytime consumption（VAD/ASR/LLM/TTS serialexecute），play入independent goroutine avoidblockreadloop，support多requestconcurrent
+		// Config test may be time consuming (VAD/ASR/LLM/TTS serial execution), put in independent goroutine to avoid blocking read loop, support multiple requests concurrently
 		go c.handleConfigTestRequest(request)
 
 	case "/api/mcp/tools":
-		// processMCPtoollistrequest
+		// Process MCP tool list request
 		c.handleMcpToolListRequest(request)
 
 	case "/api/mcp/call":
-		// processMCPtoolcallrequest
+		// Process MCP tool call request
 		c.handleMcpToolCallRequest(request)
 
 	case "/api/openclaw/status":
@@ -762,7 +762,7 @@ func (c *WebSocketClient) handleDefaultRequest(request *WebSocketRequest) {
 		c.handleOpenClawChatRequest(request)
 
 	case "/api/server/info":
-		// returnserverinfo
+		// Return server info
 		response := map[string]interface{}{
 			"server_name": "xiaozhi-server",
 			"version":     "1.0.0",
@@ -771,54 +771,54 @@ func (c *WebSocketClient) handleDefaultRequest(request *WebSocketRequest) {
 		}
 
 		if err := c.SendResponse(request.ID, 200, response, ""); err != nil {
-			log.Errorf("sendserverinforespondfailed: %v", err)
+			log.Errorf("Send server info response failed: %v", err)
 		}
 
 	case "/api/server/ping":
-		// 简单ofpingrespond
+		// Simple ping response
 		response := map[string]interface{}{
 			"message": "pong from server",
 			"time":    time.Now().Format(time.RFC3339),
 		}
 
 		if err := c.SendResponse(request.ID, 200, response, ""); err != nil {
-			log.Errorf("sendpingrespondfailed: %v", err)
+			log.Errorf("Send ping response failed: %v", err)
 		}
 	default:
 		handler, exists := c.messageHandle.Get(request.Path)
 		if exists {
-			// callhandlerandprocessreturnvalue
+			// Call handler and process return value
 			result, err := handler(request)
 			if err != nil {
-				log.Errorf("processrequest %s failed: %v", request.Path, err)
-				// senderrorrespond
+				log.Errorf("Process request %s failed: %v", request.Path, err)
+				// Send error response
 				if err := c.SendResponse(request.ID, 500, nil, err.Error()); err != nil {
-					log.Errorf("senderrorrespondfailed: %v", err)
+					log.Errorf("Send error response failed: %v", err)
 				}
 			} else {
-				// sendsuccessfulrespond
+				// Send success response
 				response := map[string]interface{}{
 					"result": result,
 				}
 				if err := c.SendResponse(request.ID, 200, response, ""); err != nil {
-					log.Errorf("sendsuccessfulrespondfailed: %v", err)
+					log.Errorf("Send success response failed: %v", err)
 				}
 			}
 		} else {
-			log.Warnf("receiveunknown WebSocket request path: %s, ID: %s", request.Path, request.ID)
+			log.Warnf("Received unknown WebSocket request path: %s, ID: %s", request.Path, request.ID)
 
-			// send404respond
+			// Send 404 response
 			if err := c.SendResponse(request.ID, 404, nil, "Unknown endpoint"); err != nil {
-				log.Errorf("senderrorrespondfailed: %v", err)
+				log.Errorf("Send error response failed: %v", err)
 			}
 		}
 	}
 }
 
-// configTestTotalTimeout configtestbodybodytimeout（VAD+ASR+LLM+TTS 合计）
+// configTestTotalTimeout is the total timeout for config test (VAD+ASR+LLM+TTS combined)
 const configTestTotalTimeout = 90 * time.Second
 
-// handleConfigTestRequest processconfigtestrequest：VAD/ASR/LLM/TTS usedown发ofconfigandfixed WAV/textexecute轻amounttest
+// handleConfigTestRequest processes config test request: VAD/ASR/LLM/TTS use received config and fixed WAV/text to execute light test
 func (c *WebSocketClient) handleConfigTestRequest(request *WebSocketRequest) {
 	data, _ := request.Body["data"].(map[string]interface{})
 	if data == nil {
@@ -827,8 +827,8 @@ func (c *WebSocketClient) handleConfigTestRequest(request *WebSocketRequest) {
 		return
 	}
 	testText, _ := request.Body["test_text"].(string)
-	// debug: requestin各typeconfigcount（no含 provider）
-	log.Debugf("[config_test] request ID=%s test_text=%q data 各type条目count: vad=%d asr=%d llm=%d tts=%d",
+	// Debug: count of each type config in request (excluding provider)
+	log.Debugf("[config_test] request ID=%s test_text=%q data count by type: vad=%d asr=%d llm=%d tts=%d",
 		request.ID, testText,
 		countConfigKeys(data["vad"]), countConfigKeys(data["asr"]),
 		countConfigKeys(data["llm"]), countConfigKeys(data["tts"]))
@@ -847,18 +847,18 @@ func (c *WebSocketClient) handleConfigTestRequest(request *WebSocketRequest) {
 	case res := <-done:
 		vadR, asrR, llmR, ttsR = res.vad, res.asr, res.llm, res.tts
 	case <-time.After(configTestTotalTimeout):
-		log.Warnf("[config_test] request ID=%s bodybodytimeout %v", request.ID, configTestTotalTimeout)
+		log.Warnf("[config_test] request ID=%s total timeout %v", request.ID, configTestTotalTimeout)
 		body := map[string]interface{}{
-			"vad": map[string]interface{}{"_error": map[string]interface{}{"ok": false, "message": "configtest总timeout"}},
-			"asr": map[string]interface{}{"_error": map[string]interface{}{"ok": false, "message": "configtest总timeout"}},
-			"llm": map[string]interface{}{"_error": map[string]interface{}{"ok": false, "message": "configtest总timeout"}},
-			"tts": map[string]interface{}{"_error": map[string]interface{}{"ok": false, "message": "configtest总timeout"}},
+			"vad": map[string]interface{}{"_error": map[string]interface{}{"ok": false, "message": "config test total timeout"}},
+			"asr": map[string]interface{}{"_error": map[string]interface{}{"ok": false, "message": "config test total timeout"}},
+			"llm": map[string]interface{}{"_error": map[string]interface{}{"ok": false, "message": "config test total timeout"}},
+			"tts": map[string]interface{}{"_error": map[string]interface{}{"ok": false, "message": "config test total timeout"}},
 		}
 		_ = c.SendResponse(request.ID, 200, body, "")
 		return
 	}
 
-	// requestin带某typebutno任何可测configwhen，return _none 便于beforeendpoint展示reason
+	// When request includes a type but no testable configs, return _none for frontend display
 	fillEmptyConfigTestResult(data, "vad", vadR)
 	fillEmptyConfigTestResult(data, "asr", asrR)
 	fillEmptyConfigTestResult(data, "llm", llmR)
@@ -869,22 +869,22 @@ func (c *WebSocketClient) handleConfigTestRequest(request *WebSocketRequest) {
 		"llm": llmR,
 		"tts": ttsR,
 	}
-	log.Debugf("[config_test] respond ID=%s 各typeresultcount: vad=%d asr=%d llm=%d tts=%d",
+	log.Debugf("[config_test] response ID=%s result count by type: vad=%d asr=%d llm=%d tts=%d",
 		request.ID, len(vadR), len(asrR), len(llmR), len(ttsR))
 	_ = c.SendResponse(request.ID, 200, body, "")
 }
 
-// fillEmptyConfigTestResult whenrequestincludethistypebuttestresultisemptywhen，write _none 条目
+// fillEmptyConfigTestResult when request includes this type but test result is empty, write _none entry
 func fillEmptyConfigTestResult(data map[string]interface{}, typ string, result map[string]interface{}) {
 	if _, has := data[typ]; !has || len(result) > 0 {
 		return
 	}
-	msg := "notconfigornot启use" + strings.ToUpper(typ)
+	msg := "no config or not enabled " + strings.ToUpper(typ)
 	result["_none"] = map[string]interface{}{"ok": false, "message": msg}
-	log.Debugf("[config_test] type %s noresult，alreadywrite _none: %s", typ, msg)
+	log.Debugf("[config_test] type %s no result, wrote _none: %s", typ, msg)
 }
 
-// countConfigKeys count data in除 provider outsideof config 条目count，used for debug
+// countConfigKeys counts config entries excluding provider, used for debug
 func countConfigKeys(v interface{}) int {
 	m, ok := v.(map[string]interface{})
 	if !ok {
@@ -899,17 +899,17 @@ func countConfigKeys(v interface{}) int {
 	return n
 }
 
-// handleIncomingResponse processreceiveofrespond
+// handleIncomingResponse processes received response
 func (c *WebSocketClient) handleIncomingResponse(rawMessage map[string]interface{}) {
 	var response WebSocketResponse
 	if err := mapToStruct(rawMessage, &response); err != nil {
-		log.Errorf("parseWebSocketrespondfailed: %v", err)
+		log.Errorf("Parse WebSocket response failed: %v", err)
 		return
 	}
 
-	log.Debugf("receiverespond: ID=%s, Status=%d", response.ID, response.Status)
+	log.Debugf("Received response: ID=%s, Status=%d", response.ID, response.Status)
 
-	// findcorrespondingrespondchannelandcallback
+	// Find corresponding response channel and callback
 	c.mu.RLock()
 	responseChan, exists := c.responseChans[response.ID]
 	callback, callbackExists := c.callbacks[response.ID]
@@ -919,7 +919,7 @@ func (c *WebSocketClient) handleIncomingResponse(rawMessage map[string]interface
 		select {
 		case responseChan <- &response:
 		default:
-			log.Debugf("respondchannelalreadyfull，discardrespond: %s", response.ID)
+			log.Debugf("Response channel full, discard response: %s", response.ID)
 		}
 	}
 
@@ -928,11 +928,11 @@ func (c *WebSocketClient) handleIncomingResponse(rawMessage map[string]interface
 	}
 
 	if !exists && !callbackExists {
-		log.Debugf("receive unknown response ID: %s", response.ID)
+		log.Debugf("Received unknown response ID: %s", response.ID)
 	}
 }
 
-// SendResponse sendrespond给receiveofrequest
+// SendResponse sends response to received request
 func (c *WebSocketClient) SendResponse(requestID string, status int, body map[string]interface{}, errorMsg string) error {
 	if !c.IsConnected() {
 		return fmt.Errorf("WebSocketnotjoin")
@@ -945,26 +945,26 @@ func (c *WebSocketClient) SendResponse(requestID string, status int, body map[st
 		Error:  errorMsg,
 	}
 
-	// usewritelockprotected
+	// Use write lock protection
 	c.writeMu.Lock()
 	err := c.conn.WriteJSON(response)
 	c.writeMu.Unlock()
 	if err != nil {
-		return fmt.Errorf("sendrespondfailed: %v", err)
+		return fmt.Errorf("send response failed: %v", err)
 	}
 
-	log.Debugf("alreadysendrespond: ID=%s, Status=%d", requestID, status)
+	log.Debugf("Already sent response: ID=%s, Status=%d", requestID, status)
 	return nil
 }
 
-// SetRequestHandler setrequest handler
+// SetRequestHandler sets request handler
 func (c *WebSocketClient) SetRequestHandler(handler func(*WebSocketRequest)) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.requestHandler = handler
 }
 
-// mapToStruct auxiliaryfunction：willmapconvertisstruct
+// mapToStruct auxiliary function: converts map to struct
 func mapToStruct(data map[string]interface{}, target interface{}) error {
 	jsonData, err := json.Marshal(data)
 	if err != nil {
@@ -978,8 +978,8 @@ func toolInfoToSchemaMap(paramsOneOf interface{}) map[string]interface{} {
 		return nil
 	}
 
-	// ParamsOneOf internalfieldnotexport，direct json.Marshal may得to {}。
-	// priority走官方 ToOpenAPIV3()，ensure能取torealparameter schema。
+	// ParamsOneOf internal field not exported, direct json.Marshal may get {}.
+	// Priority: use official ToOpenAPIV3(), ensure can get real parameter schema.
 	if p, ok := paramsOneOf.(*einoschema.ParamsOneOf); ok && p != nil {
 		if openAPISchema, err := p.ToOpenAPIV3(); err == nil && openAPISchema != nil {
 			raw, err := json.Marshal(openAPISchema)
@@ -1029,7 +1029,7 @@ func convertReportedToolsToToolList(reportedTools map[string]tool.InvokableTool)
 		invokable := reportedTools[name]
 		toolInfo := map[string]interface{}{
 			"name":        name,
-			"description": fmt.Sprintf("MCPtool: %s", name),
+			"description": fmt.Sprintf("MCP tool: %s", name),
 			"schema":      true,
 		}
 
@@ -1052,7 +1052,7 @@ func convertReportedToolsToToolList(reportedTools map[string]tool.InvokableTool)
 func getDeviceMcpTools(deviceID string) ([]map[string]interface{}, error) {
 	reportedTools, err := mcp.GetReportedToolsByDeviceID(deviceID)
 	if err != nil {
-		log.Errorf("getdeviceup报MCPtoollistfailed: %v", err)
+		log.Errorf("Failed to get device reported MCP tool list: %v", err)
 		return nil, err
 	}
 
@@ -1062,16 +1062,16 @@ func getDeviceMcpTools(deviceID string) ([]map[string]interface{}, error) {
 func getAgentMcpTools(agentID string) ([]map[string]interface{}, error) {
 	reportedTools, err := mcp.GetReportedToolsByAgentID(agentID)
 	if err != nil {
-		log.Errorf("getagentup报MCPtoollistfailed: %v", err)
+		log.Errorf("Failed to get agent reported MCP tool list: %v", err)
 		return nil, err
 	}
 
 	return convertReportedToolsToToolList(reportedTools)
 }
 
-// handleMcpToolListRequest processMCPtoollistrequest
+// handleMcpToolListRequest processes MCP tool list request
 func (c *WebSocketClient) handleMcpToolListRequest(request *WebSocketRequest) {
-	// fromrequestbodyingetagent_id/device_id
+	// Get agent_id/device_id from request body
 	agentID := ""
 	deviceID := ""
 	if request.Body != nil {
@@ -1084,17 +1084,17 @@ func (c *WebSocketClient) handleMcpToolListRequest(request *WebSocketRequest) {
 	}
 
 	if agentID == "" && deviceID == "" {
-		log.Warnf("receiveMCPtoollistrequest，butMissingagent_id/device_id")
+		log.Warnf("Received MCP tool list request, but missing agent_id/device_id")
 		if err := c.SendResponse(request.ID, 400, nil, "Missingagent_idordevice_idparameter"); err != nil {
 			log.Errorf("senderrorrespondfailed: %v", err)
 		}
 		return
 	}
 
-	log.Infof("processMCPtoollistrequest，agent_id: %s, device_id: %s", agentID, deviceID)
+	log.Infof("Processing MCP tool list request, agent_id: %s, device_id: %s", agentID, deviceID)
 
 	if agentID != "" && deviceID != "" {
-		if err := c.SendResponse(request.ID, 400, nil, "agent_idanddevice_idcannotat the same timewhen传入"); err != nil {
+		if err := c.SendResponse(request.ID, 400, nil, "agent_id and device_id cannot be provided at the same time"); err != nil {
 			log.Errorf("senderrorrespondfailed: %v", err)
 		}
 		return
@@ -1110,14 +1110,14 @@ func (c *WebSocketClient) handleMcpToolListRequest(request *WebSocketRequest) {
 		toolList, err = getAgentMcpTools(agentID)
 	}
 	if err != nil {
-		log.Errorf("getMCPtoollistfailed: %v", err)
+		log.Errorf("Failed to get MCP tool list: %v", err)
 		if err := c.SendResponse(request.ID, 500, nil, fmt.Sprintf("gettoollistfailed: %v", err)); err != nil {
 			log.Errorf("senderrorrespondfailed: %v", err)
 		}
 		return
 	}
 
-	// constructrespond
+	// Construct response
 	response := map[string]interface{}{
 		"agent_id":  agentID,
 		"device_id": deviceID,
@@ -1125,13 +1125,13 @@ func (c *WebSocketClient) handleMcpToolListRequest(request *WebSocketRequest) {
 		"count":     len(toolList),
 	}
 
-	// sendrespond
+	// Send response
 	if err := c.SendResponse(request.ID, 200, response, ""); err != nil {
-		log.Errorf("sendMCPtoollistrespondfailed: %v", err)
+		log.Errorf("Send MCP tool list response failed: %v", err)
 	}
 }
 
-// global便捷method（asynchronizationversion）
+// Global convenience methods (async version)
 func SendManagerRequestAsync(ctx context.Context, method, path string, body map[string]interface{}) (string, error) {
 	return GetDefaultClient().SendRequestAsync(ctx, method, path, body)
 }
@@ -1144,7 +1144,7 @@ func GetManagerResponse(requestID string, timeout time.Duration) (*WebSocketResp
 	return GetDefaultClient().GetResponse(requestID, timeout)
 }
 
-// dualto通信supportmethod
+// Bidirectional communication support methods
 func SetManagerRequestHandler(handler func(*WebSocketRequest)) {
 	GetDefaultClient().SetRequestHandler(handler)
 }
@@ -1153,12 +1153,12 @@ func SendManagerResponse(requestID string, status int, body map[string]interface
 	return GetDefaultClient().SendResponse(requestID, status, body, errorMsg)
 }
 
-// create带haverequest handlerofclient-side
+// Create client with request handler
 func NewManagerClientWithHandler(handler func(*WebSocketRequest)) *WebSocketClient {
 	return NewWebSocketClientWithHandler(handler)
 }
 
-// SendMcpToolListRequest sendMCPtoollistrequest
+// SendMcpToolListRequest sends MCP tool list request
 func SendMcpToolListRequest(ctx context.Context, agentID string) (*WebSocketResponse, error) {
 	body := map[string]interface{}{
 		"agent_id": agentID,
@@ -1166,7 +1166,7 @@ func SendMcpToolListRequest(ctx context.Context, agentID string) (*WebSocketResp
 	return SendManagerRequest(ctx, "GET", "/api/mcp/tools", body)
 }
 
-// SendMcpToolListRequestAsync asynchronizationsendMCPtoollistrequest
+// SendMcpToolListRequestAsync sends MCP tool list request asynchronously
 func SendMcpToolListRequestAsync(ctx context.Context, agentID string) (string, error) {
 	body := map[string]interface{}{
 		"agent_id": agentID,
@@ -1174,7 +1174,7 @@ func SendMcpToolListRequestAsync(ctx context.Context, agentID string) (string, e
 	return SendManagerRequestAsync(ctx, "GET", "/api/mcp/tools", body)
 }
 
-// SendMcpToolListRequestWithCallback usecallbacksendMCPtoollistrequest
+// SendMcpToolListRequestWithCallback sends MCP tool list request with callback
 func SendMcpToolListRequestWithCallback(ctx context.Context, agentID string, callback func(*WebSocketResponse)) error {
 	body := map[string]interface{}{
 		"agent_id": agentID,
@@ -1182,8 +1182,8 @@ func SendMcpToolListRequestWithCallback(ctx context.Context, agentID string, cal
 	return SendManagerRequestWithCallback(ctx, "GET", "/api/mcp/tools", body, callback)
 }
 
-// Init initializeManagerconfigprovider
-// package括WebSocketjoinofinitializeandreconnectmechanism
+// Init initializes Manager config provider
+// Includes WebSocket connection initialization and reconnect mechanism
 func Init(ctx context.Context) error {
 	log.Infof("Initializing Manager config provider with WebSocket client")
 
@@ -1192,8 +1192,8 @@ func Init(ctx context.Context) error {
 
 	// tryjointoWebSocketserver
 	if err := client.Connect(ctx); err != nil {
-		log.Warnf("initialjoinManager WebSocketfailed: %v，willstartreconnectmechanism", err)
-		// even ifinitialjoinfailed，alsostartreconnectmechanism
+		log.Warnf("Initial connection to Manager WebSocket failed: %v, will start reconnect mechanism", err)
+		// Even if initial connection failed, also start reconnect mechanism
 		client.triggerReconnect()
 	} else {
 		log.Infof("Manager config provider initialized successfully")
@@ -1202,26 +1202,26 @@ func Init(ctx context.Context) error {
 	return nil
 }
 
-// Close closeManagerconfigprovider，cleanupresource
+// Close closes Manager config provider, cleanup resources
 func Close() error {
 	log.Infof("Closing Manager config provider")
 
-	// stopreconnectgoroutine
+	// Stop reconnect goroutine
 	client := GetDefaultClient()
 	client.StopReconnect()
 
-	// main动disconnect join（notriggerreconnect）
+	// Manually disconnect (not trigger reconnect)
 	client.disconnect(true)
 
 	return nil
 }
 
-// IsConnected inspectManagerconfigproviderwhetheralreadyjoin
+// IsConnected checks if Manager config provider is already connected
 func IsConnected() bool {
 	return IsManagerWebSocketConnected()
 }
 
-// handleMcpToolCallRequest processMCPtoolcallrequest
+// handleMcpToolCallRequest processes MCP tool call request
 func (c *WebSocketClient) handleMcpToolCallRequest(request *WebSocketRequest) {
 	agentID := ""
 	deviceID := ""
@@ -1248,7 +1248,7 @@ func (c *WebSocketClient) handleMcpToolCallRequest(request *WebSocketRequest) {
 	}
 
 	if agentID != "" && deviceID != "" {
-		_ = c.SendResponse(request.ID, 400, nil, "agent_idanddevice_idcannotat the same timewhen传入")
+		_ = c.SendResponse(request.ID, 400, nil, "agent_id and device_id cannot be provided at the same time")
 		return
 	}
 
@@ -1262,14 +1262,14 @@ func (c *WebSocketClient) handleMcpToolCallRequest(request *WebSocketRequest) {
 		invokable, ok = mcp.GetReportedToolByAgentIDAndName(agentID, toolName)
 	}
 	if !ok {
-		_ = c.SendResponse(request.ID, 404, nil, fmt.Sprintf("toolno存at: %s", toolName))
+		_ = c.SendResponse(request.ID, 404, nil, fmt.Sprintf("tool not found: %s", toolName))
 		return
 	}
 
 	argBytes, _ := json.Marshal(arguments)
 	result, err := invokable.InvokableRun(context.Background(), string(argBytes))
 	if err != nil {
-		_ = c.SendResponse(request.ID, 500, nil, fmt.Sprintf("toolcallfailed: %v", err))
+		_ = c.SendResponse(request.ID, 500, nil, fmt.Sprintf("tool call failed: %v", err))
 		return
 	}
 
@@ -1427,7 +1427,7 @@ func (c *WebSocketClient) handleOpenClawChatRequest(request *WebSocketRequest) {
 	}
 
 	testDeviceID := buildOpenClawTestDeviceID(agentID)
-	// cleanuptestdevicehistorycache，avoidstringtoupa轮testresult。
+	// Cleanup test device history cache, avoid string to accumulate test results.
 	manager.ReplayOfflineMessages(testDeviceID, func(msg openclaw.OfflineMessage) error {
 		return nil
 	})
@@ -1525,7 +1525,7 @@ func (c *WebSocketClient) handleOpenClawChatRequest(request *WebSocketRequest) {
 	reply := strings.TrimSpace(replyBuilder.String())
 
 	if !done {
-		// cleanuptestdevice离线cache，avoidaccumulate。
+		// Cleanup test device offline cache, avoid accumulation.
 		manager.ReplayOfflineMessages(testDeviceID, func(msg openclaw.OfflineMessage) error {
 			return nil
 		})

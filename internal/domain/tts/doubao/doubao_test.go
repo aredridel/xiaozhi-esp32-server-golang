@@ -134,12 +134,12 @@ func TestSummarizeDoubaoWSAttemptErrorResourceNotGranted(t *testing.T) {
 		"zh_female_vv_uranus_bigtts",
 		resolvedTTSModel{ConfigModel: modelSeedTTS20Standard, ResourceID: "TTS-SeedTTS2.02000000628041826146"},
 		[]string{"TTS-SeedTTS2.02000000628041826146"},
-		[]error{errors.New(`建立豆package WebSocket TTS joinfailed: websocket handshake status=403 body={"error":"[resource_id=TTS-SeedTTS2.02000000628041826146] requested resource not granted"}`)},
+		[]error{errors.New(`Establish Doubao WebSocket TTS join failed: websocket handshake status=403 body={"error":"[resource_id=TTS-SeedTTS2.02000000628041826146] requested resource not granted"}`)},
 	)
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if !strings.Contains(err.Error(), "resource_id notauthorize") {
+	if !strings.Contains(err.Error(), "resource_id not authorized") {
 		t.Fatalf("unexpected error = %v", err)
 	}
 }

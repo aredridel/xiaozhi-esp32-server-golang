@@ -2,12 +2,12 @@ package plugins
 
 import "xiaozhi-esp32-server-golang/internal/domain/chat/streamtransform"
 
-// Init initializeoutputrelevant transform。
+// Init initialize output relevant transform.
 func Init(registry *streamtransform.Registry) {
 	if registry == nil {
 		return
 	}
 
-	// registeroutputbody形插件（textminute段 + tool call close）
+	// register output format plugin (text segment + tool call close)
 	RegisterOutputSegmenter(registry)
 }

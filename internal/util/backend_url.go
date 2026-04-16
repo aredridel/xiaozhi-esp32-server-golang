@@ -6,13 +6,12 @@ import (
 	"github.com/spf13/viper"
 )
 
-// GetBackendURL getafterendpointURL，priorityfromenvironmentvariableget，ifenvironmentvariableno存atthenfromconfigget
+// GetBackendURL get backend endpoint URL, priority from environment variable, if environment variable not exist then from config get
 func GetBackendURL() string {
-	// priorityfromenvironmentvariableget
+	// priority from environment variable
 	if backendURL := os.Getenv("BACKEND_URL"); backendURL != "" {
 		return backendURL
 	}
-	// fromconfigfileget
+	// from config file get
 	return viper.GetString("manager.backend_url")
 }
-

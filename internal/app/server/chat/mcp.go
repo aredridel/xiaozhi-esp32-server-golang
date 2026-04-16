@@ -18,7 +18,7 @@ type McpTransport struct {
 }
 
 func (c *McpTransport) SendMcpMsg(payload []byte) error {
-	//ifyesinitializerequest，then注入vision
+	// if is initialize request, then inject vision
 	var request transport.JSONRPCRequest
 	err := json.Unmarshal(payload, &request)
 	if err == nil {
@@ -58,14 +58,14 @@ func initMcp(clientState *ClientState, serverTransport *ServerTransport) {
 		mcp.AddDeviceMcpClient(clientState.DeviceID, mcpClientSession)
 	}
 
-	// createIotOverMcpclient-side
+	// create IotOverMcp client-side
 	mcpTransport := &McpTransport{
 		Client:          clientState,
 		ServerTransport: serverTransport,
 	}
 	iotOverMcpClient := mcp.NewIotOverMcpClient(clientState.DeviceID, mcpTransport)
 	if iotOverMcpClient == nil {
-		log.Errorf("createIotOverMcpclient-sidefailed")
+		log.Errorf("create IotOverMcp client-side failed")
 		serverTransport.transport.Close()
 		return
 	}

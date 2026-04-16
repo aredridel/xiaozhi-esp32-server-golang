@@ -15,13 +15,13 @@ import (
 	log "xiaozhi-esp32-server-golang/logger"
 )
 
-// globalHTTPclient-side，implementjoinpool
+// globalHTTPclient-side，implementconnectionpool
 var (
 	httpClient     *http.Client
 	httpClientOnce sync.Once
 )
 
-// getconfigjoinpoolofHTTPclient-side
+// getconfigconnectionpoolofHTTPclient-side
 func getHTTPClient() *http.Client {
 	httpClientOnce.Do(func() {
 		transport := &http.Transport{
@@ -97,7 +97,7 @@ func NewCosyVoiceTTSProvider(config map[string]interface{}) *CosyVoiceTTSProvide
 	}
 }
 
-// TextToSpeech willtextconvertisvoice，returnaudio framedataanderror
+// TextToSpeech willtextconverttovoice，returnaudio framedataanderror
 func (p *CosyVoiceTTSProvider) TextToSpeech(ctx context.Context, text string, sampleRate int, channels int, frameDuration int) ([][]byte, error) {
 	// buildqueryparameter
 	params := url.Values{}
@@ -110,7 +110,7 @@ func (p *CosyVoiceTTSProvider) TextToSpeech(ctx context.Context, text string, sa
 
 	startTs := time.Now().UnixMilli()
 
-	// build完bodyURL
+	// buildcompleteURL
 	requestURL := fmt.Sprintf("%s?%s", p.APIURL, params.Encode())
 
 	// createHTTPrequest
@@ -121,7 +121,7 @@ func (p *CosyVoiceTTSProvider) TextToSpeech(ctx context.Context, text string, sa
 
 	req.Header.Set("Accept", "application/json")
 
-	// usejoinpoolsendrequest
+	// useconnectionpoolsendrequest
 	client := getHTTPClient()
 	resp, err := client.Do(req)
 	if err != nil {
@@ -129,38 +129,38 @@ func (p *CosyVoiceTTSProvider) TextToSpeech(ctx context.Context, text string, sa
 	}
 	defer resp.Body.Close()
 
-	// readrespond
+	// readresponse
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response: %v", err)
 	}
 
-	// inspectrespondstate码
+	// inspectresponsestatuscode
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("API request failed，state码: %d, respond: %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("API request failed, statuscode: %d, response: %s", resp.StatusCode, string(body))
 	}
 
-	// inspectrespondinside容typeandinside容length
+	// inspectresponsecontenttypeandcontentlength
 	// contentType := resp.Header.Get("Content-Type")
 	contentLength := resp.ContentLength
 
-	// recordrespondlengthtolog
-	log.Debugf("receiveTTSrespond，Content-Length: %d", contentLength)
+	// recordresponselengthtolog
+	log.Debugf("receiveTTSresponse, Content-Length: %d", contentLength)
 
-	// judgeContent-Lengthwhether合理
+	// judgeContent-Lengthwhetherreasonable
 	if contentLength == 0 {
-		log.Errorf("APIreturnemptyrespond，Content-Lengthis0")
-		return nil, fmt.Errorf("APIreturnemptyrespond，Content-Lengthis0")
+		log.Errorf("APIreturnemptyresponse, Content-Lengthis0")
+		return nil, fmt.Errorf("APIreturnemptyresponse, Content-Lengthis0")
 	}
 
-	// MP3fileheaderat leastneed100byteonly then能normalparse
-	// -1indicatenot知length（例如minuteblock传输）
+	// MP3fileheaderat leastneed100bytethennormalparse
+	// -1indicateunknownlength（forexamplechunkedtransfer）
 	if contentLength > 0 && contentLength < 100 {
-		log.Errorf("APIreturnofrespond太smallno法parseisMP3: %dbyte", contentLength)
-		return nil, fmt.Errorf("APIreturnofrespond太smallno法parseisMP3: %dbyte", contentLength)
+		log.Errorf("APIreturnofresponsetoosmalltoparseisMP3: %dbyte", contentLength)
+		return nil, fmt.Errorf("APIreturnofresponsetoosmalltoparseisMP3: %dbyte", contentLength)
 	}
 
-	// convertisOpusframe
+	// converttoOpusframe
 	if p.AudioFormat == "mp3" {
 		// create apipe
 		doneChan := make(chan struct{})
@@ -172,14 +172,14 @@ func (p *CosyVoiceTTSProvider) TextToSpeech(ctx context.Context, text string, sa
 			close(doneChan)
 			return nil, fmt.Errorf("createMP3 decoderfailed: %v", err)
 		}
-		// startdecodepast程
+		// startdecodeprocess
 		go func() {
 			if err := mp3Decoder.Run(startTs); err != nil {
 				log.Errorf("MP3decodefailed: %v", err)
 			}
 		}()
 
-		// receive集allofOpusframe
+		// receiveallOpusframe
 		var opusFrames [][]byte
 		for frame := range outputChan {
 			opusFrames = append(opusFrames, frame)
@@ -191,7 +191,7 @@ func (p *CosyVoiceTTSProvider) TextToSpeech(ctx context.Context, text string, sa
 	return nil, fmt.Errorf("unsupportedofaudioformat: %s", p.AudioFormat)
 }
 
-// TextToSpeechStream streamingvoice合成implement
+// TextToSpeechStream streamingvoicesynthesisimplement
 func (p *CosyVoiceTTSProvider) TextToSpeechStream(ctx context.Context, text string, sampleRate int, channels int, frameDuration int) (outputChan chan []byte, err error) {
 	// buildqueryparameter
 	params := url.Values{}
@@ -204,7 +204,7 @@ func (p *CosyVoiceTTSProvider) TextToSpeechStream(ctx context.Context, text stri
 
 	startTs := time.Now().UnixMilli()
 
-	// build完bodyURL
+	// buildcompleteURL
 	requestURL := fmt.Sprintf("%s?%s", p.APIURL, params.Encode())
 
 	// createHTTPrequest
@@ -215,7 +215,7 @@ func (p *CosyVoiceTTSProvider) TextToSpeechStream(ctx context.Context, text stri
 
 	req.Header.Set("Accept", "application/json")
 
-	// usejoinpoolcreateclient-side
+	// useconnectionpoolcreateclient
 	client := getHTTPClient()
 
 	// createoutputchannel
@@ -232,36 +232,36 @@ func (p *CosyVoiceTTSProvider) TextToSpeechStream(ctx context.Context, text stri
 			resp.Body.Close()
 		}()
 
-		// inspectrespondstate码
+		// inspectresponsestatuscode
 		if resp.StatusCode != http.StatusOK {
 			body, _ := io.ReadAll(resp.Body)
-			log.Errorf("API request failed，state码: %d, respond: %s", resp.StatusCode, string(body))
+			log.Errorf("API request failed, statuscode: %d, response: %s", resp.StatusCode, string(body))
 			return
 		}
 
-		// inspectrespondinside容typeandinside容length
+		// inspectresponsecontenttypeandcontentlength
 		// contentType := resp.Header.Get("Content-Type")
 		contentLength := resp.ContentLength
 
-		// recordrespondlengthtolog
-		log.Debugf("receiveTTSrespond，Content-Length: %d", contentLength)
+		// recordresponselengthtolog
+		log.Debugf("receiveTTSresponse, Content-Length: %d", contentLength)
 
-		// judgeContent-Lengthwhether合理
+		// judgeContent-Lengthwhetherreasonable
 		if contentLength == 0 {
-			log.Errorf("APIreturnemptyrespond，Content-Lengthis0")
+			log.Errorf("APIreturnemptyresponse, Content-Lengthis0")
 			return
 		}
 
-		// MP3fileheaderat leastneed100byteonly then能normalparse
-		// -1indicatenot知length（例如minuteblock传输）
+		// MP3fileheaderat leastneed100bytethennormalparse
+		// -1indicateunknownlength（forexamplechunkedtransfer）
 		if contentLength > 0 && contentLength < 100 {
-			log.Errorf("APIreturnofrespond太smallno法parseisMP3: %dbyte", contentLength)
+			log.Errorf("APIreturnofresponsetoosmalltoparseisMP3: %dbyte", contentLength)
 			return
 		}
 
-		// according toaudioformatprocessstreamingrespond
+		// accordingtoaudioformatprocessstreamingresponse
 		if p.AudioFormat == "mp3" {
-			// create MP3 decoder，传入 context 而noyes done channel
+			// create MP3 decoder，pass context butno done channel
 			mp3Decoder, err := util.CreateAudioDecoder(ctx, resp.Body, outputChan, frameDuration, p.AudioFormat)
 			if err != nil {
 				log.Errorf("createMP3 decoderfailed: %v", err)
@@ -269,7 +269,7 @@ func (p *CosyVoiceTTSProvider) TextToSpeechStream(ctx context.Context, text stri
 				return
 			}
 
-			// startdecodepast程
+			// startdecodeprocess
 			if err := mp3Decoder.Run(startTs); err != nil {
 				log.Errorf("MP3decodefailed: %v", err)
 				return
@@ -277,14 +277,14 @@ func (p *CosyVoiceTTSProvider) TextToSpeechStream(ctx context.Context, text stri
 
 			select {
 			case <-ctx.Done():
-				log.Debugf("TTSstreaming合成cancel, text: %s", text)
+				log.Debugf("TTSstreamingsynthesiscancel, text: %s", text)
 				return
 			default:
 				log.Infof("ttstime consumption: from input togetMP3dataendtime consumption: %d ms", time.Now().UnixMilli()-startTs)
 
 			}
 		} else {
-			log.Errorf("currentonlysupportMP3formatofstreaming合成")
+			log.Errorf("currentlyonlysupportMP3formatofstreamingsynthesis")
 		}
 	}()
 
@@ -300,7 +300,7 @@ func (p *CosyVoiceTTSProvider) SetVoice(voiceConfig map[string]interface{}) erro
 	return fmt.Errorf("invalidofvoiceconfig: Missing spk_id")
 }
 
-// Close closeresource（nostate Provider，noneedclose）
+// Close closeresource（nostate Provider，noneedtoclose）
 func (p *CosyVoiceTTSProvider) Close() error {
 	return nil
 }

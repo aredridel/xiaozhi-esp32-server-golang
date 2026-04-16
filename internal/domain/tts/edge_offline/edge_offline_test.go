@@ -18,69 +18,69 @@ var upgrader = websocket.Upgrader{
 // mock TTS WebSocket server
 func mockTTSServer(t *testing.T) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// upgradeHTTPjoinisWebSocket
+		// upgrade HTTP join is WebSocket
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
-			t.Errorf("upgradeWebSocketfailed: %v", err)
+			t.Errorf("upgrade WebSocket failed: %v", err)
 			return
 		}
 		defer conn.Close()
 
-		// readtextmessage
+		// read text message
 		_, text, err := conn.ReadMessage()
 		if err != nil {
-			t.Errorf("readtextmessagefailed: %v", err)
+			t.Errorf("read text message failed: %v", err)
 			return
 		}
 
-		// mockaudio data
+		// mock audio data
 		audioData := []byte("mock audio data for: " + string(text))
 
-		// send二systemaudio data
+		// send binary audio data
 		err = conn.WriteMessage(websocket.BinaryMessage, audioData)
 		if err != nil {
-			t.Errorf("sendaudio datafailed: %v", err)
+			t.Errorf("send audio data failed: %v", err)
 			return
 		}
 
-		// normalclosejoin
+		// normal close join
 		err = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 		if err != nil {
-			t.Errorf("closeWebSocketjoinfailed: %v", err)
+			t.Errorf("close WebSocket join failed: %v", err)
 			return
 		}
 	}))
 }
 
 func TestEdgeOfflineTTSProvider(t *testing.T) {
-	// startmockserver
+	// start mock server
 	server := mockTTSServer(t)
 	defer server.Close()
 
-	// createconfig
+	// create config
 	config := map[string]interface{}{
-		"server_url": "ws" + server.URL[4:], // will http:// replaceis ws://
-		"timeout":    float64(5),            // 5secondtimeout
+		"server_url": "ws" + server.URL[4:], // will http:// replace is ws://
+		"timeout":    float64(5),            // 5 second timeout
 	}
 
 	provider := NewEdgeOfflineTTSProvider(config)
 
 	t.Run("TestTextToSpeech", func(t *testing.T) {
 		ctx := context.Background()
-		frames, err := provider.TextToSpeech(ctx, "testtext", 16000, 1, 20)
+		frames, err := provider.TextToSpeech(ctx, "test text", 16000, 1, 20)
 		if err != nil {
-			t.Fatalf("TextToSpeechfailed: %v", err)
+			t.Fatalf("TextToSpeech failed: %v", err)
 		}
 		if len(frames) == 0 {
-			t.Error("notreturn任何audio frame")
+			t.Error("not return any audio frame")
 		}
 	})
 
 	t.Run("TestTextToSpeechStream", func(t *testing.T) {
 		ctx := context.Background()
-		outputChan, err := provider.TextToSpeechStream(ctx, "testtext", 16000, 1, 20)
+		outputChan, err := provider.TextToSpeechStream(ctx, "test text", 16000, 1, 20)
 		if err != nil {
-			t.Fatalf("TextToSpeechStreamfailed: %v", err)
+			t.Fatalf("TextToSpeechStream failed: %v", err)
 		}
 
 		var receivedFrames [][]byte
@@ -95,13 +95,13 @@ func TestEdgeOfflineTTSProvider(t *testing.T) {
 				}
 				receivedFrames = append(receivedFrames, frame)
 			case <-timeout:
-				t.Error("receiveaudio frametimeout")
+				t.Error("receive audio frame timeout")
 				break ReceiveLoop
 			}
 		}
 
 		if len(receivedFrames) == 0 {
-			t.Error("notreceiveto任何audio frame")
+			t.Error("not receive any audio frame")
 		}
 	})
 
@@ -112,36 +112,36 @@ func TestEdgeOfflineTTSProvider(t *testing.T) {
 		})
 
 		ctx := context.Background()
-		_, err := provider.TextToSpeech(ctx, "testtext", 16000, 1, 20)
+		_, err := provider.TextToSpeech(ctx, "test text", 16000, 1, 20)
 		if err == nil {
-			t.Error("期望joininvalidserverwhenreturnerror")
+			t.Error("expect join invalid server when return error")
 		}
 	})
 
 	t.Run("TestTimeout", func(t *testing.T) {
-		// create awilldelayrespondofserver
+		// create a will delay respond of server
 		slowServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			conn, err := upgrader.Upgrade(w, r, nil)
 			if err != nil {
-				t.Errorf("upgradeWebSocketfailed: %v", err)
+				t.Errorf("upgrade WebSocket failed: %v", err)
 				return
 			}
 			defer conn.Close()
 
-			// delay2second
+			// delay 2 second
 			time.Sleep(2 * time.Second)
 		}))
 		defer slowServer.Close()
 
 		provider := NewEdgeOfflineTTSProvider(map[string]interface{}{
 			"server_url": "ws" + slowServer.URL[4:],
-			"timeout":    float64(1), // 1secondtimeout
+			"timeout":    float64(1), // 1 second timeout
 		})
 
 		ctx := context.Background()
-		_, err := provider.TextToSpeech(ctx, "testtext", 16000, 1, 20)
+		_, err := provider.TextToSpeech(ctx, "test text", 16000, 1, 20)
 		if err == nil {
-			t.Error("期望timeoutwhenreturnerror")
+			t.Error("expect timeout when return error")
 		}
 	})
 }

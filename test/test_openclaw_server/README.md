@@ -43,7 +43,7 @@ Configure the output `Token` in the plugin configuration:
 
 ## HTTP API
 
-### 1) 健康检查
+### 1) Health Check
 
 ```bash
 curl -sS http://127.0.0.1:18080/healthz | jq
@@ -62,13 +62,13 @@ curl -sS "http://127.0.0.1:18080/debug/ws-auth" \
   -H "Authorization: Bearer <token>" | jq
 ```
 
-### 2) 查看当前连接
+### 2) View Current Connections
 
 ```bash
 curl -sS http://127.0.0.1:18080/api/connections | jq
 ```
 
-### 3) 发送测试消息给插件
+### 3) Send Test Message to Plugin
 
 ```bash
 curl -sS -X POST http://127.0.0.1:18080/api/send \
@@ -76,7 +76,7 @@ curl -sS -X POST http://127.0.0.1:18080/api/send \
   -d '{
     "agent_id":"main",
     "device_id":"esp32-001",
-    "content":"请回复一条测试消息",
+    "content":"Please reply with a test message",
     "session_id":"test-session-1"
   }' | jq
 ```
@@ -90,11 +90,11 @@ curl -sS -X POST http://127.0.0.1:18080/api/send \
     "agent_id":"main",
     "conn_id":"main-2",
     "device_id":"esp32-001",
-    "content":"发给指定连接"
+    "content":"Send to specific connection"
   }' | jq
 ```
 
-### 4) 查看插件回包
+### 4) View Plugin Response
 
 ```bash
 curl -sS "http://127.0.0.1:18080/api/responses?limit=20" | jq

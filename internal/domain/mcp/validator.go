@@ -13,15 +13,15 @@ import (
 
 const validateTimeout = 25 * time.Second
 
-// ValidateMCPConfigMap to传入of mcp configexecutejoin级预检（initialize + tools/list）。
+// ValidateMCPConfigMap execute connection-level pre-check on passed mcp config (initialize + tools/list).
 func ValidateMCPConfigMap(mcpConfig map[string]interface{}) error {
 	if mcpConfig == nil {
-		return fmt.Errorf("mcp configisempty")
+		return fmt.Errorf("mcp config is empty")
 	}
 
 	global := asAnyMap(mcpConfig["global"])
 	if global == nil {
-		return fmt.Errorf("mcp.global config缺失")
+		return fmt.Errorf("mcp.global config missing")
 	}
 
 	enabled := toBool(global["enabled"])
@@ -34,16 +34,16 @@ func ValidateMCPConfigMap(mcpConfig map[string]interface{}) error {
 		return fmt.Errorf("parse mcp.global.servers failed: %w", err)
 	}
 	if len(servers) == 0 {
-		return fmt.Errorf("mcp.global.enabled=true but servers isempty")
+		return fmt.Errorf("mcp.global.enabled=true but servers is empty")
 	}
 
 	return ValidateServerConfigs(servers)
 }
 
-// ValidateServerConfigs verifyserverconfigavailability。
+// ValidateServerConfigs verify server config availability.
 func ValidateServerConfigs(serverConfigs []MCPServerConfig) error {
 	if len(serverConfigs) == 0 {
-		return fmt.Errorf("notprovide任何MCPserverconfig")
+		return fmt.Errorf("no MCP server config provided")
 	}
 
 	errs := make([]string, 0)
@@ -59,7 +59,7 @@ func ValidateServerConfigs(serverConfigs []MCPServerConfig) error {
 	}
 
 	if enabledCount == 0 {
-		return fmt.Errorf("no启useofMCPserver")
+		return fmt.Errorf("no enabled MCP server")
 	}
 	if len(errs) > 0 {
 		return fmt.Errorf("%s", strings.Join(errs, "; "))

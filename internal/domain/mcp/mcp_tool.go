@@ -12,21 +12,21 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-// LocalToolHandler localtoolprocess functiontype
+// LocalToolHandler local tool process function type
 type LocalToolHandler func(ctx context.Context, argumentsInJSON string) (string, error)
 
-// mcpTool MCPtoolimplement，supportremoteandlocaltool
+// mcpTool MCP tool implementation, support remote and local tools
 type McpTool struct {
 	info       *schema.ToolInfo
 	serverName string
 	client     *client.Client
 
-	// localtoolsupport
+	// local tool support
 	isLocal      bool
 	localHandler LocalToolHandler
 }
 
-// Info gettoolinfo，implementBaseToolinterface
+// Info get tool info, implement BaseTool interface
 func (t *McpTool) Info(ctx context.Context) (*schema.ToolInfo, error) {
 	return t.info, nil
 }
@@ -34,49 +34,49 @@ func (t *McpTool) Info(ctx context.Context) (*schema.ToolInfo, error) {
 func (t *McpTool) InvokeableLocalRun(ctx context.Context, argumentsInJSON string, opts ...tool.Option) (string, error) {
 	toolInfo := t.info
 	if t.localHandler == nil {
-		return "", fmt.Errorf("localtool %s ofprocess functionnot定义", toolInfo.Name)
+		return "", fmt.Errorf("local tool %s process function not defined", toolInfo.Name)
 	}
 
-	log.Infof("executelocaltool: %s, parameter: %s", toolInfo.Name, argumentsInJSON)
+	log.Infof("execute local tool: %s, parameter: %s", toolInfo.Name, argumentsInJSON)
 
 	resultStr, err := t.localHandler(ctx, argumentsInJSON)
 	if err != nil {
-		log.Errorf("localtool %s executefailed: %v", toolInfo.Name, err)
-		return "", fmt.Errorf("localtoolexecutefailed: %v", err)
+		log.Errorf("local tool %s execute failed: %v", toolInfo.Name, err)
+		return "", fmt.Errorf("local tool execute failed: %v", err)
 	}
 	if len(resultStr) > 2048 {
-		log.Infof("localtool %s executesuccessful，resultlength: %d", toolInfo.Name, len(resultStr))
+		log.Infof("local tool %s execute successful, result length: %d", toolInfo.Name, len(resultStr))
 	} else {
-		log.Infof("localtool %s executesuccessful，result: %+s", toolInfo.Name, resultStr)
+		log.Infof("local tool %s execute successful, result: %+s", toolInfo.Name, resultStr)
 	}
 
 	return resultStr, nil
 }
 
-// InvokableRun calltool，implementInvokableToolinterface
+// InvokableRun call tool, implement InvokableTool interface
 func (t *McpTool) InvokableRun(ctx context.Context, argumentsInJSON string, opts ...tool.Option) (string, error) {
-	// ifyeslocaltool，directcalllocalprocess function
+	// if is local tool, directly call local process function
 	if t.isLocal {
 		return t.InvokeableLocalRun(ctx, argumentsInJSON, opts...)
 	}
 
 	retContent := ""
 
-	// remoteMCPtoolcalllogical
-	// inspectclient-sidewhetheravailable
+	// remote MCP tool call logic
+	// check if client is available
 	if t.client == nil {
-		return retContent, fmt.Errorf("callMCPtoolfailed: MCPclient-sidenot initialized")
+		return retContent, fmt.Errorf("call MCP tool failed: MCP client not initialized")
 	}
 
-	// parseparameter
+	// parse parameter
 	var arguments map[string]interface{}
 	if argumentsInJSON != "" {
 		if err := json.Unmarshal([]byte(argumentsInJSON), &arguments); err != nil {
-			return retContent, fmt.Errorf("parsetoolparameterfailed: %v", err)
+			return retContent, fmt.Errorf("parse tool parameter failed: %v", err)
 		}
 	}
 
-	// preparecallrequest
+	// prepare call request
 	callRequest := mcp.CallToolRequest{
 		Params: mcp.CallToolParams{
 			Name:      t.info.Name,
@@ -84,32 +84,32 @@ func (t *McpTool) InvokableRun(ctx context.Context, argumentsInJSON string, opts
 		},
 	}
 
-	// firsttimestrycall
+	// first time try call
 	result, err := t.client.CallTool(ctx, callRequest)
 	if err != nil && isSessionClosedError(err) {
-		log.Warnf("tool %s callfailed(session closed): %v，tryreconnectafterretry", t.info.Name, err)
+		log.Warnf("tool %s call failed(session closed): %v, try reconnect after retry", t.info.Name, err)
 
-		// reconnectandget newclient
+		// reconnect and get new client
 		newClient, err := GetGlobalMCPManager().reconnectServer(t.serverName)
 		if err != nil {
-			return retContent, fmt.Errorf("reconnectserverfailed: %v", err)
+			return retContent, fmt.Errorf("reconnect server failed: %v", err)
 		}
 
-		// updatetoolofclientreference
+		// update tool's client reference
 		t.client = newClient
 
-		// retrycall
+		// retry call
 		result, err = t.client.CallTool(ctx, callRequest)
 		if err != nil {
-			return retContent, fmt.Errorf("reconnectaftercallstill然failed: %v", err)
+			return retContent, fmt.Errorf("reconnect after call still failed: %v", err)
 		}
 	} else if err != nil {
-		return retContent, fmt.Errorf("calltoolfailed: %v", err)
+		return retContent, fmt.Errorf("call tool failed: %v", err)
 	}
 
 	resultStr, err := result.MarshalJSON()
 	if err != nil {
-		return retContent, fmt.Errorf("toolcallreturninside容convertfailed: %v", err)
+		return retContent, fmt.Errorf("tool call return content convert failed: %v", err)
 	}
 
 	return string(resultStr), nil

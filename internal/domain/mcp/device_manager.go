@@ -15,7 +15,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-// DeviceMcpSession 代表adeviceofMCPsession，aggregate多种MCPjoin
+// DeviceMcpSession represents a device MCP session, aggregates multiple MCP connections
 type DeviceMcpSession struct {
 	deviceID      string
 	Ctx           context.Context
@@ -38,7 +38,7 @@ func (dcs *DeviceMcpSession) AddWsEndPointMcp(mcpClient *McpClientInstance) {
 func (dcs *DeviceMcpSession) SetIotOverMcp(mcpClient *McpClientInstance) {
 	dcs.iotMux.Lock()
 	defer dcs.iotMux.Unlock()
-	// ifalready存ataiotOverMcp，firstcloseit
+	// if already exists iotOverMcp, first close it
 	/*if dcs.iotOverMcp != nil {
 		dcs.iotOverMcp.Close()
 	}*/
@@ -54,31 +54,31 @@ func (dcs *DeviceMcpSession) RemoveWsEndPointMcp(mcpClient *McpClientInstance) {
 	dcs.wsEndPointMcp.Delete(mcpClient.serverName)
 }
 
-// GetDeviceID getdeviceID
+// GetDeviceID get device ID
 func (dcs *DeviceMcpSession) GetDeviceID() string {
 	return dcs.deviceID
 }
 
-// handleMcpClientClose processMCPclient-sidecloseevent
+// handleMcpClientClose process MCP client close event
 func (dcs *DeviceMcpSession) handleMcpClientClose(instance *McpClientInstance, reason string) {
-	logger.Infof("device %s ofMCPclient-side %s alreadyclose，reason: %s", dcs.deviceID, instance.serverName, reason)
+	logger.Infof("device %s MCP client %s already closed, reason: %s", dcs.deviceID, instance.serverName, reason)
 
-	// fromsessioninremovealreadycloseofclient-side
+	// from session remove already closed client
 	dcs.RemoveWsEndPointMcp(instance)
 
-	// ifallWebSocketendpointpointareclose，can考虑cleanupbody个session
+	// if all WebSocket endpoints are closed, can consider cleanup whole session
 	/*if len(dcs.wsEndPointMcp) == 0 && dcs.iotOverMcp == nil {
 		logger.Infof("device %s ofallMCPjoinalreadyclose，cleanupsession", dcs.deviceID)
 		dcs.cancel()
 	}*/
 }
 
-// McpClientInstance 代表aconcreteofMCPclient-sidejoin
+// McpClientInstance represents a concrete MCP client connection
 type McpClientInstance struct {
 	serverName string
-	mcpClient  *client.Client // yesfromws endpoint连up来ofmcp server
+	mcpClient  *client.Client // from ws endpoint connected mcp server
 	tools      map[string]tool.InvokableTool
-	toolsMux   sync.RWMutex // protectedtoollistofmutexlock
+	toolsMux   sync.RWMutex // protected tool list mutex lock
 	serverInfo *mcp.InitializeResult
 	lastPing   time.Time
 	Ctx        context.Context
@@ -90,7 +90,7 @@ type McpClientInstance struct {
 	onCloseHandler func(instance *McpClientInstance, reason string)
 }
 
-// NewDeviceMCPClient create newMCPclient-side
+// NewDeviceMCPClient create new MCP client
 func NewDeviceMCPSession(deviceID string) *DeviceMcpSession {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -166,7 +166,7 @@ func NewIotOverMcpClient(deviceID string, conn ConnInterface) *McpClientInstance
 	return iotOverMcp
 }
 
-// refreshToolsCommon 通useoftoollistrefreshlogical
+// refreshToolsCommon common tool list refresh logic
 func (dc *McpClientInstance) refreshTools() error {
 	tools, err := dc.mcpClient.ListTools(dc.Ctx, mcp.ListToolsRequest{})
 	if err != nil {
@@ -174,12 +174,12 @@ func (dc *McpClientInstance) refreshTools() error {
 		return err
 	}
 
-	// usemutexlockprotectedtoollistofupdate
+	// use mutex lock protected tool list update
 	dc.toolsMux.Lock()
 	dc.tools = ConvertMcpToolListToInvokableToolList(tools.Tools, dc.serverName, dc.mcpClient)
 	dc.toolsMux.Unlock()
 
-	logger.Infof("refreshtoollistsuccessful: %s getto %d 个tool", dc.serverName, len(dc.tools))
+	logger.Infof("refresh tool list successful: %s get %d tools", dc.serverName, len(dc.tools))
 	return nil
 }
 
@@ -188,7 +188,7 @@ func (dc *McpClientInstance) GetServerName() string {
 }
 
 func (dc *DeviceMcpSession) refreshToolsAndPing() {
-	// onlyatinitializewhengetatimestoollist
+	// only at initialize when get a time tool list
 	findTools := func(mcpInstance *McpClientInstance) {
 		if mcpInstance == nil {
 			return
@@ -217,14 +217,14 @@ func (dc *DeviceMcpSession) refreshToolsAndPing() {
 
 	findTools(dc.iotOverMcp)
 
-	// 每2minute钟performatimesping
+	// every 2 minutes perform a ping
 	pingTick := time.NewTicker(2 * time.Minute)
 	defer pingTick.Stop()
 
 	for {
 		select {
 		case <-dc.Ctx.Done():
-			logger.Infof("device %s sessionalreadycancel，stopping", dc.deviceID)
+			logger.Infof("device %s session already cancelled, stopping", dc.deviceID)
 			return
 		case <-pingTick.C:
 			dc.wsEndPointMcp.Range(func(_, mcpInstance interface{}) bool {
@@ -266,7 +266,7 @@ func (dc *McpClientInstance) findTools() (*mcp.ListToolsResult, error) {
 	return tools, nil
 }
 
-// handleJSONRPCNotification processJSON-RPCnotify
+// handleJSONRPCNotification process JSON-RPC notify
 func (dc *McpClientInstance) handleJSONRPCNotification(notification mcp.JSONRPCNotification) {
 	switch notification.Method {
 	case "notifications/progress":
@@ -276,7 +276,7 @@ func (dc *McpClientInstance) handleJSONRPCNotification(notification mcp.JSONRPCN
 	case "notifications/resources/updated":
 		//handleResourceUpdateNotification(notification)
 	case "notifications/tools/updated":
-		// receivetoolupdatenotify，refreshtoollist
+		// receive tool update notify, refresh tool list
 		logger.Infof("receivetoolupdatenotify，refreshtoollist")
 		go dc.refreshToolsOnNotification()
 	default:
@@ -284,46 +284,46 @@ func (dc *McpClientInstance) handleJSONRPCNotification(notification mcp.JSONRPCN
 	}
 }
 
-// refreshToolsOnNotification 基于notifyrefreshtoollist
+// refreshToolsOnNotification based on notify refresh tool list
 func (dc *McpClientInstance) refreshToolsOnNotification() {
-	// addshort暂delayavoid频繁refresh
+	// add short delay avoid frequent refresh
 	time.Sleep(100 * time.Millisecond)
 	dc.refreshTools()
 }
 
-// handleJSONRPCError processJSON-RPCerror
+// handleJSONRPCError process JSON-RPC error
 func (dc *McpClientInstance) handleJSONRPCError(errMsg mcp.JSONRPCError) error {
-	logger.Errorf("receiveMCPservererror: %+v", errMsg.Error)
+	logger.Errorf("receive MCP server error: %+v", errMsg.Error)
 	return nil
 }
 
-// handleTransportClose processtransportlayercloseevent
+// handleTransportClose process transport layer close event
 func (dc *McpClientInstance) handleTransportClose(reason string) {
-	logger.Infof("MCPclient-side %s transportlayerclose，reason: %s", dc.serverName, reason)
+	logger.Infof("MCP client %s transport layer close, reason: %s", dc.serverName, reason)
 
-	// markjoinalreadydisconnect
+	// mark connection already disconnect
 	dc.connected = false
 
 	// cancelcontext
 	dc.cancel()
 
-	// notifyupperprocess
+	// notify upper process
 	if dc.onCloseHandler != nil {
 		dc.onCloseHandler(dc, reason)
 	}
 }
 
-// SetOnCloseHandler setclosecallback
+// SetOnCloseHandler set close callback
 func (dc *McpClientInstance) SetOnCloseHandler(handler func(instance *McpClientInstance, reason string)) {
 	dc.onCloseHandler = handler
 }
 
-// IsConnected inspectjoinwhetherstill然活跃
+// IsConnected inspect connection whether still active
 func (dc *McpClientInstance) IsConnected() bool {
 	return dc.connected
 }
 
-// GetConnectionStatus getjoinstateinfo
+// GetConnectionStatus get connection state info
 func (dc *McpClientInstance) GetConnectionStatus() map[string]interface{} {
 	dc.toolsMux.RLock()
 	toolsCount := len(dc.tools)
@@ -337,7 +337,7 @@ func (dc *McpClientInstance) GetConnectionStatus() map[string]interface{} {
 	}
 }
 
-// GetTools gettoollist
+// GetTools get tool list
 func (dc *DeviceMcpSession) GetTools() map[string]tool.InvokableTool {
 	tools := make(map[string]tool.InvokableTool)
 	dc.wsEndPointMcp.Range(func(_, value interface{}) bool {

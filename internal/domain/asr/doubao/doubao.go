@@ -146,7 +146,7 @@ func (d *DoubaoV2ASR) StreamingRecognize(ctx context.Context, audioStream <-chan
 		ForceToSpeechTime: d.config.ForceToSpeechTime,
 		EnableNonstream:   d.config.EnableNonstream,
 	}
-	// createclient-sideinstance（noimmediately建立join）
+	// createclient-sideinstance（noimmediatelyestablishconnection）
 	d.c = client.NewAsrWsClient(d.config.WsURL, d.config.AppID, d.config.AccessToken, d.config.ResourceID, connectID, streamID, requestOptions)
 	log.Debugf(
 		"[doubao-asr:%s] StreamingRecognize start: ws=%s, resource_id=%s, result_type=%s, show_utterances=%v, force_to_speech_time=%d, chunk_duration=%d, timeout=%d",
@@ -165,7 +165,7 @@ func (d *DoubaoV2ASR) StreamingRecognize(ctx context.Context, audioStream <-chan
 	// program internal result channel
 	resultChan := make(chan types.StreamingResult, 10)
 
-	// startaudio streamprocess（joinwillatnthaaudiopackagetoreachwhen建立）
+	// startaudio streamprocess（connectionwillatnthaaudiopackagetoreachwhenestablish）
 	go func() {
 		defer close(doubaoResultChan)
 		if err := d.c.StartAudioStream(ctx, audioStream, doubaoResultChan); err != nil {
@@ -246,7 +246,7 @@ func (d *DoubaoV2ASR) receiveStreamResults(ctx context.Context, streamID string,
 				lastNonEmptyUtterance = firstUtterance
 			}
 			log.Debugf(
-				"[doubao-asr:%s] up游resultsketch: idx=%d, payload_seq=%d, event=%d, last=%v, code=%d, text_len=%d, text=%q, utterances=%d, first_utterance=%q, audio_duration=%d",
+				"[doubao-asr:%s] upstreamresultssketch: idx=%d, payload_seq=%d, event=%d, last=%v, code=%d, text_len=%d, text=%q, utterances=%d, first_utterance=%q, audio_duration=%d",
 				streamID,
 				packetCount,
 				result.PayloadSequence,
@@ -275,10 +275,10 @@ func (d *DoubaoV2ASR) receiveStreamResults(ctx context.Context, streamID string,
 					errMsg,
 					retryReason,
 				)
-				// use select avoidtoalreadycloseof channel send（if ctx alreadycancel，priorityselect ctx.Done()）
+				// use select avoidtoalreadycloseof channel send（if ctx alreadycancel，priorityselect ctx.Done())
 				select {
 				case <-ctx.Done():
-					log.Debugf("[doubao-asr:%s] senderrorresultwhencontextalreadycancel，skipsend", streamID)
+					log.Debugf("[doubao-asr:%s] senderrorresultwhencontextalreadycancel,skipsend", streamID)
 					return
 				case resultChan <- types.StreamingResult{
 					Text:        "",
@@ -293,7 +293,7 @@ func (d *DoubaoV2ASR) receiveStreamResults(ctx context.Context, streamID string,
 				if candidateText != lastPartialText {
 					lastPartialText = candidateText
 					log.Debugf(
-						"[doubao-asr:%s] 透传middleresult: packets=%d, partial_text=%q, payload_seq=%d, event=%d",
+						"[doubao-asr:%s] passthroughmiddleresult: packets=%d, partial_text=%q, payload_seq=%d, event=%d",
 						streamID,
 						packetCount,
 						previewDoubaoText(candidateText, 24),
@@ -302,7 +302,7 @@ func (d *DoubaoV2ASR) receiveStreamResults(ctx context.Context, streamID string,
 					)
 					select {
 					case <-ctx.Done():
-						log.Debugf("[doubao-asr:%s] sendmiddleresultwhencontextalreadycancel，skipsend", streamID)
+						log.Debugf("[doubao-asr:%s] sendmiddleresultwhencontextalreadycancel,skipsend", streamID)
 						return
 					case resultChan <- types.StreamingResult{
 						Text:    candidateText,
@@ -339,7 +339,7 @@ func (d *DoubaoV2ASR) receiveStreamResults(ctx context.Context, streamID string,
 					)
 					select {
 					case <-ctx.Done():
-						log.Debugf("[doubao-asr:%s] sendfinallyemptyresultwhencontextalreadycancel，skipsend", streamID)
+						log.Debugf("[doubao-asr:%s] sendfinallyemptyresultwhencontextalreadycancel,skipsend", streamID)
 						return
 					case resultChan <- types.StreamingResult{
 						Text:        "",
@@ -351,7 +351,7 @@ func (d *DoubaoV2ASR) receiveStreamResults(ctx context.Context, streamID string,
 				}
 				if text == "" {
 					log.Warnf(
-						"[doubao-asr:%s] finallypackagetextisempty，回退to最近nonemptyresult: packets=%d, non_empty_packets=%d, final_text=%q, last_non_empty_utterance=%q, payload_seq=%d, event=%d, utterances=%d, audio_duration=%d",
+						"[doubao-asr:%s] finallypackagetextisempty, fallbacktorecentnonemptyresult: packets=%d, non_empty_packets=%d, final_text=%q, last_non_empty_utterance=%q, payload_seq=%d, event=%d, utterances=%d, audio_duration=%d",
 						streamID,
 						packetCount,
 						nonEmptyPacketCount,
@@ -371,10 +371,10 @@ func (d *DoubaoV2ASR) receiveStreamResults(ctx context.Context, streamID string,
 						previewDoubaoText(text, 24),
 					)
 				}
-				// processfinallyresult（package括silencesituationofemptyresult），use select avoidtoalreadycloseof channel send
+				// processfinallyresult（includesilencesituationofemptyresult），use select avoidtoalreadycloseof channel send
 				select {
 				case <-ctx.Done():
-					log.Debugf("[doubao-asr:%s] sendfinallyresultwhencontextalreadycancel，skipsend", streamID)
+					log.Debugf("[doubao-asr:%s] sendfinallyresultwhencontextalreadycancel,skipsend", streamID)
 					return
 				case resultChan <- types.StreamingResult{
 					Text:    finalText,

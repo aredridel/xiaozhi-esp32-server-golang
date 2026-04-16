@@ -146,7 +146,7 @@
             placeholder="Separate multiple services with commas, leave empty to use all enabled services"
           />
           <div style="margin-top: 6px; color: #909399; font-size: 12px;">
-            Example: Discovery Report, Amap. Leaving empty will clear the agent's service filter.
+            Example: Discovery Report, Amap. Leaving empty will use all enabled services.
           </div>
         </el-form-item>
         <el-form-item label="OpenClaw">
@@ -404,14 +404,14 @@ const editingAgent = ref(null)
 const saving = ref(false)
 const agentFormRef = ref()
 
-// MCP接入点相关
+// MCP endpoint related
 const showMCPDialog = ref(false)
 const mcpLoading = ref(false)
 const mcpEndpointData = ref({
   endpoint: ''
 })
 
-// MCP工具相关
+// MCP tools related
 const toolsLoading = ref(false)
 const mcpTools = ref([])
 const currentAgentId = ref(null)

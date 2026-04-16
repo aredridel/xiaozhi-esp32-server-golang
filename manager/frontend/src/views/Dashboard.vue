@@ -413,7 +413,7 @@ const stats = ref({
   onlineDevices: 0
 })
 
-const uptime = ref('0天 0小时 0分钟')
+const uptime = ref('0d 0h 0m')
 const fileInput = ref(null)
 
 onMounted(async () => {

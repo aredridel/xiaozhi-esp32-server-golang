@@ -25,14 +25,14 @@ import (
 	"github.com/spf13/viper"
 )
 
-// App unified manage all protocol services and ChatManager
+// App unified manages all protocol services and ChatManager
 
 type App struct {
 	wsServer       *websocket.WebSocketServer
 	mqttUdpAdapter *mqtt_udp.MqttUdpAdapter
 	mqttUdpMu      sync.RWMutex
 
-	// ChatManager manage - use concurrent map
+	// ChatManager manager - use concurrent map
 	chatManagers cmap.ConcurrentMap[string, *chat.ChatManager]
 }
 
@@ -65,7 +65,7 @@ func (a *App) Run() {
 	adapter := a.mqttUdpAdapter
 	a.mqttUdpMu.RUnlock()
 	if adapter != nil {
-		go adapter.Start() // non-blocking，joinandretryat adapter internalafter台execute
+		go adapter.Start() // non-blocking, connect and retry at adapter internal background execution
 	}
 
 	// register chat relevant local MCP tools
@@ -82,7 +82,7 @@ func (a *App) Run() {
 	// start resource pool count report (report once every 5 seconds to manager backend)
 	pool.StartStatsReporter(ctx)
 
-	select {} // blockmainthread
+	select {} // block main thread
 }
 
 func (app *App) initEventHandle() {
@@ -96,7 +96,7 @@ func (app *App) initEventHandle() {
 		return
 	}
 
-	// initialize message processor (always enabled, unified process Redis+MemoryProvider+History)
+	// initialize message processor (always enabled, unified process Redis + MemoryProvider + History)
 	historyCfg := history.HistoryClientConfig{
 		BaseURL:   util.GetBackendURL(),
 		AuthToken: util.GetManagerAuthToken(),
@@ -104,7 +104,7 @@ func (app *App) initEventHandle() {
 		Enabled:   true, // always enabled
 	}
 	NewMessageWorker(historyCfg)
-	log.Info("message processor already initialized")
+	log.Info("message processor initialized")
 }
 
 func (app *App) currentMqttConfig() *mqtt_udp.MqttConfig {
@@ -166,7 +166,7 @@ func (app *App) startMqttServer() error {
 	return mqtt_server.StartMqttServer()
 }
 
-// ReloadMqttServer hot reload MQTT Server: first stop, then according to mqtt_server.enable decide whether to start (if not enabled then only stop without start)
+// ReloadMqttServer hot reload MQTT Server: first stop, then according to mqtt_server.enable decide whether to start (if not enabled then only stop without starting)
 func (app *App) ReloadMqttServer() {
 	_ = mqtt_server.StopMqttServer()
 	if !viper.GetBool("mqtt_server.enable") {
@@ -177,7 +177,7 @@ func (app *App) ReloadMqttServer() {
 	}
 }
 
-// ReloadMqttUdp hot reload MQTT+UDP: first stop old adapter, then according to mqtt.enable decide whether to create new and start (if not enabled then only stop without start)
+// ReloadMqttUdp hot reload MQTT+UDP: first stop old adapter, then according to mqtt.enable decide whether to create new and start (if not enabled then only stop without starting)
 func (app *App) ReloadMqttUdp() {
 	app.mqttUdpMu.Lock()
 	old := app.mqttUdpAdapter
@@ -201,7 +201,7 @@ func (app *App) ReloadMqttUdp() {
 	go adapter.Start()
 }
 
-// ReloadMqttUdpWithFlags according to change mark decide whether to hot reload MQTT+UDP
+// ReloadMqttUdpWithFlags according to change mark decide whether to hot reload MQTT + UDP
 func (app *App) ReloadMqttUdpWithFlags(doMqttReload, doUdpReload bool) {
 	if !doMqttReload && !doUdpReload {
 		return
@@ -263,7 +263,7 @@ func (app *App) ReloadMqttUdpWithFlags(doMqttReload, doUdpReload bool) {
 // ReloadMCP hot reload MCP: when disabled only stop global MCP; when enabled and already started then restart global MCP, if not started then start MCP cluster
 func (app *App) ReloadMCP() error {
 	if !viper.GetBool("mcp.global.enabled") {
-		// disabled: only stop without start, avoid dependency on Start() internal judgment or merge sequence
+		// disabled: only stop without starting, avoid dependency on Start() internal judgment or merge sequence
 		if err := mcp.GetGlobalMCPManager().Stop(); err != nil {
 			return err
 		}
@@ -306,18 +306,18 @@ func (a *App) OnNewConnection(transport types.IConn) {
 
 	a.DeviceOnline(deviceID)
 
-	log.Infof("device %s ChatManager already created and stored", deviceID)
+	log.Infof("device %s ChatManager created and stored", deviceID)
 
-	// OpenClaw offline message replay (delay retry, avoid when connection just established but session not yet initialized)
+	// OpenClaw offline message replay (delay retry, avoid when connection just established but session is not yet initialized)
 	go a.replayOpenClawOfflineMessages(deviceID)
 
-	// startChatManager
+	// start ChatManager
 	go func() {
 		defer func() {
 			// when ChatManager ends, remove from map
 			if storedManager, exists := a.chatManagers.Get(deviceID); exists && storedManager == chatManager {
 				a.chatManagers.Remove(deviceID)
-				log.Infof("device %s ChatManager already removed from map", deviceID)
+				log.Infof("device %s ChatManager removed from map", deviceID)
 				a.DeviceOffline(deviceID)
 			}
 		}()
@@ -386,15 +386,15 @@ func (a *App) CloseChatManager(deviceID string) bool {
 	if manager, exists := a.chatManagers.Get(deviceID); exists {
 		manager.Close()
 		a.chatManagers.Remove(deviceID)
-		log.Infof("device %s ChatManager already closed and removed", deviceID)
+		log.Infof("device %s ChatManager closed and removed", deviceID)
 		return true
 	}
 	return false
 }
 
-// GetAllChatManagers get all ChatManager replica
+// GetAllChatManagers get all ChatManager copy
 func (a *App) GetAllChatManagers() map[string]*chat.ChatManager {
-	// return replica to avoid concurrent access issues
+	// return copy to avoid concurrent access issues
 	managers := make(map[string]*chat.ChatManager)
 	for tuple := range a.chatManagers.IterBuffered() {
 		managers[tuple.Key] = tuple.Val
@@ -411,20 +411,20 @@ func (a *App) GetChatManagerCount() int {
 func (a *App) CloseAllChatManagers() {
 	for tuple := range a.chatManagers.IterBuffered() {
 		tuple.Val.Close()
-		log.Infof("device %s ChatManager already closed", tuple.Key)
+		log.Infof("device %s ChatManager closed", tuple.Key)
 	}
 
 	// clear map
 	a.chatManagers.Clear()
-	log.Info("all ChatManager already closed")
+	log.Info("all ChatManager closed")
 }
 
 // registerChatMCPTools register chat relevant local MCP tools
 func (s *App) registerChatMCPTools() {
-	// callchatpackageofregisterfunction
+	// call chat package register function
 	chat.RegisterChatMCPTools()
 
-	log.Info("chat relevant local MCP tools register complete")
+	log.Info("chat relevant local MCP tools registered")
 }
 
 func (s *App) DeviceOnline(deviceID string) {
@@ -500,7 +500,7 @@ func (a *App) HandleInjectMsg(ctx context.Context, eventType string, eventData m
 	log.Debugf("HandleInjectMsg: injecting message to device %s, skip_llm: %v, message: %s",
 		msg.DeviceId, msg.SkipLlm, msg.Message)
 
-	// useChatManagerof公开method注入message
+	// use ChatManager public method to inject message
 	err = chatManager.InjectMessage(msg.Message, msg.SkipLlm)
 	if err != nil {
 		log.Errorf("HandleInjectMsg: failed to inject message to device %s: %v", msg.DeviceId, err)

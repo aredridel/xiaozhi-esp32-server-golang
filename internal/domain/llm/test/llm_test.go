@@ -14,18 +14,18 @@ func containsRune(slice []rune, target rune) bool {
 }
 
 func extractSmartSentences(text string, minLen, maxLen int) (sentences []string, remaining string) {
-	// validdivide符set（可自定义extend）
+	// valid split token set (can custom extend)
 	splitTokens := []rune{'。', '！', '？', '；', '\n', '.', '!', '?', ';'}
 
 	current := []rune(text)
 	for len(current) >= minLen {
-		// calculate current窗口size
+		// calculate current window size
 		windowSize := maxLen
 		if windowSize > len(current) {
 			windowSize = len(current)
 		}
 
-		// atvalid窗口in寻找dividepoint
+		// at valid window in find split point
 		splitPos := -1
 		for i := windowSize - 1; i >= minLen-1; i-- {
 			if containsRune(splitTokens, current[i]) {
@@ -35,10 +35,10 @@ func extractSmartSentences(text string, minLen, maxLen int) (sentences []string,
 		}
 
 		if splitPos == -1 {
-			break // not找tovaliddividepoint
+			break // not find valid split point
 		}
 
-		// divideandsavevalid句child
+		// split and save valid sentence
 		sentences = append(sentences, string(current[:splitPos+1]))
 		current = current[splitPos+1:]
 	}
@@ -47,7 +47,7 @@ func extractSmartSentences(text string, minLen, maxLen int) (sentences []string,
 }
 
 func main() {
-	text := "large家好！今天天气no错。我们a起learning自然languageprocess。这个例childdemotextdividefunction。"
+	text := "Hello everyone! The weather is nice today. Let's learn natural language processing together. This example demonstrates text segmentation function."
 	sentences, remaining := extractSmartSentences(text, 3, 20)
 	fmt.Println(sentences)
 	fmt.Println(remaining)

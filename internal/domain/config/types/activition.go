@@ -1,6 +1,6 @@
 package types
 
-// ActivationPayload/ActivationRequest structurebody定义
+// ActivationPayload/ActivationRequest structure definition
 
 type ActivationPayload struct {
 	Algorithm    string `json:"algorithm"`

@@ -9,9 +9,9 @@ import (
 	log "xiaozhi-esp32-server-golang/logger"
 )
 
-// MemoryUserConfigProvider memoryuserconfigprovide者
-// implementUserConfigProviderinterface，willconfigstoreatmemoryin
-// 注意：restartafterdatawill丢失，适used fortestor临whenstorescenario
+// MemoryUserConfigProvider memory user config provider
+// implement UserConfigProvider interface, store config in memory
+// Note: data will be lost after restart, suitable for test or temporary storage scenario
 type MemoryUserConfigProvider struct {
 	mu         sync.RWMutex
 	configs    map[string]types.UConfig
@@ -20,15 +20,15 @@ type MemoryUserConfigProvider struct {
 
 // MemoryConfig memoryconfigstructure
 type MemoryConfig struct {
-	MaxEntries int `json:"max_entries"` // maximumstore条目count
+	MaxEntries int `json:"max_entries"` // maximum store entry count
 }
 
-// NewMemoryUserConfigProvider creatememoryuserconfigprovide者
-// config: configparametermap，includemax_entriesetc
+// NewMemoryUserConfigProvider create memory user config provider
+// config: config parameter map, include max_entries etc
 func NewMemoryUserConfigProvider(config map[string]interface{}) (*MemoryUserConfigProvider, error) {
-	// parseconfigparameter
+	// parse config parameter
 	memoryConfig := &MemoryConfig{
-		MaxEntries: 1000, // defaultmaximum1000个config
+		MaxEntries: 1000, // default maximum 1000 configs
 	}
 
 	if maxEntries, ok := config["max_entries"].(int); ok && maxEntries > 0 {
@@ -42,72 +42,72 @@ func NewMemoryUserConfigProvider(config map[string]interface{}) (*MemoryUserConf
 		maxEntries: memoryConfig.MaxEntries,
 	}
 
-	log.Log().Infof("memoryuserconfigprovide者initializesuccessful，maximum条目count: %d", memoryConfig.MaxEntries)
+	log.Log().Infof("memory user config provider initialize successful, maximum entry count: %d", memoryConfig.MaxEntries)
 	return provider, nil
 }
 
-// GetUserConfig getuserconfig
+// GetUserConfig get user config
 func (m *MemoryUserConfigProvider) GetUserConfig(ctx context.Context, userID string) (types.UConfig, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	config, exists := m.configs[userID]
 	if !exists {
-		log.Log().Debugf("user %s configno存at，returnemptyconfig", userID)
+		log.Log().Debugf("user %s config not exist, return empty config", userID)
 		return types.UConfig{}, nil
 	}
 
 	return config, nil
 }
 
-// SetUserConfig setuserconfig
+// SetUserConfig set user config
 func (m *MemoryUserConfigProvider) SetUserConfig(ctx context.Context, userID string, config types.UConfig) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	// check if超pastmaximum条目count
+	// check if exceed maximum entry count
 	if len(m.configs) >= m.maxEntries && !m.configExists(userID) {
-		return fmt.Errorf("alreadyreachtomaximumstore条目count %d，no法add新config", m.maxEntries)
+		return fmt.Errorf("already reach to maximum store entry count %d, cannot add new config", m.maxEntries)
 	}
 
 	m.configs[userID] = config
-	log.Log().Infof("user %s configsetsuccessful (memorystore)", userID)
+	log.Log().Infof("user %s config set successful (memory store)", userID)
 	return nil
 }
 
-// DeleteUserConfig deleteuserconfig
+// DeleteUserConfig delete user config
 func (m *MemoryUserConfigProvider) DeleteUserConfig(ctx context.Context, userID string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	if _, exists := m.configs[userID]; !exists {
-		log.Log().Warnf("user %s configno存at，noneeddelete", userID)
+		log.Log().Warnf("user %s config not exist, no need delete", userID)
 		return nil
 	}
 
 	delete(m.configs, userID)
-	log.Log().Infof("user %s configdeletesuccessful (memorystore)", userID)
+	log.Log().Infof("user %s config delete successful (memory store)", userID)
 	return nil
 }
 
-// Close closeprovide者（memoryprovide者noneed特殊cleanup）
+// Close close provider (memory provider no need special cleanup)
 func (m *MemoryUserConfigProvider) Close() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	// clearallconfig
+	// clear all config
 	m.configs = make(map[string]types.UConfig)
-	log.Log().Info("memoryuserconfigprovide者alreadyclose，allconfigalreadyclear")
+	log.Log().Info("memory user config provider already closed, all config already cleared")
 	return nil
 }
 
-// configExists inspectconfigwhether存at（internalmethod，callwhenneed持havelock）
+// configExists inspect config whether exists (internal method, call when need hold lock)
 func (m *MemoryUserConfigProvider) configExists(userID string) bool {
 	_, exists := m.configs[userID]
 	return exists
 }
 
-// GetStats getstorecountinfo（额outsideof实usemethod）
+// GetStats get store count info (extra method)
 func (m *MemoryUserConfigProvider) GetStats() map[string]interface{} {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -119,7 +119,7 @@ func (m *MemoryUserConfigProvider) GetStats() map[string]interface{} {
 	}
 }
 
-// ListUserIDs 列outalluserID（额outsideof实usemethod）
+// ListUserIDs list all user IDs (extra method)
 func (m *MemoryUserConfigProvider) ListUserIDs() []string {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -131,26 +131,26 @@ func (m *MemoryUserConfigProvider) ListUserIDs() []string {
 	return userIDs
 }
 
-// GetSystemConfig getsystemconfig
+// GetSystemConfig get system config
 func (m *MemoryUserConfigProvider) GetSystemConfig(ctx context.Context) (string, error) {
-	// memoryconfigprovide者noprovidesystemconfig
+	// memory config provider no provide system config
 	return "", nil
 }
 
-// Init initializeMemoryconfigprovide者
+// Init initialize Memory config provider
 func Init(ctx context.Context) error {
 	log.Log().Info("Memory config provider initialized successfully")
 	return nil
 }
 
-// Close closeMemoryconfigprovide者，cleanupresource
+// Close close Memory config provider, cleanup resource
 func Close() error {
 	log.Log().Info("Memory config provider closed")
 	return nil
 }
 
-// IsConnected inspectMemoryconfigprovide者whetheralreadyjoin
+// IsConnected inspect Memory config provider whether already connected
 func IsConnected() bool {
-	// memoryconfigprovide者alwaysyes"join"state
+	// memory config provider always is "connected" state
 	return true
 }

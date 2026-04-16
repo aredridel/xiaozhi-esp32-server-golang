@@ -8,16 +8,16 @@ import (
 	"xiaozhi-esp32-server-golang/internal/util"
 )
 
-// Config userconfigprovide者configstructure
+// Config user config provider config struct
 type Config struct {
-	Type       string                 `json:"type"`       // storetype: "redis", "memory", "file"
-	Parameters map[string]interface{} `json:"parameters"` // storerelevantconfigparameter
+	Type       string                 `json:"type"`       // store type: "redis", "memory", "file"
+	Parameters map[string]interface{} `json:"parameters"` // store relevant config parameters
 }
 
 func GetProvider(sType string) (UserConfigProvider, error) {
 	config := make(map[string]interface{})
 	if sType == "manager" {
-		// priorityfromenvironmentvariablegetbackendaddress，ifenvironmentvariableno存atthenfromconfigget
+		// priority from environment variable get backend address, if environment variable not exists then from config get
 		backendUrl := util.GetBackendURL()
 		config = map[string]interface{}{
 			"backend_url": backendUrl,
@@ -32,11 +32,11 @@ func GetProvider(sType string) (UserConfigProvider, error) {
 	return provider, nil
 }
 
-// GetUserConfigProvider createuserconfigprovide者
-// according to传入ofstoretypeandconfigparametercreatecorrespondingprovide者instance
-// providerType: provide者type，support "redis", "memory", "file"
-// config: provide者configparameter
-// returnUserConfigProviderinterface，support完bodyofCRUD操as
+// GetUserConfigProvider create user config provider
+// according to passed store type and config parameters create corresponding provider instance
+// providerType: provider type, support "redis", "memory", "file"
+// config: provider config parameters
+// return UserConfigProvider interface, support full CRUD operations
 func GetUserConfigProvider(providerType string, config map[string]interface{}) (UserConfigProvider, error) {
 	if config == nil {
 		config = make(map[string]interface{})
@@ -44,20 +44,20 @@ func GetUserConfigProvider(providerType string, config map[string]interface{}) (
 
 	switch providerType {
 	case "redis":
-		// createRedisuserconfigprovide者
+		// create Redis user config provider
 		provider, err := userconfig_redis.NewRedisUserConfigProvider(config)
 		if err != nil {
-			return nil, fmt.Errorf("createRedisuserconfigprovide者failed: %v", err)
+			return nil, fmt.Errorf("create Redis user config provider failed: %v", err)
 		}
 		return provider, nil
 	case "manager":
-		// createafterendpointmanagesystemuserconfigprovide者
+		// create backend management system user config provider
 		provider, err := manager.NewManagerUserConfigProvider(config)
 		if err != nil {
-			return nil, fmt.Errorf("createafterendpointmanagesystemuserconfigprovide者failed: %v", err)
+			return nil, fmt.Errorf("create backend management system user config provider failed: %v", err)
 		}
 		return provider, nil
 	default:
-		return nil, fmt.Errorf("unsupportedofuserconfigprovide者: %s", providerType)
+		return nil, fmt.Errorf("unsupported user config provider: %s", providerType)
 	}
 }

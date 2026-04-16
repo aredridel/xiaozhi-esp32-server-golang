@@ -6,17 +6,16 @@ import (
 	"xiaozhi-esp32-server-golang/internal/domain/vad/inter"
 	// "xiaozhi-esp32-server-golang/internal/domain/vad/silero_vad"
 	"xiaozhi-esp32-server-golang/internal/domain/vad/ten_vad"
-
 	// "xiaozhi-esp32-server-golang/internal/domain/vad/webrtc_vad"
 )
 
 func AcquireVAD(provider string, config map[string]interface{}) (inter.VAD, error) {
-	// priorityuse config inof provider，elseuseparameterinof provider
+	// priority use config provider, else use parameter provider
 	if configProvider, ok := config["provider"].(string); ok && configProvider != "" {
 		provider = configProvider
 	}
 
-	// if provider isempty，return明确oferrorinfo
+	// if provider is empty, return explicit error info
 	if provider == "" {
 		return nil, errors.New("vad provider is empty, please set provider in config (supported: ten_vad)")
 	}
@@ -34,7 +33,7 @@ func AcquireVAD(provider string, config map[string]interface{}) (inter.VAD, erro
 }
 
 func ReleaseVAD(vad inter.VAD) error {
-	//according tovadoftype，callcorrespondingReleaseVADmethod
+	// according to vad type, call corresponding ReleaseVAD method
 	switch vad.(type) {
 	// case *webrtc_vad.WebRTCVAD:
 	// 	return webrtc_vad.ReleaseVAD(vad)

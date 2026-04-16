@@ -21,39 +21,39 @@ import (
 	"xiaozhi-esp32-server-golang/internal/domain/tts/zhipu"
 )
 
-// foundationTTS providerinterface（no含Contextmethod）
+// foundationTTS providerinterface（noContextmethod）
 type BaseTTSProvider interface {
 	TextToSpeech(ctx context.Context, text string, sampleRate int, channels int, frameDuration int) ([][]byte, error)
 	TextToSpeechStream(ctx context.Context, text string, sampleRate int, channels int, frameDuration int) (outputChan chan []byte, err error)
 }
 
-// DualStreamProvider both TTS input and output are streamingofoptionalinterface：synthesize output while receiving text。Provider ifsupportthenimplementthisinterface。
+// DualStreamProvider both TTS input and output are streamingoptionalinterface：synthesize output while receiving text。Provider ifsupportthenimplementthisinterface。
 type DualStreamProvider interface {
 	StreamingSynthesize(ctx context.Context, textChan <-chan string, sampleRate int, channels int, frameDuration int) (outputChan chan streaming.SynthesisEvent, err error)
 }
 
-// 完bodyTTS providerinterface（includeContextmethod）
+// completeTTS providerinterface（includeContextmethod）
 type TTSProvider interface {
 	BaseTTSProvider
 	// SetVoice dynamicsetvoiceparameter
-	// voiceConfig: includevoicerelevantconfigof map，如 {"voice": "xxx"} or {"spk_id": "xxx"}
+	// voiceConfig: includevoicerelevantconfigof map，like {"voice": "xxx"} or {"spk_id": "xxx"}
 	SetVoice(voiceConfig map[string]interface{}) error
-	// Close closeresource，releasejoinetc
+	// Close closeresource，releaseconnectionetc
 	Close() error
-	// IsValid inspectresourcewhethervalid（joinwhether存活etc）
+	// IsValid inspectresourcewhethervalid（connectionwhetheraliveetc）
 	IsValid() bool
 }
 
-// GetTTSProvider geta完bodyofTTS provider（supportContext）
-// providerName: mayyes config_id/provider orresourcepool key（如 "edge_tts:zh-CN-XiaoxiaoNeural"）
-// config: fromdatalibraryconfigs表ofjson_datafieldparseofconfigmap
-// priorityuse config inof provider field，elsefrom providerName parse（取 ":" beforepart）
+// GetTTSProvider getacompleteTTS provider（supportContext）
+// providerName: maybe config_id/provider orresourcepool key（like "edge_tts:zh-CN-XiaoxiaoNeural"）
+// config: fromdatabaseconfigsjson_datafieldparsedconfigmap
+// priorityuse config inof provider field，elsefrom providerName parse（take ":" beforepart）
 func GetTTSProvider(providerName string, config map[string]interface{}) (TTSProvider, error) {
 	effectiveName := providerName
 	if configProvider, ok := config["provider"].(string); ok && configProvider != "" {
 		effectiveName = configProvider
 	}
-	// resourcepool key formatis "provider:voiceID"，取before半partasisprovidertype
+	// resourcepool key formatis "provider:voiceID"，takebeforepartasprovidertype
 	if idx := strings.Index(effectiveName, ":"); idx > 0 {
 		effectiveName = effectiveName[:idx]
 	}
@@ -91,10 +91,10 @@ func GetTTSProvider(providerName string, config map[string]interface{}) (TTSProv
 	}
 
 	if baseProvider == nil {
-		return nil, fmt.Errorf("no法createTTS provider: %s", effectiveName)
+		return nil, fmt.Errorf("cannotcreateTTS provider: %s", effectiveName)
 	}
 
-	// useadapterpackage装foundationprovider，convertis完bodyofTTSProvider
+	// useadapterwrapfoundationprovider，convertiscompleteTTSProvider
 	provider := &ContextTTSAdapter{baseProvider}
 
 	return provider, nil
@@ -149,18 +149,18 @@ func buildIndexTTSOpenAIConfig(config map[string]interface{}) map[string]interfa
 	return normalized
 }
 
-// ContextTTSAdapter yesaadapter，isfoundationTTS provideraddContextsupport
+// ContextTTSAdapter isanadapter，isfoundationTTS provideraddContextsupport
 type ContextTTSAdapter struct {
 	Provider BaseTTSProvider
 }
 
-// StreamingSynthesize proxytooriginalproviderofdual-stream合成interface
+// StreamingSynthesize proxytooriginalproviderofdual-streamsynthesisinterface
 func (a *ContextTTSAdapter) StreamingSynthesize(ctx context.Context, textChan <-chan string, sampleRate int, channels int, frameDuration int) (outputChan chan streaming.SynthesisEvent, err error) {
 	// inspectunderlying Provider whethersupportdual-stream
 	if dsProvider, ok := a.Provider.(DualStreamProvider); ok {
 		return dsProvider.StreamingSynthesize(ctx, textChan, sampleRate, channels, frameDuration)
 	}
-	return nil, fmt.Errorf("underlying Provider unsupporteddual-stream合成")
+	return nil, fmt.Errorf("underlying Provider unsupporteddual-streamsynthesis")
 }
 
 // TextToSpeech proxytooriginalprovider
@@ -185,7 +185,7 @@ func (a *ContextTTSAdapter) SetVoice(voiceConfig map[string]interface{}) error {
 	return fmt.Errorf("underlying Provider unsupported SetVoice method")
 }
 
-// TextToSpeechWithContext useContextversionoftext转voice
+// TextToSpeechWithContext useContextversionoftexttovoice
 func (a *ContextTTSAdapter) TextToSpeechWithContext(ctx context.Context, text string, sampleRate int, channels int, frameDuration int) ([][]byte, error) {
 	// inspectproviderwhetherdirectsupportContextversion
 	if provider, ok := a.Provider.(interface {
@@ -223,7 +223,7 @@ func (a *ContextTTSAdapter) TextToSpeechWithContext(ctx context.Context, text st
 	}
 }
 
-// TextToSpeechStreamWithContext useContextversionofstreamingtext转voice
+// TextToSpeechStreamWithContext useContextversionofstreamingtexttovoice
 func (a *ContextTTSAdapter) TextToSpeechStreamWithContext(ctx context.Context, text string, sampleRate int, channels int, frameDuration int) (outputChan chan []byte, cancelFunc func(), err error) {
 	// inspectproviderwhetherdirectsupportContextversion
 	if provider, ok := a.Provider.(interface {
@@ -233,7 +233,7 @@ func (a *ContextTTSAdapter) TextToSpeechStreamWithContext(ctx context.Context, t
 		return provider.TextToSpeechStreamWithContext(ctx, text, sampleRate, channels, frameDuration)
 	}
 
-	// elseusestandardversion，butcreate awrapper来processcontextcancel
+	// elseusestandardversion，butcreate awrappertoprocesscontextcancel
 	streamChan, err := a.Provider.TextToSpeechStream(ctx, text, sampleRate, channels, frameDuration)
 	if err != nil {
 		return nil, nil, err
@@ -242,7 +242,7 @@ func (a *ContextTTSAdapter) TextToSpeechStreamWithContext(ctx context.Context, t
 	// create anewoutputchannel，used forforwardandprocesscancel
 	outputChan = make(chan []byte, 10)
 
-	// create agoroutine来forwarddataandlistencontextcancel
+	// create agoroutinetoforwarddataandlistencontextcancel
 	go func() {
 		defer close(outputChan)
 

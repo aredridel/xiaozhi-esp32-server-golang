@@ -78,7 +78,7 @@ func (p *McpClientPool) GetWsEndpointMcpTools(agentId string) (map[string]tool.I
 
 func (p *McpClientPool) checkOffline() {
 	for _, client := range p.device2McpClient.Items() {
-		// inspectWebSocketendpointpointMCPjoin
+		// inspect WebSocket endpoint MCP connection
 		hasActiveWsConnections := false
 		client.wsEndPointMcp.Range(func(_, value interface{}) bool {
 			wsInstance := value.(*McpClientInstance)
@@ -91,7 +91,7 @@ func (p *McpClientPool) checkOffline() {
 			return true //continue
 		})
 
-		// inspectIoT over MCPjoin
+		// inspect IoT over MCP connection
 		hasActiveIotConnection := false
 		if client.iotOverMcp != nil {
 			if time.Since(client.iotOverMcp.lastPing) > 2*time.Minute {
@@ -102,7 +102,7 @@ func (p *McpClientPool) checkOffline() {
 			}
 		}
 
-		// ifno任何活跃join，removeclient-side
+		// if no any active connection, remove client
 		if !hasActiveWsConnections && !hasActiveIotConnection {
 			p.RemoveMcpClient(client.deviceID)
 		}

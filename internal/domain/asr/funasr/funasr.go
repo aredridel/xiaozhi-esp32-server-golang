@@ -351,11 +351,11 @@ func (f *Funasr) recvResult(ctx context.Context, conn *websocket.Conn, streamID 
 
 		streamingResult := f.toStreamingResult(response)
 
-		// sendrecognizeresult
+		// send recognize result
 		select {
 		case <-ctx.Done():
-			// contextcancel，exitgoroutine
-			log.Debugf("funasr recvResult alreadycancel: %v", ctx.Err())
+			// context cancelled, exit goroutine
+			log.Debugf("funasr recvResult already cancelled: %v", ctx.Err())
 			return
 		case resultChan <- streamingResult:
 		}
@@ -444,7 +444,7 @@ func (f *Funasr) forwardStreamAudio(ctx context.Context, cancelFunc context.Canc
 				debugState.audioSampleCount.Load(),
 				ctx.Err(),
 			)
-			// 注意：这innoneedcall cancelFunc()，becauseis ctx.Done() alreadybetriggerinstructioncontextalreadycancel
+			// Note: No need to call cancelFunc() here, because ctx.Done() already triggered context cancellation
 			sendEndMsg()
 			return
 		case pcmChunk, ok := <-audioStream:
@@ -461,24 +461,24 @@ func (f *Funasr) forwardStreamAudio(ctx context.Context, cancelFunc context.Canc
 				return
 			}
 
-			// convertPCMdataisbyte
+			// Convert PCM data to bytes
 			audioBytes := Float32SliceToBytes(pcmChunk)
 
-			//log.Debugf("funasr forwardStreamAudio sendaudio data, pcmChunk len: %v, audioBytes len: %v", len(pcmChunk), len(audioBytes))
+			//log.Debugf("funasr forwardStreamAudio send audio data, pcmChunk len: %v, audioBytes len: %v", len(pcmChunk), len(audioBytes))
 
-			// sendaudio data
+			// Send audio data
 			err := f.writeMessage(conn, websocket.BinaryMessage, audioBytes)
 			if err != nil {
-				log.Debugf("funasr forwardStreamAudio sendaudio datafailed: stream_id=%s, conn=%p, err=%v，clearjoin", streamID, conn, err)
+				log.Debugf("funasr forwardStreamAudio send audio data failed: stream_id=%s, conn=%p, err=%v, clear connection", streamID, conn, err)
 				f.clearConnection()
-				cancelFunc() // sendfailedwhencancelcontext，notify recvResult goroutine stop
+				cancelFunc() // When send failed, cancel context to notify recvResult goroutine to stop
 				return
 			}
 			chunkCount := debugState.audioChunkCount.Add(1)
 			sampleCount := debugState.audioSampleCount.Add(uint64(len(pcmChunk)))
 			if chunkCount <= 3 || chunkCount%10 == 0 {
 				log.Debugf(
-					"funasr forwardStreamAudio alreadysendaudio chunk: stream_id=%s, conn=%p, chunk=%d, chunk_samples=%d, total_samples=%d, bytes=%d",
+					"funasr forwardStreamAudio already sent audio chunk: stream_id=%s, conn=%p, chunk=%d, chunk_samples=%d, total_samples=%d, bytes=%d",
 					streamID,
 					conn,
 					chunkCount,
@@ -499,7 +499,7 @@ func (f *Funasr) Process(pcmData []float32) (string, error) {
 	f.sendMutex.Lock()
 	defer f.sendMutex.Unlock()
 
-	// getjoin（复useorcreate）
+	// get connection (reuse or create)
 	conn, err := f.getConnection(ctx)
 	if err != nil {
 		return "", err
@@ -533,8 +533,8 @@ func (f *Funasr) Process(pcmData []float32) (string, error) {
 		return "", fmt.Errorf("sendinitialmessagefailed: %v", err)
 	}
 
-	// willaudio data按blocksend
-	chunkSize := int(audio.SampleRate * 0.1) // 每blocksizeabout100msofaudio (16000 * 0.1)
+	// send audio data by block
+	chunkSize := int(audio.SampleRate * 0.1) // each block size about 100ms of audio (16000 * 0.1)
 	for i := 0; i < len(audioBytes); i += chunkSize {
 		end := i + chunkSize
 		if end > len(audioBytes) {
@@ -564,28 +564,28 @@ func (f *Funasr) Process(pcmData []float32) (string, error) {
 		return "", fmt.Errorf("sendterminatemessagefailed: %v", err)
 	}
 
-	// setreadtimeout
+	// set read timeout
 	conn.SetReadDeadline(time.Now().Add(time.Duration(f.config.Timeout) * time.Second))
 
-	// readresult
+	// read result
 	var result string
 	for {
 		_, message, err := conn.ReadMessage()
 		if err != nil {
 			if isTimeoutError(err) {
-				log.Debugf("funasr Process readresulttimeout: %v", err)
-				f.clearConnection() // readtimeout，clearjoin
-				return "", fmt.Errorf("readresulttimeout: %v", err)
+				log.Debugf("funasr Process read result timeout: %v", err)
+				f.clearConnection() // read timeout, clear connection
+				return "", fmt.Errorf("read result timeout: %v", err)
 			}
 			if isConnectionClosedError(err) {
-				log.Debugf("funasr Process readresultjoinalreadyclose: %v", err)
-				f.clearConnection() // joinalreadyclose，clearjoin
-				return "", fmt.Errorf("joinalreadyclose: %v", err)
+				log.Debugf("funasr Process read result connection already closed: %v", err)
+				f.clearConnection() // connection already closed, clear connection
+				return "", fmt.Errorf("connection already closed: %v", err)
 			}
-			// readfailed，clearjoin，downtimesusewhenautomaticreconnect
-			log.Errorf("funasr Process readresultfailed: %v，clearjoin", err)
+			// read failed, clear connection, auto reconnect next time
+			log.Errorf("funasr Process read result failed: %v, clear connection", err)
 			f.clearConnection()
-			return "", fmt.Errorf("readresultfailed: %v", err)
+			return "", fmt.Errorf("read result failed: %v", err)
 		}
 
 		var response FunasrResponse
@@ -594,7 +594,7 @@ func (f *Funasr) Process(pcmData []float32) (string, error) {
 			continue
 		}
 
-		// check ifisfinallyresult
+		// check if is final result
 		if response.IsFinal {
 			result = response.Text
 			break
@@ -605,7 +605,7 @@ func (f *Funasr) Process(pcmData []float32) (string, error) {
 }
 
 func Float32ToInt16(sample float32) int16 {
-	// limitat [-1, 1]，avoidoverflow
+	// limit at [-1, 1], avoid overflow
 	if sample > 1.0 {
 		sample = 1.0
 	} else if sample < -1.0 {
@@ -624,13 +624,13 @@ func Float32SliceToBytes(samples []float32) []byte {
 	return data
 }
 
-// Close closeresource，releasejoin
+// Close close resource, release connection
 func (f *Funasr) Close() error {
 	f.clearConnection()
 	return nil
 }
 
-// IsValid inspectresourcewhethervalid
+// IsValid check if resource is valid
 func (f *Funasr) IsValid() bool {
 	f.connMutex.RLock()
 	conn := f.conn
@@ -639,37 +639,37 @@ func (f *Funasr) IsValid() bool {
 }
 
 /*
-errortypejudgeuseexample：
+Error type judgment usage example:
 
-1. timeouterrorjudge：
+1. Timeout error judgment:
    if isTimeoutError(err) {
-       // processtimeoutsituation，mayneedretryor调bodytimeouttime
-       log.Warnf("操astimeout: %v", err)
+       // Process timeout situation, may need retry or adjust timeout time
+       log.Warnf("Operation timeout: %v", err)
    }
 
-2. joincloseerrorjudge：
+2. Connection close error judgment:
    if isConnectionClosedError(err) {
-       // processjoinclosesituation，mayneedre建立join
-       log.Warnf("joinalreadyclose: %v", err)
+       // Process connection close situation, may need to re-establish connection
+       log.Warnf("Connection already closed: %v", err)
    }
 
-3. 综合errorprocess：
+3. Comprehensive error process:
    _, message, err := conn.ReadMessage()
    if err != nil {
        if isTimeoutError(err) {
-           // timeout：mayyesnetworkdelayorserverrespondslow
-           // suggestion：调bodytimeouttimeorretry
+           // Timeout: may be network delay or server response slow
+           // Suggestion: adjust timeout time or retry
        } else if isConnectionClosedError(err) {
-           // joinclose：mayyesservermain动disconnectornetworkin断
-           // suggestion：re建立join
+           // Connection close: may be server actively disconnected or network interruption
+           // Suggestion: re-establish connection
        } else {
-           // othererror：mayyesprotocolerrorordataformaterror
-           // suggestion：inspectdataformatorprotocolimplement
+           // Other error: may be protocol error or data format error
+           // Suggestion: inspect data format or protocol implementation
        }
    }
 
-常见errortype：
-- timeouterror：i/o timeout, context deadline exceeded
-- joinclose：connection closed, broken pipe, connection reset
-- WebSocketclose：close 1000 (normal), close 1001 (going away)
+Common error types:
+- Timeout error: i/o timeout, context deadline exceeded
+- Connection close: connection closed, broken pipe, connection reset
+- WebSocket close: close 1000 (normal), close 1001 (going away)
 */

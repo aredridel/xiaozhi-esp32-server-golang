@@ -8,112 +8,112 @@ import (
 func TestMemoryProvider(t *testing.T) {
 	ctx := context.Background()
 
-	// creatememoryprovider
+	// Create memory provider
 	config := map[string]interface{}{
 		"max_entries": 10,
 	}
 
 	provider, err := GetUserConfigProvider("memory", config)
 	if err != nil {
-		t.Fatalf("creatememoryproviderfailed: %v", err)
+		t.Fatalf("Create memory provider failed: %v", err)
 	}
-	// 注意：interfaceinnoClosemethod，sononeedcall
+	// Note: interface has no Close method, so no need to call
 
 	userID := "test_user_123"
 
-	// by于interfaceinnoSetUserConfigmethod，我们onlytestGetUserConfigmethod
-	// testgetno存atuserofconfig（shouldreturnemptyconfig）
+	// Because interface has no SetUserConfig method, we only test GetUserConfig method
+	// Test getting non-existent user config (should return empty config)
 	retrievedConfig, err := provider.GetUserConfig(ctx, userID)
 	if err != nil {
 		t.Fatalf("getuserconfigfailed: %v", err)
 	}
 
-	// validatereturnofyesemptyconfig
+	// Validate returned is empty config
 	if retrievedConfig.Llm.Provider != "" {
-		t.Errorf("期望emptyconfig，but得toLLM Provider: %s", retrievedConfig.Llm.Provider)
+		t.Errorf("Expected empty config, but got LLM Provider: %s", retrievedConfig.Llm.Provider)
 	}
 
-	// testsystemconfigget
+	// Test system config get
 	systemConfig, err := provider.GetSystemConfig(ctx)
 	if err != nil {
-		t.Fatalf("getsystemconfigfailed: %v", err)
+		t.Fatalf("GetSystemConfig failed: %v", err)
 	}
-	_ = systemConfig // systemconfigmayisempty，这yesnormalof
+	_ = systemConfig // System config may be empty, this is normal
 }
 
 func TestProviderAdapter(t *testing.T) {
 	ctx := context.Background()
 
-	// creatememoryprovider
+	// Create memory provider
 	provider, err := GetUserConfigProvider("memory", map[string]interface{}{
 		"max_entries": 5,
 	})
 	if err != nil {
-		t.Fatalf("creatememoryproviderfailed: %v", err)
+		t.Fatalf("Create memory provider failed: %v", err)
 	}
-	// 注意：interfaceinnoClosemethod，sononeedcall
+	// Note: interface has no Close method, so no need to call
 
-	// testadaptergetconfig
+	// Test adapter get config
 	userID := "adapter_test_user"
 
-	// useadaptergetconfig（mayisemptyconfig）
+	// Use adapter to get config (may be empty config)
 	adapter := NewUserConfigAdapter(provider)
 	retrievedConfig, err := adapter.GetUserConfig(ctx, userID)
 	if err != nil {
-		t.Fatalf("throughadaptergetconfigfailed: %v", err)
+		t.Fatalf("Get config through adapter failed: %v", err)
 	}
 
-	// validateadapternormal工as（gettoconfigstructure）
+	// Validate adapter normal work (get config structure)
 	if retrievedConfig.SystemPrompt == "" {
-		t.Logf("adaptergettoemptyofsystemhint，这yesnormalof")
+		t.Logf("Adapter got empty system prompt, this is normal")
 	} else {
-		t.Logf("adaptergettosystemhint: %s", retrievedConfig.SystemPrompt)
+		t.Logf("Adapter got system prompt: %s", retrievedConfig.SystemPrompt)
 	}
 }
 
 func TestDefaultConfig(t *testing.T) {
-	// testRedisdefaultconfig
+	// Test Redis default config
 	redisConfig := DefaultConfig("redis")
 	if redisConfig["host"] != "localhost" {
-		t.Errorf("Redisdefaulthostconfigerror，期望: localhost, actual: %v", redisConfig["host"])
+		t.Errorf("Redis default host config error, expected: localhost, actual: %v", redisConfig["host"])
 	}
 
-	// testMemorydefaultconfig
+	// Test Memory default config
 	memoryConfig := DefaultConfig("memory")
 	if memoryConfig["max_entries"] != 1000 {
-		t.Errorf("Memorydefaultmax_entriesconfigerror，期望: 1000, actual: %v", memoryConfig["max_entries"])
+		t.Errorf("Memory default max_entries config error, expected: 1000, actual: %v", memoryConfig["max_entries"])
 	}
 
-	// testunsupportedoftype
+	// Test unsupported type
 	unknownConfig := DefaultConfig("unknown")
 	if len(unknownConfig) != 0 {
-		t.Errorf("not知type应returnemptyconfig，actual: %v", unknownConfig)
+		t.Errorf("Unknown type should return empty config, actual: %v", unknownConfig)
 	}
 }
 
 func TestValidateConfig(t *testing.T) {
-	// testvalidofRedisconfig
+	// Test valid Redis config
 	validRedisConfig := map[string]interface{}{
 		"host": "localhost",
 		"port": 6379,
 	}
 	err := ValidateConfig("redis", validRedisConfig)
 	if err != nil {
-		t.Errorf("validRedisconfigvalidatefailed: %v", err)
+		t.Errorf("Valid Redis config validate failed: %v", err)
 	}
 
-	// testinvalidofRedisconfig（Missinghost）
+	// Test invalid Redis config (Missing host)
 	invalidRedisConfig := map[string]interface{}{
 		"port": 6379,
 	}
 	err = ValidateConfig("redis", invalidRedisConfig)
 	if err == nil {
-		t.Error("MissinghostofRedisconfigshouldvalidatefailed")
+		t.Error("Missing host Redis config should validate failed")
 	}
 
-	// testMemoryconfig（noneedvalidate）
+	// Test Memory config (no need validate)
 	err = ValidateConfig("memory", map[string]interface{}{})
 	if err != nil {
-		t.Errorf("Memoryconfigvalidatefailed: %v", err)
+		t.Errorf("Memory config validate failed: %v", err)
 	}
 }

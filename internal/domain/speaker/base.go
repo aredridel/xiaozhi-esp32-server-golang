@@ -4,25 +4,25 @@ import (
 	"context"
 )
 
-// SpeakerProvider voiceprintrecognizeprovide者interface
+// SpeakerProvider voiceprint recognize provider interface
 type SpeakerProvider interface {
-	// StartStreaming startstreaming recognize
+	// StartStreaming start streaming recognize
 	StartStreaming(ctx context.Context, sampleRate int, agentId string) error
 
-	// SendAudioChunk sendaudio datablock
+	// SendAudioChunk send audio data block
 	SendAudioChunk(ctx context.Context, audioData []float32) error
 
-	// FinishAndIdentify completeinputandgetrecognizeresult
+	// FinishAndIdentify complete input and get recognize result
 	FinishAndIdentify(ctx context.Context) (*IdentifyResult, error)
 
-	// IsActive check if处于activatestate
+	// IsActive check if in active state
 	IsActive() bool
 
-	// Close closejoin
+	// Close close connection
 	Close() error
 }
 
-// GetSpeakerProvider getvoiceprintrecognizeprovide者
+// GetSpeakerProvider get voiceprint recognize provider
 func GetSpeakerProvider(config map[string]interface{}) (SpeakerProvider, error) {
 	return NewAsrServerProvider(config)
 }

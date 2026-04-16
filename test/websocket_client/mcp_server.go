@@ -70,10 +70,10 @@ func NewMcpServer(sendMsgChan chan []byte, recvMsgChan chan []byte) {
 
 	// Add weather query tool
 	weatherTool := mcp.NewTool("query_weather",
-		mcp.WithDescription("Query Dalian weather"),
+		mcp.WithDescription("Query weather"),
 	)
 
-	// Add random number generation tool (parameter type is string, converted internally by handler)
+	// Add random number generation tool (parameter type is number, converted internally by handler)
 	randomNumberTool := mcp.NewTool("random_number",
 		mcp.WithDescription("Generate random integer in specified range"),
 		mcp.WithNumber("min",
@@ -149,13 +149,13 @@ func randomNumberHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp
 
 // Joke telling handler
 func jokeHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	joke := "One day Xiaoming went to school. The teacher asked him why he was late. Xiaoming said: Because the homework was too difficult, I was doing homework in my dream, and when I woke up, I was already late."
+	joke := "One day, a student went to school. The teacher asked why he was late. The student replied: The homework was too difficult. I was doing it in my dream, and when I woke up, I was already late."
 	return mcp.NewToolResultText(joke), nil
 }
 
 func visionHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	image := "1.jpg"
-	question := "图片中有什么？"
+	question := "What is in the image?"
 	url := GetServerVisionURL()
 	if url == "" {
 		url = "http://192.168.208.214:8989/xiaozhi/api/vision" // Use default when not received from server

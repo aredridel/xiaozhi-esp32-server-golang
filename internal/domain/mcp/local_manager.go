@@ -16,8 +16,8 @@ import (
 
 // LocalMCPManager local MCP tool manager
 type LocalMCPManager struct {
-	tools map[string]*McpTool // toolname -> tool定义
-	mu    sync.RWMutex        // readwritelockprotectedconcurrentaccess
+	tools map[string]*McpTool // tool name -> tool definition
+	mu    sync.RWMutex        // read-write lock protected concurrent access
 }
 
 var (
@@ -25,54 +25,54 @@ var (
 	localOnce    sync.Once
 )
 
-// GetLocalMCPManager getlocal MCP managersingleton
+// GetLocalMCPManager get local MCP manager singleton
 func GetLocalMCPManager() *LocalMCPManager {
 	localOnce.Do(func() {
 		localManager = &LocalMCPManager{
 			tools: make(map[string]*McpTool),
 		}
-		// initializedefaultoflocaltool
+		// initialize default local tools
 		localManager.initDefaultTools()
 	})
 	return localManager
 }
 
-// initDefaultTools initializedefaultoflocaltool
+// initDefaultTools initialize default local tools
 func (l *LocalMCPManager) initDefaultTools() {
 
-	log.Info("local MCP managerdefaulttoolinitializecomplete")
+	log.Info("local MCP manager default tools initialize complete")
 }
 
-// RegisterTool registerlocaltool
+// RegisterTool register local tool
 func (l *LocalMCPManager) RegisterTool(tool *McpTool) error {
 	if tool == nil {
-		return fmt.Errorf("toolcannot be empty")
+		return fmt.Errorf("tool cannot be empty")
 	}
 
 	if tool.info.Name == "" {
-		return fmt.Errorf("toolnamecannot be empty")
+		return fmt.Errorf("tool name cannot be empty")
 	}
 
 	if !tool.isLocal || tool.localHandler == nil {
-		return fmt.Errorf("toolprocess functioncannot be empty")
+		return fmt.Errorf("tool process function cannot be empty")
 	}
 
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	// inspecttoolwhetheralready存at
+	// check if tool already exists
 	if _, exists := l.tools[tool.info.Name]; exists {
-		log.Warnf("localtool %s already存at，willbe覆盖", tool.info.Name)
+		log.Warnf("local tool %s already exists, will be overwritten", tool.info.Name)
 	}
 
 	l.tools[tool.info.Name] = tool
-	log.Infof("successfulregisterlocaltool: %s - %s", tool.info.Name, tool.info.Desc)
+	log.Infof("successfully register local tool: %s - %s", tool.info.Name, tool.info.Desc)
 	return nil
 }
 
 func (l *LocalMCPManager) convertStructToOpenaipi3Schema(inputParams any) (*openapi3.Schema, error) {
-	//usegithub.com/ThinkInAIXYZ/go-mcp throughstructgenerate tool, 然afterconvert成openapi3.Schema
-	toolInstance, err := mcp_protocol.NewTool("get_system_info", "getsystem基本info", inputParams)
+	// use github.com/ThinkInAIXYZ/go-mcp through struct generate tool, then convert to openapi3.Schema
+	toolInstance, err := mcp_protocol.NewTool("get_system_info", "get system basic info", inputParams)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func (l *LocalMCPManager) convertStructToOpenaipi3Schema(inputParams any) (*open
 	return inputSchema, nil
 }
 
-// RegisterToolFunc registertoolfunction（简化version）
+// RegisterToolFunc register tool function (simplified version)
 func (l *LocalMCPManager) RegisterToolFunc(name, description string, inputParams any, handler LocalToolHandler) error {
 	inputSchema, err := l.convertStructToOpenaipi3Schema(inputParams)
 	if err != nil {
@@ -109,21 +109,21 @@ func (l *LocalMCPManager) RegisterToolFunc(name, description string, inputParams
 	return l.RegisterTool(tool)
 }
 
-// UnregisterTool unregistertool
+// UnregisterTool unregister tool
 func (l *LocalMCPManager) UnregisterTool(name string) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
 	if _, exists := l.tools[name]; !exists {
-		return fmt.Errorf("tool %s no存at", name)
+		return fmt.Errorf("tool %s not exists", name)
 	}
 
 	delete(l.tools, name)
-	log.Infof("successfulunregisterlocaltool: %s", name)
+	log.Infof("successfully unregister local tool: %s", name)
 	return nil
 }
 
-// GetAllTools getalllocaltool，returnEinotoolinterfaceformat
+// GetAllTools get all local tools, return Eino tool interface format
 func (l *LocalMCPManager) GetAllTools() map[string]tool.InvokableTool {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
@@ -135,7 +135,7 @@ func (l *LocalMCPManager) GetAllTools() map[string]tool.InvokableTool {
 	return result
 }
 
-// GetToolByName according tonamegettool
+// GetToolByName get tool by name
 func (l *LocalMCPManager) GetToolByName(name string) (tool.InvokableTool, bool) {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
@@ -148,7 +148,7 @@ func (l *LocalMCPManager) GetToolByName(name string) (tool.InvokableTool, bool) 
 	return mcpTool, true
 }
 
-// GetToolNames getalltoolnamelist
+// GetToolNames get all tool name list
 func (l *LocalMCPManager) GetToolNames() []string {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
@@ -160,23 +160,23 @@ func (l *LocalMCPManager) GetToolNames() []string {
 	return names
 }
 
-// GetToolCount gettoolcount
+// GetToolCount get tool count
 func (l *LocalMCPManager) GetToolCount() int {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
 	return len(l.tools)
 }
 
-// Start startlocal manager（reserved interface）
+// Start start local manager (reserved interface)
 func (l *LocalMCPManager) Start() error {
-	log.Info("local MCP manageralreadystart")
+	log.Info("local MCP manager already started")
 	return nil
 }
 
-// Stop stoplocal manager（reserved interface）
+// Stop stop local manager (reserved interface)
 func (l *LocalMCPManager) Stop() error {
-	// 注意：我们nocleartool，becauseislocal manageroftoolshouldatthe entire applicationlifecycleinsidekeepavailable
-	// ifneedcleartool，should显式callUnregisterToolmethod
-	log.Info("local MCP manageralreadystop")
+	// note: we don't clear tools, because local manager's tools should keep available throughout the entire application lifecycle
+	// if need to clear tools, should explicitly call UnregisterTool method
+	log.Info("local MCP manager already stopped")
 	return nil
 }
