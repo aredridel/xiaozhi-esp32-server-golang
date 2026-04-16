@@ -46,7 +46,7 @@ const (
 	interruptExtraKey      = "interrupt"
 	interruptByExtraKey    = "interrupt_by"
 	interruptStageExtraKey = "interrupt_stage"
-	interruptContentSuffix = " [userinterrupt]"
+	interruptContentSuffix = " [user interrupt]"
 )
 
 // GetLastMessageID get the MessageID of the most recently saved message (used for two-phase save)
@@ -366,7 +366,7 @@ func (l *LLMManager) handleLLMWithContextAndTools(
 				if !ok {
 					stop, pushErr := pushRawText("", true, nil)
 					if pushErr != nil {
-						log.Errorf("processLLM endstreamfailed: %v", pushErr)
+						log.Errorf("process LLM end stream failed: %v", pushErr)
 					}
 					if stop || pushErr != nil {
 						return
@@ -543,12 +543,12 @@ func (l *LLMManager) handleLLMResponseChannelAsync(ctx context.Context, userMess
 		needSendTtsCmd = false
 	}
 
-	// at context ininitializeor复use fullText（used forchat history）
-	// if context inalreadyhave fullText（toolcallaftercontinueLLMrequest），then复use；elsecreate new
+	// at context initialize or reuse fullText (used for chat history)
+	// if context already have fullText (tool call after continue LLM request), then reuse; else create new
 	var fullText *strings.Builder
 	if existingFullText, ok := ctx.Value(fullTextKey).(*strings.Builder); ok && existingFullText != nil {
 		fullText = existingFullText
-		log.Debugf("复usealreadyhaveof fullText，currentlength: %d", fullText.Len())
+		log.Debugf("reuse already have fullText, current length: %d", fullText.Len())
 	} else {
 		fullText = &strings.Builder{}
 		ctx = context.WithValue(ctx, fullTextKey, fullText)
@@ -654,12 +654,12 @@ func (l *LLMManager) HandleLLMResponseChannelSync(ctx context.Context, userMessa
 		}
 	}
 
-	// at context ininitializeor复use fullText（used forchat history）
-	// if context inalreadyhave fullText（toolcallaftercontinueLLMrequest），then复use；elsecreate new
+	// at context initialize or reuse fullText (used for chat history)
+	// if context already have fullText (tool call after continue LLM request), then reuse; else create new
 	var fullText *strings.Builder
 	if existingFullText, ok := ctx.Value(fullTextKey).(*strings.Builder); ok && existingFullText != nil {
 		fullText = existingFullText
-		log.Debugf("复usealreadyhaveof fullText，currentlength: %d", fullText.Len())
+		log.Debugf("reuse already have fullText, current length: %d", fullText.Len())
 	} else {
 		fullText = &strings.Builder{}
 		ctx = context.WithValue(ctx, fullTextKey, fullText)

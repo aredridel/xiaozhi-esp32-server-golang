@@ -5,8 +5,8 @@ const (
 	TopicSessionEnd = "session_end"
 	TopicExitChat   = "exit_chat" // exitchatevent
 
-	// chat historyrelevantevent（already废弃，unifieduse TopicAddMessage）
-	// Deprecated: use TopicAddMessage 替代
-	TopicChatHistoryUserMessage      = "chat_history_user_message"      // usermessage(ASRafter) - already废弃
-	TopicChatHistoryAssistantMessage = "chat_history_assistant_message" // 机器人回复(LLM+TTSafter) - already废弃
+	// chat history relevant events (already deprecated, unified use TopicAddMessage)
+	// Deprecated: use TopicAddMessage instead
+	TopicChatHistoryUserMessage      = "chat_history_user_message"      // user message (after ASR) - already deprecated
+	TopicChatHistoryAssistantMessage = "chat_history_assistant_message" // bot reply (after LLM+TTS) - already deprecated
 )

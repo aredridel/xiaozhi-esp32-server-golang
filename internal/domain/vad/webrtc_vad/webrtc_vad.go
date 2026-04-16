@@ -12,27 +12,27 @@ import (
 )
 
 const (
-	// DefaultSampleRate WebRTC VAD supportofsampling率 (8000, 16000, 32000, 48000)
+	// DefaultSampleRate WebRTC VAD supported sampling rate (8000, 16000, 32000, 48000)
 	DefaultSampleRate = 16000
-	// DefaultMode VAD 敏感degreepattern (0: 最no敏感, 3: 最敏感)
+	// DefaultMode VAD sensitivity pattern (0: least sensitive, 3: most sensitive)
 	DefaultMode = 2
-	// FrameDuration frame持continuetime (ms)，WebRTC VAD support 10ms, 20ms, 30ms
+	// FrameDuration frame duration (ms), WebRTC VAD supports 10ms, 20ms, 30ms
 	FrameDuration = 20
 )
 
-// WebRTCVAD WebRTC VAD implement，现atimplement Resource interface
+// WebRTCVAD WebRTC VAD implementation, now implements Resource interface
 type WebRTCVAD struct {
 	webrtcVad      *webrtcvad.VAD
-	sampleRate     int          // sampling率
+	sampleRate     int          // sampling rate
 	mode           int          // VAD pattern
-	frameSize      int          // 每framesamplingcount
-	frameSizeBytes int          // 每framebytecount
-	initialized    bool         // whetheralreadyinitialize
-	lastUsed       time.Time    // 最afterusetime
-	mu             sync.RWMutex // readwritelock
+	frameSize      int          // per frame sample count
+	frameSizeBytes int          // per frame byte count
+	initialized    bool         // whether already initialized
+	lastUsed       time.Time    // last use time
+	mu             sync.RWMutex // read write lock
 }
 
-// AcquireVAD createandreturn WebRTC VAD instance（byglobalresourcepoolmanage）
+// AcquireVAD create and return WebRTC VAD instance (by global resource pool manage)
 func AcquireVAD(config map[string]interface{}) (inter.VAD, error) {
 	vadConfig := getVadConfigFromMap(config)
 
@@ -42,7 +42,7 @@ func AcquireVAD(config map[string]interface{}) (inter.VAD, error) {
 		lastUsed:   time.Now(),
 	}
 
-	// initializeinstance
+	// initialize instance
 	if err := vad.init(); err != nil {
 		return nil, fmt.Errorf("failed to initialize WebRTC VAD: %w", err)
 	}
@@ -67,7 +67,7 @@ func NewWebRTCVAD() inter.VAD {
 	}
 }
 
-// NewWebRTCVADWithConfig usespecifyconfigcreate WebRTC VAD instance
+// NewWebRTCVADWithConfig use specified config create WebRTC VAD instance
 func NewWebRTCVADWithConfig(sampleRate, mode int) (inter.VAD, error) {
 	if !isValidSampleRate(sampleRate) {
 		return nil, fmt.Errorf("unsupported sample rate: %d, supported rates: 8000, 16000, 32000, 48000", sampleRate)
@@ -99,7 +99,7 @@ func (w *WebRTCVAD) init() error {
 		return nil
 	}
 
-	// calculateframesize
+	// calculate frame size
 	w.frameSize = w.sampleRate / 1000 * FrameDuration
 	w.frameSizeBytes = w.frameSize * 2 // 16-bit PCM
 
@@ -125,7 +125,7 @@ func (w *WebRTCVAD) IsVAD(pcmData []float32) (bool, error) {
 	return w.isVad(pcmData, w.sampleRate, w.frameSize)
 }
 
-// IsVAD detectaudio datainofvoice活动
+// IsVAD detect audio data voice activity
 func (w *WebRTCVAD) isVad(pcmData []float32, sampleRate int, frameSize int) (bool, error) {
 	if len(pcmData) == 0 {
 		return false, nil
@@ -133,19 +133,19 @@ func (w *WebRTCVAD) isVad(pcmData []float32, sampleRate int, frameSize int) (boo
 
 	//log.Debugf("isVad, pcmData len: %d, frameSize: %d", len(pcmData), frameSize)
 
-	// update最afterusetime
+	// update last use time
 	w.lastUsed = time.Now()
 
 	//pcmBytes := pcmData
-	// will float32 dataconvertis int16 PCM data
+	// convert float32 data to int16 PCM data
 	pcmBytes := w.float32ToPCMBytes(pcmData)
 
-	// ifdatalengthno够aframe，return false
+	// if data length not enough for one frame, return false
 	if len(pcmBytes) < frameSize {
 		return false, nil
 	}
 
-	// process多framedata，取最afteraframeofresult
+	// process multi-frame data, take last frame result
 	var isActive bool
 	var err error
 
@@ -173,12 +173,12 @@ func (w *WebRTCVAD) IsVADExt(pcmData []float32, sampleRate int, frameSize int) (
 	return w.isVad(pcmData, sampleRate, frameSize)
 }
 
-// Reset resetdetect器state
+// Reset reset detector state
 func (w *WebRTCVAD) Reset() error {
 	return nil
 }
 
-// Close closeandreleaseresource (implement Resource interface)
+// Close close and release resource (implement Resource interface)
 func (w *WebRTCVAD) Close() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -190,7 +190,7 @@ func (w *WebRTCVAD) Close() error {
 	return nil
 }
 
-// IsValid inspectresourcewhethervalid (implement Resource interface)
+// IsValid inspect resource whether valid (implement Resource interface)
 func (w *WebRTCVAD) IsValid() bool {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
@@ -198,12 +198,12 @@ func (w *WebRTCVAD) IsValid() bool {
 	return w.initialized && w.webrtcVad != nil
 }
 
-// float32ToPCMBytes will float32 arrayconvertis 16-bit PCM bytearray
+// float32ToPCMBytes convert float32 array to 16-bit PCM byte array
 func (w *WebRTCVAD) float32ToPCMBytes(samples []float32) []byte {
 	pcmBytes := make([]byte, len(samples)*2)
 
 	for i, sample := range samples {
-		// will float32 (-1.0 to 1.0) convertis int16 (-32768 to 32767)
+		// convert float32 (-1.0 to 1.0) to int16 (-32768 to 32767)
 		var intSample int16
 		if sample > 1.0 {
 			intSample = 32767
@@ -213,14 +213,14 @@ func (w *WebRTCVAD) float32ToPCMBytes(samples []float32) []byte {
 			intSample = int16(sample * 32767)
 		}
 
-		// smallendpoint序writebytearray
+		// little endian write byte array
 		binary.LittleEndian.PutUint16(pcmBytes[i*2:], uint16(intSample))
 	}
 
 	return pcmBytes
 }
 
-// isValidSampleRate inspectsampling率whetherbe WebRTC VAD support
+// isValidSampleRate inspect sampling rate whether supported by WebRTC VAD
 func isValidSampleRate(sampleRate int) bool {
 	validRates := []int{8000, 16000, 32000, 48000}
 	for _, rate := range validRates {
@@ -231,7 +231,7 @@ func isValidSampleRate(sampleRate int) bool {
 	return false
 }
 
-// SetMode set VAD 敏感degreepattern
+// SetMode set VAD sensitivity pattern
 func (w *WebRTCVAD) SetMode(mode int) error {
 	if mode < 0 || mode > 3 {
 		return fmt.Errorf("invalid VAD mode: %d, must be 0-3", mode)
@@ -249,7 +249,7 @@ func (w *WebRTCVAD) SetMode(mode int) error {
 	return nil
 }
 
-// SetSampleRate setsampling率
+// SetSampleRate set sampling rate
 func (w *WebRTCVAD) SetSampleRate(sampleRate int) error {
 	if !isValidSampleRate(sampleRate) {
 		return fmt.Errorf("unsupported sample rate: %d, supported rates: 8000, 16000, 32000, 48000", sampleRate)
@@ -258,7 +258,7 @@ func (w *WebRTCVAD) SetSampleRate(sampleRate int) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	// ifalreadyinitialize，needreinitialize
+	// if already initialized, need reinitialize
 	if w.initialized {
 		w.Close()
 	}
@@ -267,7 +267,7 @@ func (w *WebRTCVAD) SetSampleRate(sampleRate int) error {
 	return nil
 }
 
-// GetSampleRate get currentsampling率
+// GetSampleRate get current sampling rate
 func (w *WebRTCVAD) GetSampleRate() int {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
@@ -281,7 +281,7 @@ func (w *WebRTCVAD) GetMode() int {
 	return w.mode
 }
 
-// GetLastUsed get最afterusetime
+// GetLastUsed get last use time
 func (w *WebRTCVAD) GetLastUsed() time.Time {
 	w.mu.RLock()
 	defer w.mu.RUnlock()

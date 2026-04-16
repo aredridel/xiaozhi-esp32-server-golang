@@ -191,7 +191,7 @@ func (d *AudioDecoder) Run(startTs int64) error {
 	return nil
 }
 
-// WriteLengthPrefixedFrame will单frameaudio datawrite成“4bytelengthheader + payload”format，便于streaming传给通usedecode器。
+// WriteLengthPrefixedFrame writes a single frame of audio data into "4-byte length header + payload" format, for streaming to the decoder.
 func WriteLengthPrefixedFrame(writer io.Writer, frame []byte) error {
 	if writer == nil {
 		return fmt.Errorf("writer cannot be empty")
@@ -310,7 +310,7 @@ func (d *AudioDecoder) passThroughOpusPackets(startTs int64, firstPacket []byte,
 		}
 		if !firstFrame {
 			firstFrame = true
-			log.Infof("tts cloud endpoint->first frame passthrough complete, time consumption: %d ms", time.Now().UnixMilli()-startTs)
+			log.Infof("tts cloud endpoint->first frame decode complete, time consumed: %d ms", time.Now().UnixMilli()-startTs)
 		}
 		frameData := make([]byte, len(packet))
 		copy(frameData, packet)
@@ -401,7 +401,7 @@ func (d *AudioDecoder) transcodeOpusPackets(startTs int64, sourceSampleRate int,
 
 		if !firstFrame {
 			firstFrame = true
-			log.Infof("tts cloud endpoint->first frame decode complete, time consumption: %d ms", time.Now().UnixMilli()-startTs)
+			log.Infof("tts cloud endpoint->first frame decode complete, time consumed: %d ms", time.Now().UnixMilli()-startTs)
 		}
 
 		switch d.TargetAudioFormat {
@@ -534,7 +534,7 @@ func (d *AudioDecoder) repacketizeOpusPackets(startTs int64, sourceSampleRate in
 		}
 		if !firstFrame {
 			firstFrame = true
-			log.Infof("tts cloud endpoint->first frame repacketize complete, time consumption: %d ms", time.Now().UnixMilli()-startTs)
+			log.Infof("tts cloud endpoint->first frame decode complete, time consumed: %d ms", time.Now().UnixMilli()-startTs)
 		}
 		frameData := make([]byte, len(packet))
 		copy(frameData, packet)

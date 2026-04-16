@@ -1,29 +1,29 @@
 <template>
   <div class="udp-config">
-    <!-- 页面头部 -->
+    <!-- Page Header -->
     <div class="page-header">
       <div class="header-content">
         <div class="title-section">
           <el-icon class="title-icon">
             <Connection />
           </el-icon>
-          <h1 class="page-title">UDP配置管理</h1>
+          <h1 class="page-title">UDP Configuration Management</h1>
         </div>
       </div>
     </div>
 
-    <!-- 配置说明 -->
+    <!-- Configuration Description -->
     <div class="config-description">
       <el-alert
-        title="配置说明"
-        description="配置UDP连接参数和网络设置。此配置页面是主程序自带的udp server配置项"
+        title="Configuration Instructions"
+        description="Configure UDP connection parameters and network settings. This configuration page is for the main program's built-in UDP server configuration items"
         type="info"
         :closable="false"
         show-icon
       />
     </div>
 
-    <!-- 表单容器 -->
+    <!-- Form Container -->
     <div class="form-container">
       <el-form
         ref="formRef"
@@ -32,54 +32,54 @@
         class="config-form"
         v-loading="loading"
       >
-        <!-- 基础配置卡片 -->
+        <!-- Basic Configuration Card -->
         <el-card class="config-card basic-config" shadow="never">
           <template #header>
             <div class="card-header">
               <el-icon class="card-icon">
                 <Setting />
               </el-icon>
-              <span class="card-title">基础配置</span>
+              <span class="card-title">Basic Configuration</span>
             </div>
           </template>
           
           <div class="form-grid basic-form-grid">
-            <el-form-item label="监听主机" prop="listen_host" class="form-item">
-              <el-input v-model="form.listen_host" placeholder="请输入监听主机地址" />
+            <el-form-item label="Listen Host" prop="listen_host" class="form-item">
+              <el-input v-model="form.listen_host" placeholder="Please enter listen host address" />
             </el-form-item>
             
-            <el-form-item label="监听端口" prop="listen_port" class="form-item">
+            <el-form-item label="Listen Port" prop="listen_port" class="form-item">
               <el-input-number v-model="form.listen_port" :min="1" :max="65535" style="width: 100%" />
             </el-form-item>
           </div>
         </el-card>
 
-        <!-- 外部连接配置卡片 -->
+        <!-- External Connection Configuration Card -->
         <el-card class="config-card external-config" shadow="never">
           <template #header>
             <div class="card-header">
               <el-icon class="card-icon external-icon">
                 <Link />
               </el-icon>
-              <span class="card-title">外部连接配置</span>
-              <el-tooltip content="在hello协议下发给终端的 ip和端口，所以需要终端可访问" placement="top">
+              <span class="card-title">External Connection Configuration</span>
+              <el-tooltip content="The IP and port sent to the terminal in the hello protocol, so the terminal must be able to access it" placement="top">
                 <el-icon class="help-icon"><QuestionFilled /></el-icon>
               </el-tooltip>
             </div>
           </template>
           
           <div class="form-grid">
-            <el-form-item label="外部主机" prop="external_host" class="form-item">
-              <el-input v-model="form.external_host" placeholder="请输入外部主机地址" />
+            <el-form-item label="External Host" prop="external_host" class="form-item">
+              <el-input v-model="form.external_host" placeholder="Please enter external host address" />
             </el-form-item>
             
-            <el-form-item label="外部端口" prop="external_port" class="form-item">
+            <el-form-item label="External Port" prop="external_port" class="form-item">
               <el-input-number v-model="form.external_port" :min="1" :max="65535" style="width: 100%" />
             </el-form-item>
           </div>
         </el-card>
 
-        <!-- 操作按钮区域 -->
+        <!-- Action Buttons Area -->
         <div class="action-section">
           <el-button 
             type="primary" 
@@ -88,7 +88,7 @@
             class="save-button"
             size="large"
           >
-            保存配置
+            Save Configuration
           </el-button>
         </div>
       </el-form>
@@ -108,7 +108,7 @@ const configId = ref(null)
 const formRef = ref(null)
 
 const form = ref({
-  name: 'UDP配置',
+  name: 'UDP Configuration',
   is_default: true,
   external_host: '192.168.0.208',
   external_port: 8990,
@@ -126,16 +126,16 @@ const generateConfig = () => {
 }
 
 const rules = {
-  name: [{ required: true, message: '请输入配置名称', trigger: 'blur' }],
-  external_host: [{ required: true, message: '请输入外部主机地址', trigger: 'blur' }],
+  name: [{ required: true, message: 'Please enter configuration name', trigger: 'blur' }],
+  external_host: [{ required: true, message: 'Please enter external host address', trigger: 'blur' }],
   external_port: [
-    { required: true, message: '请输入外部端口号', trigger: 'blur' },
-    { type: 'number', min: 1, max: 65535, message: '端口号必须在1-65535之间', trigger: 'blur' }
+    { required: true, message: 'Please enter external port number', trigger: 'blur' },
+    { type: 'number', min: 1, max: 65535, message: 'Port number must be between 1-65535', trigger: 'blur' }
   ],
-  listen_host: [{ required: true, message: '请输入监听主机地址', trigger: 'blur' }],
+  listen_host: [{ required: true, message: 'Please enter listen host address', trigger: 'blur' }],
   listen_port: [
-    { required: true, message: '请输入监听端口号', trigger: 'blur' },
-    { type: 'number', min: 1, max: 65535, message: '端口号必须在1-65535之间', trigger: 'blur' }
+    { required: true, message: 'Please enter listen port number', trigger: 'blur' },
+    { type: 'number', min: 1, max: 65535, message: 'Port number must be between 1-65535', trigger: 'blur' }
   ]
 }
 
@@ -148,12 +148,12 @@ const loadConfig = async () => {
       const config = configs[0]
       configId.value = config.id
       
-      // 解析JSON配置
+      // Parse JSON configuration
       let configData = {}
       try {
         configData = JSON.parse(config.json_data || '{}')
       } catch (e) {
-        console.warn('解析配置JSON失败:', e)
+        console.warn('Failed to parse configuration JSON:', e)
       }
       
       form.value = {
@@ -166,8 +166,8 @@ const loadConfig = async () => {
       }
     }
   } catch (error) {
-    console.error('加载UDP配置失败:', error)
-    ElMessage.error('加载UDP配置失败')
+    console.error('Failed to load UDP configuration:', error)
+    ElMessage.error('Failed to load UDP configuration')
   } finally {
     loading.value = false
   }
@@ -201,15 +201,15 @@ const handleSave = async () => {
     
     if (configId.value) {
       await api.put(`/admin/udp-configs/${configId.value}`, payload)
-      ElMessage.success('更新配置成功')
+      ElMessage.success('Configuration updated successfully')
     } else {
       const response = await api.post('/admin/udp-configs', payload)
       configId.value = response.data.data.id
-      ElMessage.success('创建配置成功')
+      ElMessage.success('Configuration created successfully')
     }
   } catch (error) {
-    console.error('保存配置失败:', error)
-    ElMessage.error('保存配置失败')
+    console.error('Failed to save configuration:', error)
+    ElMessage.error('Failed to save configuration')
   } finally {
     saving.value = false
   }
@@ -227,7 +227,7 @@ onMounted(() => {
   padding: 24px;
 }
 
-/* 页面头部 */
+/* Page Header */
 .page-header {
   margin-bottom: 24px;
 }
@@ -260,13 +260,13 @@ onMounted(() => {
   background-clip: text;
 }
 
-/* 配置说明 */
+/* Configuration Description */
 .config-description {
   max-width: 1200px;
   margin: 0 auto 24px;
 }
 
-/* 表单容器 */
+/* Form Container */
 .form-container {
   max-width: 1200px;
   margin: 0 auto;
@@ -278,7 +278,7 @@ onMounted(() => {
   gap: 24px;
 }
 
-/* 配置卡片 */
+/* Configuration Card */
 .config-card {
   background: rgba(255, 255, 255, 0.95);
   border: 1px solid #e5e7eb;
@@ -301,7 +301,7 @@ onMounted(() => {
   border-left: 4px solid #409eff;
 }
 
-/* 卡片头部 */
+/* Card Header */
 .card-header {
   display: flex;
   align-items: center;
@@ -334,7 +334,7 @@ onMounted(() => {
   color: #6366f1;
 }
 
-/* 表单网格 */
+/* Form Grid */
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -342,7 +342,7 @@ onMounted(() => {
   padding: 24px;
 }
 
-/* 基础配置表单网格 - 换行显示 */
+/* Basic Configuration Form Grid - Display in new line */
 .basic-form-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -354,7 +354,7 @@ onMounted(() => {
   margin-bottom: 0;
 }
 
-/* Element Plus 组件深度样式 */
+/* Element Plus Component Deep Styles */
 :deep(.el-form-item__label) {
   font-weight: 500;
   color: #374151;
@@ -397,7 +397,7 @@ onMounted(() => {
   padding: 0;
 }
 
-/* 操作按钮区域 */
+/* Action Buttons Area */
 .action-section {
   display: flex;
   justify-content: center;
@@ -420,7 +420,7 @@ onMounted(() => {
   box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
-/* 响应式设计 */
+/* Responsive Design */
 @media (max-width: 768px) {
   .udp-config {
     padding: 16px;

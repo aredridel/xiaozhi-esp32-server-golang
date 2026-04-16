@@ -9,21 +9,21 @@ import (
 	log "xiaozhi-esp32-server-golang/logger"
 )
 
-// EventWrapper eventpackage装器，used forunifiedprocessnoat the same timetypeofevent
+// EventWrapper event wrapper, used for unified processing of different types of events
 type EventWrapper struct {
 	Topic string      // topicname
 	Data  interface{} // eventdata
 }
 
-// TopicHandler 通usetopicprocess器interface
+// TopicHandler common topic processor interface
 type TopicHandler interface {
-	// Process processevent
+	// Process process event
 	Process(ctx context.Context, data interface{}) error
-	// GetRoutingKey getused forhashrouteofkey（通常yesDeviceIDorSessionID）
+	// GetRoutingKey get key used for hash routing (usually DeviceID or SessionID)
 	GetRoutingKey(data interface{}) string
 }
 
-// UnifiedWorkerPool unifiedofworkerpool，canprocessmultipletopic
+// UnifiedWorkerPool unified worker pool, can process multiple topics
 type UnifiedWorkerPool struct {
 	workers   []chan *EventWrapper
 	ctx       context.Context
@@ -34,7 +34,7 @@ type UnifiedWorkerPool struct {
 	mu        sync.RWMutex // protected handlers map
 }
 
-// NewUnifiedWorkerPool createunifiedofworkerpool
+// NewUnifiedWorkerPool create unified worker pool
 func NewUnifiedWorkerPool(workerNum int) *UnifiedWorkerPool {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -46,26 +46,26 @@ func NewUnifiedWorkerPool(workerNum int) *UnifiedWorkerPool {
 		workerNum: workerNum,
 	}
 
-	// initialize每个workerofchannelandstartgoroutine
+	// initialize each worker's channel and start goroutine
 	for i := 0; i < workerNum; i++ {
-		pool.workers[i] = make(chan *EventWrapper, 100) // buffer100个message
+		pool.workers[i] = make(chan *EventWrapper, 100) // buffer 100 messages
 		pool.wg.Add(1)
 		go pool.workerLoop(i)
 	}
 
-	log.Infof("UnifiedWorkerPoolinitializecomplete，start %d 个worker goroutine（可processmultipletopic）", workerNum)
+	log.Infof("UnifiedWorkerPool initialize complete, start %d worker goroutines (can process multiple topics)", workerNum)
 	return pool
 }
 
-// RegisterHandler registertopicprocess器
+// RegisterHandler register topic processor
 func (p *UnifiedWorkerPool) RegisterHandler(topic string, handler TopicHandler) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.handlers[topic] = handler
-	log.Infof("UnifiedWorkerPool: registertopicprocess器 [%s]", topic)
+	log.Infof("UnifiedWorkerPool: register topic processor [%s]", topic)
 }
 
-// workerLoop 每个workerofprocessloop（保证sequentialprocess）
+// workerLoop each worker's process loop (guarantees sequential processing)
 func (p *UnifiedWorkerPool) workerLoop(index int) {
 	defer p.wg.Done()
 	defer log.Infof("UnifiedWorkerPool worker %d exit", index)
@@ -74,7 +74,7 @@ func (p *UnifiedWorkerPool) workerLoop(index int) {
 	for {
 		select {
 		case <-p.ctx.Done():
-			// cleanupchannelinofremainingmessage
+			// cleanup remaining messages in channel
 			for {
 				select {
 				case event := <-ch:
@@ -97,61 +97,61 @@ func (p *UnifiedWorkerPool) workerLoop(index int) {
 	}
 }
 
-// processEvent processevent（according totopicminute发tocorrespondinghandler）
+// processEvent process event (dispatch to corresponding handler according to topic)
 func (p *UnifiedWorkerPool) processEvent(event *EventWrapper) {
 	p.mu.RLock()
 	handler, exists := p.handlers[event.Topic]
 	p.mu.RUnlock()
 
 	if !exists {
-		log.Warnf("UnifiedWorkerPool: topic [%s] noregisterprocess器，skip", event.Topic)
+		log.Warnf("UnifiedWorkerPool: topic [%s] no registered processor, skip", event.Topic)
 		return
 	}
 
 	if err := handler.Process(context.Background(), event.Data); err != nil {
-		log.Errorf("UnifiedWorkerPool: topic [%s] processfailed: %v", event.Topic, err)
+		log.Errorf("UnifiedWorkerPool: topic [%s] process failed: %v", event.Topic, err)
 	}
 }
 
-// Route routeeventtocorrespondingworker（usehashminute布）
+// Route route event to corresponding worker (use hash distribution)
 func (p *UnifiedWorkerPool) Route(topic string, data interface{}) bool {
 	p.mu.RLock()
 	handler, exists := p.handlers[topic]
 	p.mu.RUnlock()
 
 	if !exists {
-		log.Warnf("UnifiedWorkerPool: topic [%s] noregisterprocess器，no法route", topic)
+		log.Warnf("UnifiedWorkerPool: topic [%s] no registered processor, cannot route", topic)
 		return false
 	}
 
-	// getroutekey
+	// get route key
 	key := handler.GetRoutingKey(data)
 	if key == "" {
-		log.Warnf("UnifiedWorkerPool: topic [%s] routekeyisempty，no法routemessage", topic)
+		log.Warnf("UnifiedWorkerPool: topic [%s] route key is empty, cannot route message", topic)
 		return false
 	}
 
-	// calculatehashvalue，routetocorrespondingworker
+	// calculate hash value, route to corresponding worker
 	workerIndex := p.hashKey(key)
 
-	// createeventpackage装器
+	// create event wrapper
 	event := &EventWrapper{
 		Topic: topic,
 		Data:  data,
 	}
 
-	// non-blockingsendtocorrespondingworker channel
+	// non-blocking send to corresponding worker channel
 	select {
 	case p.workers[workerIndex] <- event:
 		return true
 	default:
-		log.Warnf("UnifiedWorkerPool: topic [%s] worker %d ofchannelalreadyfull，discardmessage, key: %s",
+		log.Warnf("UnifiedWorkerPool: topic [%s] worker %d channel already full, discard message, key: %s",
 			topic, workerIndex, key)
 		return false
 	}
 }
 
-// hashKey calculatekeyofhashvalue，returnworkerindex
+// hashKey calculate key's hash value, return worker index
 func (p *UnifiedWorkerPool) hashKey(key string) int {
 	if key == "" {
 		return 0
@@ -162,7 +162,7 @@ func (p *UnifiedWorkerPool) hashKey(key string) int {
 	return int(hash) % p.workerNum
 }
 
-// Close closeworkerpool
+// Close close worker pool
 func (p *UnifiedWorkerPool) Close() {
 	p.cancel()
 	p.wg.Wait()
@@ -172,17 +172,17 @@ func (p *UnifiedWorkerPool) Close() {
 		close(p.workers[i])
 	}
 
-	log.Info("UnifiedWorkerPoolalreadyclose")
+	log.Info("UnifiedWorkerPool already closed")
 }
 
 type EventHandle struct {
-	// unifiedofworkerpool，canprocessmultipletopic
+	// unified worker pool, can process multiple topics
 	workerPool *UnifiedWorkerPool
-	// App reference，used forget ChatManager
+	// App reference, used for getting ChatManager
 	app *App
 }
 
-// SessionEndHandler SessionEndeventprocess器
+// SessionEndHandler SessionEnd event processor
 type SessionEndHandler struct{}
 
 func (h *SessionEndHandler) Process(ctx context.Context, data interface{}) error {
@@ -200,7 +200,7 @@ func (h *SessionEndHandler) Process(ctx context.Context, data interface{}) error
 
 	log.Debugf("HandleSessionEnd: deviceId: %s", clientState.DeviceID)
 
-	// willmessage加tolong期记忆bodyin
+	// add message to long-term memory body
 	err := clientState.MemoryProvider.Flush(
 		clientState.Ctx,
 		clientState.GetDeviceIDOrAgentID())
@@ -219,9 +219,9 @@ func (h *SessionEndHandler) GetRoutingKey(data interface{}) string {
 	return clientState.DeviceID
 }
 
-// ExitChatHandler ExitChateventprocess器
+// ExitChatHandler ExitChat event processor
 type ExitChatHandler struct {
-	eventHandle *EventHandle // 持have EventHandle reference，used foraccess App
+	eventHandle *EventHandle // hold EventHandle reference, used for accessing App
 }
 
 func (h *ExitChatHandler) Process(ctx context.Context, data interface{}) error {
@@ -240,24 +240,24 @@ func (h *ExitChatHandler) Process(ctx context.Context, data interface{}) error {
 
 	// according to deviceId get ChatManager
 	if h.eventHandle == nil || h.eventHandle.app == nil {
-		log.Warnf("EventHandle or App not initialized，no法get ChatManager")
+		log.Warnf("EventHandle or App not initialized, cannot get ChatManager")
 		return nil
 	}
 
 	chatManager, exists := h.eventHandle.app.GetChatManager(clientState.DeviceID)
 	if !exists {
-		log.Warnf("not找todevice %s of ChatManager，mayalreadyclose", clientState.DeviceID)
+		log.Warnf("device %s ChatManager not found, may already closed", clientState.DeviceID)
 		return nil
 	}
 
-	// get ChatSession andexecuteexitchatlogical
+	// get ChatSession and execute exit chat logic
 	session := chatManager.GetSession()
 	if session == nil {
-		log.Warnf("ChatManager of Session isempty，device: %s", clientState.DeviceID)
+		log.Warnf("ChatManager Session is empty, device: %s", clientState.DeviceID)
 		return nil
 	}
 
-	// executeexitchatlogical（sendgoodbyephraseandclosesession）
+	// execute exit chat logic (send goodbye phrase and close session)
 	session.DoExitChat()
 
 	return nil
@@ -272,10 +272,10 @@ func (h *ExitChatHandler) GetRoutingKey(data interface{}) string {
 }
 
 func NewEventHandle(app *App) (*EventHandle, error) {
-	// createunifiedofworkerpool
+	// create unified worker pool
 	workerPool := NewUnifiedWorkerPool(MessageWorkerNum)
 
-	// registerSessionEndprocess器
+	// register SessionEnd processor
 	sessionEndHandler := &SessionEndHandler{}
 	workerPool.RegisterHandler(eventbus.TopicSessionEnd, sessionEndHandler)
 
@@ -284,13 +284,13 @@ func NewEventHandle(app *App) (*EventHandle, error) {
 		app:        app,
 	}
 
-	// registerExitChatprocess器
+	// register ExitChat processor
 	exitChatHandler := &ExitChatHandler{
 		eventHandle: handle,
 	}
 	workerPool.RegisterHandler(eventbus.TopicExitChat, exitChatHandler)
 
-	log.Infof("EventHandleinitializecomplete（useunifiedworkerpoolprocessmultipletopic，Redisprocessalreadymigrate至MessageWorker）")
+	log.Infof("EventHandle initialize complete (use unified worker pool process multiple topics, Redis process already migrated to MessageWorker)")
 	return handle, nil
 }
 
@@ -301,13 +301,13 @@ func (s *EventHandle) Start() error {
 	// subscribeExitChatevent
 	go s.HandleExitChat()
 
-	// at这incanaddothertopicofsubscribe
+	// here can add other topic subscriptions
 	// go s.HandleDeviceOnline()
 
 	return nil
 }
 
-// HandleSessionEnd subscribeandprocessSessionEndevent
+// HandleSessionEnd subscribe and process SessionEnd event
 func (s *EventHandle) HandleSessionEnd() error {
 	eventbus.Get().Subscribe(eventbus.TopicSessionEnd, func(clientState *ClientState) {
 		if clientState == nil {
@@ -321,7 +321,7 @@ func (s *EventHandle) HandleSessionEnd() error {
 	return nil
 }
 
-// HandleExitChat subscribeandprocessExitChatevent
+// HandleExitChat subscribe and process ExitChat event
 func (s *EventHandle) HandleExitChat() error {
 	eventbus.Get().Subscribe(eventbus.TopicExitChat, func(event *eventbus.ExitChatEvent) {
 		if event == nil {
@@ -335,15 +335,15 @@ func (s *EventHandle) HandleExitChat() error {
 	return nil
 }
 
-// RegisterTopic register新topicofprocess器（便捷method）
+// RegisterTopic register new topic processor (convenience method)
 func (s *EventHandle) RegisterTopic(topic string, handler TopicHandler) {
 	s.workerPool.RegisterHandler(topic, handler)
 }
 
-// Close closeEventHandle，优雅closeworkerpool
+// Close close EventHandle, gracefully close worker pool
 func (s *EventHandle) Close() {
 	if s.workerPool != nil {
 		s.workerPool.Close()
 	}
-	log.Info("EventHandlealreadyclose")
+	log.Info("EventHandle already closed")
 }

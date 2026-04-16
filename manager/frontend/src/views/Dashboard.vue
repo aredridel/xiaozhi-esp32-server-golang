@@ -58,7 +58,7 @@
       </el-col>
     </el-row>
     
-    <!-- 服务地址（紧凑） + OTA 测试 -->
+    <!-- Service Address (compact) + OTA Test -->
     <el-card class="address-card address-card-compact" v-if="authStore.isAdmin" style="margin: 20px 0;">
       <template #header>
         <div class="config-header address-card-header">
@@ -98,7 +98,7 @@
             </div>
           </template>
           <div v-if="otaTestResult !== null" class="ota-test-block">
-            <span class="address-tag">OTA 接口返回</span>
+            <span class="address-tag">OTA Response</span>
             <pre class="ota-test-pre">{{ otaTestResult }}</pre>
           </div>
         </template>
@@ -106,7 +106,7 @@
       </div>
     </el-card>
 
-    <!-- 配置管理卡片 - 放在统计数据和系统信息之间 -->
+    <!-- Configuration Management Card - placed between statistics and system info -->
     <el-card class="config-card" v-if="authStore.isAdmin" style="margin: 20px 0;">
       <template #header>
         <div class="config-header">
@@ -240,7 +240,7 @@ import {
 
 const authStore = useAuthStore()
 
-// 服务地址（OTA、WS、MQTT、UDP）
+  // Service addresses (OTA, WS, MQTT, UDP)
 const addressLoading = ref(false)
 const serviceAddress = ref({
   otaUrl: '',
@@ -261,9 +261,9 @@ async function loadServiceAddress() {
     const config = otaList.find(c => c.is_default) || otaList[0]
     if (config?.json_data) {
       const data = JSON.parse(config.json_data || '{}')
-      console.log('[Dashboard] OTA配置数据:', data)
+      console.log('[Dashboard] OTA config data:', data)
 
-      // 选择环境配置：优先 external，如果为空则使用 test
+      // Select environment config: prefer external, fallback to test if empty
       let envData = data.external || {}
       const hasExternalWs = envData.websocket?.url
       const hasExternalOta = envData.ota_url
@@ -271,7 +271,7 @@ async function loadServiceAddress() {
         envData = data.test || {}
       }
 
-      // OTA URL：优先使用配置中的 ota_url，没有则从 websocket.url 解析
+      // OTA URL: prefer ota_url from config, otherwise parse from websocket.url
       let otaUrl = envData.ota_url || ''
       if (!otaUrl) {
         const wsUrl = envData.websocket?.url || ''
@@ -323,7 +323,7 @@ function copyAddress(text) {
   })
 }
 
-// 首页 OTA 测试（展示 OTA 接口返回内容）
+  // Dashboard OTA test (display OTA API response)
 const otaTestLoading = ref(false)
 const otaTestResult = ref(null)
 
@@ -432,7 +432,7 @@ onMounted(async () => {
   uptime.value = `${days}d ${hours}h ${minutes}m`
 })
 
-// 加载统计数据
+  // Load statistics
 const loadStats = async () => {
   try {
     const response = await api.get('/dashboard/stats')
@@ -454,7 +454,7 @@ const loadStats = async () => {
   }
 }
 
-// 导出配置
+  // Export configuration
 const exportConfig = async () => {
   try {
     const response = await fetch('/api/admin/configs/export', {
@@ -485,12 +485,12 @@ const exportConfig = async () => {
   }
 }
 
-// 导入配置
+  // Import configuration
 const importConfig = () => {
   fileInput.value.click()
 }
 
-// 处理文件选择
+  // Handle file selection
 const handleFileChange = async (event) => {
   const file = event.target.files[0]
   if (!file) return

@@ -413,7 +413,7 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	return r
 }
 
-// serveEmbedStatic 未匹配路由时：先尝试从 fsys 返回对应静态文件，否则 GET 返回 index.html（SPA 回退）
+// serveEmbedStatic when no route matches: first try to return corresponding static file from fsys, otherwise return index.html for GET (SPA fallback)
 func serveEmbedStatic(fsys fs.FS) gin.HandlerFunc {
 	indexHTML, _ := fs.ReadFile(fsys, "index.html")
 	fileServer := http.FileServer(http.FS(fsys))

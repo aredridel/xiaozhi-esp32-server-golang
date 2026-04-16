@@ -34,7 +34,7 @@ type MCPServerConfig struct {
 	AllowedTools []string          `json:"allowed_tools,omitempty" mapstructure:"allowed_tools"`
 }
 
-// GlobalMCPManager globalMCPmanage器
+// GlobalMCPManager global MCP manager
 type GlobalMCPManager struct {
 	servers       map[string]*MCPServerConnection
 	tools         map[string]tool.InvokableTool
@@ -68,7 +68,7 @@ var (
 	once          sync.Once
 )
 
-// GetGlobalMCPManager getglobalMCPmanage器singleton
+// GetGlobalMCPManager getglobal MCP managersingleton
 func GetGlobalMCPManager() *GlobalMCPManager {
 	once.Do(func() {
 		ctx, cancel := context.WithCancel(context.Background())
@@ -89,7 +89,7 @@ func GetGlobalMCPManager() *GlobalMCPManager {
 	return globalManager
 }
 
-// Start startglobalMCPmanage器
+// Start startglobal MCP manager
 func (g *GlobalMCPManager) Start() error {
 	// 热更scenario：Stop after ctx alreadycancel，need重建以便restartaftermonitorandreconnectnormal
 	if g.ctx != nil && g.ctx.Err() != nil {
@@ -104,7 +104,7 @@ func (g *GlobalMCPManager) Start() error {
 	CheckMCPConfig()
 
 	if !viper.GetBool("mcp.global.enabled") {
-		log.Info("globalMCPmanage器already禁use")
+		log.Info("global MCP manageralreadydisabled")
 		return nil
 	}
 
@@ -132,7 +132,7 @@ func (g *GlobalMCPManager) Start() error {
 				connectedCount++
 			}
 		} else {
-			log.Infof("MCPserver %s already禁use，skipjoin", config.Name)
+			log.Infof("MCPserver %s alreadydisabled，skipjoin", config.Name)
 		}
 	}
 
@@ -141,11 +141,11 @@ func (g *GlobalMCPManager) Start() error {
 	// startmonitorgoroutine
 	go g.monitorConnections()
 
-	log.Info("globalMCPmanage器alreadystart")
+	log.Info("global MCP manageralreadystart")
 	return nil
 }
 
-// Stop stopglobalMCPmanage器
+// Stop stopglobal MCP manager
 func (g *GlobalMCPManager) Stop() error {
 	g.cancel()
 
@@ -161,7 +161,7 @@ func (g *GlobalMCPManager) Stop() error {
 	g.servers = make(map[string]*MCPServerConnection)
 	g.tools = make(map[string]tool.InvokableTool)
 
-	log.Info("globalMCPmanage器alreadystop")
+	log.Info("global MCP manageralreadystop")
 	return nil
 }
 
@@ -190,7 +190,7 @@ func (g *GlobalMCPManager) connectToServer(config MCPServerConfig) error {
 	}
 
 	if !config.Enabled {
-		log.Infof("MCPserver %s already禁use，skipjoin", config.Name)
+		log.Infof("MCPserver %s alreadydisabled，skipjoin", config.Name)
 		return nil
 	}
 

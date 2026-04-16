@@ -4,15 +4,15 @@
       <div class="header-content">
         <div class="title-section">
           <el-icon class="title-icon"><Connection /></el-icon>
-          <h1 class="page-title">MCP配置管理</h1>
+          <h1 class="page-title">MCP Configuration Management</h1>
         </div>
       </div>
     </div>
 
     <div class="config-description">
       <el-alert
-        title="配置说明"
-        description="配置MCP (Model Context Protocol) 相关参数，包括全局MCP服务器配置和设备端MCP配置"
+        title="Configuration Instructions"
+        description="Configure MCP (Model Context Protocol) related parameters, including global MCP server configuration and device-side MCP configuration"
         type="info"
         :closable="false"
         show-icon
@@ -25,75 +25,75 @@
           <template #header>
             <div class="card-header">
               <el-icon class="card-icon"><Setting /></el-icon>
-              <span class="card-title">全局MCP配置</span>
+              <span class="card-title">Global MCP Configuration</span>
             </div>
           </template>
           
           <div class="form-grid">
-            <el-form-item label="启用全局MCP" prop="mcp.global.enabled" class="form-item">
+            <el-form-item label="Enable Global MCP" prop="mcp.global.enabled" class="form-item">
               <el-switch v-model="form.mcp.global.enabled" />
             </el-form-item>
             
-            <el-form-item label="重连间隔(秒)" prop="mcp.global.reconnect_interval" class="form-item">
+            <el-form-item label="Reconnect Interval (seconds)" prop="mcp.global.reconnect_interval" class="form-item">
               <el-input-number v-model="form.mcp.global.reconnect_interval" :min="1" :max="3600" style="width: 100%" />
             </el-form-item>
             
-            <el-form-item label="最大重连次数" prop="mcp.global.max_reconnect_attempts" class="form-item">
+            <el-form-item label="Max Reconnect Attempts" prop="mcp.global.max_reconnect_attempts" class="form-item">
               <el-input-number v-model="form.mcp.global.max_reconnect_attempts" :min="1" :max="100" style="width: 100%" />
             </el-form-item>
           </div>
 
           <div class="server-list">
             <div class="server-list-header">
-              <h4>全局MCP服务器</h4>
+              <h4>Global MCP Servers</h4>
               <el-button type="primary" size="small" @click="addGlobalServer">
-                <el-icon><Plus /></el-icon>添加服务器
+                <el-icon><Plus /></el-icon>Add Server
               </el-button>
             </div>
             
             <div v-for="(server, index) in form.mcp.global.servers" :key="index" class="server-item">
               <div class="server-item-header">
                 <div class="server-title-row">
-                  <span>服务器 {{ index + 1 }}</span>
+                  <span>Server {{ index + 1 }}</span>
                   <el-tag size="small" :type="server.allowed_tools?.length ? 'warning' : 'info'">
-                    {{ server.allowed_tools?.length ? `${server.allowed_tools.length}个工具` : '全部工具' }}
+                    {{ server.allowed_tools?.length ? `${server.allowed_tools.length} tools` : 'All Tools' }}
                   </el-tag>
                 </div>
                 <div class="server-actions">
                   <el-button size="small" :loading="server._tools_loading" @click="discoverGlobalServerTools(server)">
-                    探测工具
+                    Discover Tools
                   </el-button>
                   <el-button type="danger" size="small" @click="removeGlobalServer(index)">
-                    <el-icon><Delete /></el-icon>删除
+                    <el-icon><Delete /></el-icon>Delete
                   </el-button>
                 </div>
               </div>
               
               <div class="server-form-grid">
-                <el-form-item :label="'服务器名称'" :prop="`mcp.global.servers.${index}.name`" class="form-item">
-                  <el-input v-model="server.name" placeholder="服务器名称" />
+                <el-form-item :label="'Server Name'" :prop="`mcp.global.servers.${index}.name`" class="form-item">
+                  <el-input v-model="server.name" placeholder="Server Name" />
                 </el-form-item>
                 
-                                       <el-form-item :label="'服务器类型'" :prop="`mcp.global.servers.${index}.type`" class="form-item">
-                         <el-select v-model="server.type" placeholder="选择服务器类型" style="width: 100%">
+                                       <el-form-item :label="'Server Type'" :prop="`mcp.global.servers.${index}.type`" class="form-item">
+                         <el-select v-model="server.type" placeholder="Select Server Type" style="width: 100%">
                            <el-option label="SSE" value="sse" />
                            <el-option label="StreamableHTTP" value="streamablehttp" />
                          </el-select>
                        </el-form-item>
                 
-                <el-form-item :label="'服务器URL'" :prop="`mcp.global.servers.${index}.url`" class="form-item">
-                  <el-input v-model="server.url" placeholder="服务器URL" />
+                <el-form-item :label="'Server URL'" :prop="`mcp.global.servers.${index}.url`" class="form-item">
+                  <el-input v-model="server.url" placeholder="Server URL" />
                 </el-form-item>
                 
-                <el-form-item :label="'启用状态'" :prop="`mcp.global.servers.${index}.enabled`" class="form-item">
+                <el-form-item :label="'Enable Status'" :prop="`mcp.global.servers.${index}.enabled`" class="form-item">
                   <el-switch v-model="server.enabled" />
                 </el-form-item>
               </div>
 
-              <el-form-item :label="'允许工具'" class="form-item tool-form-item">
+              <el-form-item :label="'Allowed Tools'" class="form-item tool-form-item">
                 <div class="tool-picker">
                   <div class="tool-picker-tip">
-                    留空表示允许该服务器全部工具。探测工具时会使用当前填写的类型、URL 和 Headers。
+                    Leave empty to allow all tools from this server. Tool discovery uses the currently filled type, URL, and Headers.
                   </div>
                   <el-select
                     v-model="server.allowed_tools"
@@ -103,13 +103,13 @@
                     collapse-tags
                     collapse-tags-tooltip
                     style="width: 100%"
-                    placeholder="不选择则允许全部工具"
+                    placeholder="Leave empty to allow all tools"
                     :loading="server._tools_loading"
                   >
                     <el-option v-for="tool in server._tool_options" :key="tool.name" :label="tool.name" :value="tool.name">
                       <div class="tool-option-row">
                         <span class="tool-option-name">{{ tool.name }}</span>
-                        <span class="tool-option-desc">{{ tool.description || '无描述' }}</span>
+                        <span class="tool-option-desc">{{ tool.description || 'No description' }}</span>
                       </div>
                     </el-option>
                   </el-select>
@@ -123,20 +123,20 @@
           <template #header>
             <div class="card-header">
               <el-icon class="card-icon"><HomeFilled /></el-icon>
-              <span class="card-title">本地MCP配置</span>
+              <span class="card-title">Local MCP Configuration</span>
             </div>
           </template>
           
           <div class="form-grid">
-            <el-form-item label="退出对话" prop="local_mcp.exit_conversation" class="form-item">
+            <el-form-item label="Exit Conversation" prop="local_mcp.exit_conversation" class="form-item">
               <el-switch v-model="form.local_mcp.exit_conversation" />
             </el-form-item>
             
-            <el-form-item label="清除对话历史" prop="local_mcp.clear_conversation_history" class="form-item">
+            <el-form-item label="Clear Conversation History" prop="local_mcp.clear_conversation_history" class="form-item">
               <el-switch v-model="form.local_mcp.clear_conversation_history" />
             </el-form-item>
             
-            <el-form-item label="播放音乐" prop="local_mcp.play_music" class="form-item">
+            <el-form-item label="Play Music" prop="local_mcp.play_music" class="form-item">
               <el-switch v-model="form.local_mcp.play_music" />
             </el-form-item>
           </div>
@@ -144,7 +144,7 @@
 
         <div class="action-section">
           <el-button type="primary" size="large" class="save-button" :loading="saving" @click="handleSave">
-            <el-icon><Check /></el-icon>保存配置
+            <el-icon><Check /></el-icon>Save Configuration
           </el-button>
         </div>
       </el-form>
@@ -180,18 +180,18 @@ const form = reactive({
 })
 
 const rules = {
-  'mcp.global.enabled': [{ required: true, message: '请选择是否启用全局MCP', trigger: 'change' }],
+  'mcp.global.enabled': [{ required: true, message: 'Please select whether to enable global MCP', trigger: 'change' }],
   'mcp.global.reconnect_interval': [
-    { required: true, message: '请输入重连间隔', trigger: 'blur' },
-    { type: 'number', min: 1, max: 3600, message: '重连间隔必须在1-3600之间', trigger: 'blur' }
+    { required: true, message: 'Please enter reconnect interval', trigger: 'blur' },
+    { type: 'number', min: 1, max: 3600, message: 'Reconnect interval must be between 1-3600', trigger: 'blur' }
   ],
   'mcp.global.max_reconnect_attempts': [
-    { required: true, message: '请输入最大重连次数', trigger: 'blur' },
-    { type: 'number', min: 1, max: 100, message: '最大重连次数必须在1-100之间', trigger: 'blur' }
+    { required: true, message: 'Please enter max reconnect attempts', trigger: 'blur' },
+    { type: 'number', min: 1, max: 100, message: 'Max reconnect attempts must be between 1-100', trigger: 'blur' }
   ],
-  'local_mcp.exit_conversation': [{ required: true, message: '请选择是否退出对话', trigger: 'change' }],
-  'local_mcp.clear_conversation_history': [{ required: true, message: '请选择是否清除对话历史', trigger: 'change' }],
-  'local_mcp.play_music': [{ required: true, message: '请选择是否播放音乐', trigger: 'change' }]
+  'local_mcp.exit_conversation': [{ required: true, message: 'Please select whether to exit conversation', trigger: 'change' }],
+  'local_mcp.clear_conversation_history': [{ required: true, message: 'Please select whether to clear conversation history', trigger: 'change' }],
+  'local_mcp.play_music': [{ required: true, message: 'Please select whether to play music', trigger: 'change' }]
 }
 
 const createGlobalServer = () => ({
@@ -219,7 +219,7 @@ const mergeServerToolOptions = (server, tools = []) => {
     if (!name || merged.has(name)) return
     merged.set(name, {
       name,
-      description: '当前已选择'
+      description: 'Currently selected'
     })
   })
 
@@ -272,7 +272,7 @@ const generateConfig = () => {
 
 const discoverGlobalServerTools = async (server) => {
   if (!server?.url) {
-    ElMessage.warning('请先填写服务器URL')
+    ElMessage.warning('Please fill in server URL first')
     return
   }
 
@@ -284,10 +284,10 @@ const discoverGlobalServerTools = async (server) => {
       headers: server.headers || null
     })
     mergeServerToolOptions(server, response.data?.data?.tools || [])
-    ElMessage.success(`探测到 ${server._tool_options.length} 个工具`)
+    ElMessage.success(`Discovered ${server._tool_options.length} tools`)
   } catch (error) {
     mergeServerToolOptions(server)
-    ElMessage.error(error.response?.data?.error || '探测工具失败')
+    ElMessage.error(error.response?.data?.error || 'Tool discovery failed')
   } finally {
     server._tools_loading = false
   }
@@ -305,7 +305,7 @@ const loadConfig = async () => {
       
              try {
            const configData = JSON.parse(config.json_data)
-           // 兼容旧格式：如果存在global配置，则转换为新格式
+           // Compatibility: if global config exists but mcp config doesn't, convert to new format
            if (configData.global && !configData.mcp) {
              form.mcp.global = {
                ...form.mcp.global,
@@ -331,15 +331,15 @@ const loadConfig = async () => {
         }
     } else {
       form.mcp.global.servers.push(normalizeGlobalServer({
-        name: '默认MCP服务器',
+        name: 'Default MCP Server',
         type: 'streamablehttp',
         url: 'http://192.168.208.214:3001/mcp',
         enabled: true
       }))
     }
   } catch (error) {
-    console.error('加载配置失败:', error)
-    ElMessage.error('加载配置失败')
+    console.error('Failed to load configuration:', error)
+    ElMessage.error('Failed to load configuration')
   } finally {
     loading.value = false
   }
@@ -353,7 +353,7 @@ const handleSave = async () => {
       saving.value = true
       try {
         const configData = {
-          name: 'MCP全局配置',
+          name: 'MCP Global Configuration',
           config_id: 'mcp_global_config',
           is_default: true,
           json_data: generateConfig()
@@ -361,14 +361,14 @@ const handleSave = async () => {
         
         if (configId.value) {
           await api.put(`/admin/mcp-configs/${configId.value}`, configData)
-          ElMessage.success('更新成功')
+          ElMessage.success('Update successful')
         } else {
           const response = await api.post('/admin/mcp-configs', configData)
           configId.value = response.data.data.id
-          ElMessage.success('保存成功')
+          ElMessage.success('Save successful')
         }
       } catch (error) {
-        ElMessage.error(error.response?.data?.message || '保存失败')
+        ElMessage.error(error.response?.data?.message || 'Save failed')
       } finally {
         saving.value = false
       }

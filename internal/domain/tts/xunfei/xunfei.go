@@ -249,7 +249,7 @@ func (p *XunfeiTTSProvider) streamSynthesis(ctx context.Context, text string, ta
 		_ = pipeReader.Close()
 		_ = pipeWriter.Close()
 		close(outputChan)
-		return fmt.Errorf("create xunfei audiodecode器failed: %v", err)
+		return fmt.Errorf("create xunfei audio decoderfailed: %v", err)
 	}
 	decoder.WithFormat(beep.Format{
 		SampleRate:  beep.SampleRate(p.SampleRate),
@@ -279,7 +279,7 @@ func (p *XunfeiTTSProvider) streamSynthesis(ctx context.Context, text string, ta
 	<-decoderDone
 
 	if streamErr == nil && ctx.Err() == nil {
-		log.Infof("xunfei TTStime consumption: frominput至getaudio dataendtime consumption: %d ms", time.Now().UnixMilli()-startTs)
+		log.Infof("xunfei TTStime consumption: from input togetaudio dataendtime consumption: %d ms", time.Now().UnixMilli()-startTs)
 	}
 
 	return streamErr

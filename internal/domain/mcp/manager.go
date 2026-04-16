@@ -7,11 +7,11 @@ import (
 	log "xiaozhi-esp32-server-golang/logger"
 )
 
-// MCPManager unifiedofMCPmanage器，negative责coordinateallchildmanage器
+// MCPManager unifiedofMCP manager，responsible forcoordinateallchild manager
 type MCPManager struct {
 	localManager  *LocalMCPManager
 	globalManager *GlobalMCPManager
-	// deviceManager will来canat这inmanagedevicemanage器pool
+	// deviceManager will be managed heredevice managerpool
 
 	mu      sync.RWMutex
 	started bool
@@ -22,7 +22,7 @@ var (
 	mcpOnce    sync.Once
 )
 
-// GetMCPManager getunifiedMCPmanage器singleton
+// GetMCPManager getunifiedMCP managersingleton
 func GetMCPManager() *MCPManager {
 	mcpOnce.Do(func() {
 		mcpManager = &MCPManager{
@@ -34,37 +34,37 @@ func GetMCPManager() *MCPManager {
 	return mcpManager
 }
 
-// Start startallMCPmanage器
+// Start startallMCP manager
 func (m *MCPManager) Start() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	if m.started {
-		log.Warn("MCPmanage器alreadystart")
+		log.Warn("MCP manageralreadystart")
 		return nil
 	}
 
-	log.Info("=== startMCPmanage器cluster ===")
+	log.Info("=== startMCP managercluster ===")
 
-	// 1. firstfirststartlocalmanage器
-	log.Info("startlocalMCPmanage器...")
+	// 1. firstfirststartlocal manager
+	log.Info("startlocal MCP manager...")
 	if err := m.localManager.Start(); err != nil {
-		log.Errorf("startlocalMCPmanage器failed: %v", err)
-		return fmt.Errorf("startlocalMCPmanage器failed: %v", err)
+		log.Errorf("startlocal MCP managerfailed: %v", err)
+		return fmt.Errorf("startlocal MCP managerfailed: %v", err)
 	}
 
-	// 2. 然afterstartglobalmanage器
-	log.Info("startglobalMCPmanage器...")
+	// 2. 然afterstartglobal manager
+	log.Info("startglobal MCP manager...")
 	if err := m.globalManager.Start(); err != nil {
-		log.Errorf("startglobalMCPmanage器failed: %v", err)
-		return fmt.Errorf("startglobalMCPmanage器failed: %v", err)
+		log.Errorf("startglobal MCP managerfailed: %v", err)
+		return fmt.Errorf("startglobal MCP managerfailed: %v", err)
 	}
 
-	// 3. devicemanage器throughjoinwhendynamiccreate，这innoneedstart
-	log.Info("deviceMCPmanage器willaccording tojoindynamiccreate")
+	// 3. device managerthroughjoinwhendynamiccreate，这innoneedstart
+	log.Info("device MCP managerwilldynamically created according to connection")
 
 	m.started = true
-	log.Info("=== MCPmanage器clusterstartcomplete ===")
+	log.Info("=== MCP managerclusterstartcomplete ===")
 
 	// outputstartstatecount
 	m.printStartupStats()
@@ -72,52 +72,52 @@ func (m *MCPManager) Start() error {
 	return nil
 }
 
-// Stop stopallMCPmanage器
+// Stop stopallMCP manager
 func (m *MCPManager) Stop() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	if !m.started {
-		log.Info("MCPmanage器notstart，noneedstop")
+		log.Info("MCP managernotstart，noneedstop")
 		return nil
 	}
 
-	log.Info("=== stopMCPmanage器cluster ===")
+	log.Info("=== stopMCP managercluster ===")
 
-	// 按相反sequentialstopmanage器
-	// 1. stopglobalmanage器
-	log.Info("stopglobalMCPmanage器...")
+	// stop managers in reverse order
+	// 1. stopglobal manager
+	log.Info("stopglobal MCP manager...")
 	if err := m.globalManager.Stop(); err != nil {
-		log.Errorf("stopglobalMCPmanage器failed: %v", err)
+		log.Errorf("stopglobal MCP managerfailed: %v", err)
 	}
 
-	// 2. stoplocalmanage器
-	log.Info("stoplocalMCPmanage器...")
+	// 2. stoplocal manager
+	log.Info("stoplocal MCP manager...")
 	if err := m.localManager.Stop(); err != nil {
-		log.Errorf("stoplocalMCPmanage器failed: %v", err)
+		log.Errorf("stoplocal MCP managerfailed: %v", err)
 	}
 
-	// 3. devicemanage器throughjoindisconnectautomaticcleanup
+	// 3. device managerthroughjoindisconnectautomaticcleanup
 	log.Info("deviceMCPjoinwillautomaticcleanup")
 
 	m.started = false
-	log.Info("=== MCPmanage器clusteralreadystop ===")
+	log.Info("=== MCP managerclusteralreadystop ===")
 	return nil
 }
 
-// IsStarted inspectmanage器whetheralreadystart
+// IsStarted check if manager already started
 func (m *MCPManager) IsStarted() bool {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.started
 }
 
-// GetLocalManager getlocalmanage器
+// GetLocalManager getlocal manager
 func (m *MCPManager) GetLocalManager() *LocalMCPManager {
 	return m.localManager
 }
 
-// GetGlobalManager getglobalmanage器
+// GetGlobalManager getglobal manager
 func (m *MCPManager) GetGlobalManager() *GlobalMCPManager {
 	return m.globalManager
 }
@@ -127,14 +127,14 @@ func (m *MCPManager) printStartupStats() {
 	localToolCount := m.localManager.GetToolCount()
 	globalToolCount := len(m.globalManager.GetAllTools())
 
-	log.Infof("MCPmanage器startcount:")
+	log.Infof("MCP managerstartcount:")
 	log.Infof("  - localtoolcount: %d", localToolCount)
 	log.Infof("  - globaltoolcount: %d", globalToolCount)
-	log.Infof("  - devicemanage器: dynamicmanage")
+	log.Infof("  - device manager: dynamicmanage")
 	log.Infof("  - totaltoolcount: %d", localToolCount+globalToolCount)
 }
 
-// GetAllManagersStatus getallmanage器ofstateinfo
+// GetAllManagersStatus get all managersofstateinfo
 func (m *MCPManager) GetAllManagersStatus() map[string]interface{} {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -158,38 +158,38 @@ func (m *MCPManager) GetAllManagersStatus() map[string]interface{} {
 	return status
 }
 
-// RestartManager restartspecifyofmanage器
+// RestartManager restart specified manager
 func (m *MCPManager) RestartManager(managerType string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	if !m.started {
-		return fmt.Errorf("MCPmanage器clusternotstart")
+		return fmt.Errorf("MCP managerclusternotstart")
 	}
 
 	switch managerType {
 	case "local":
-		log.Info("restartlocalMCPmanage器...")
+		log.Info("restartlocal MCP manager...")
 		if err := m.localManager.Stop(); err != nil {
-			log.Errorf("stoplocalmanage器failed: %v", err)
+			log.Errorf("stoplocal managerfailed: %v", err)
 		}
 		if err := m.localManager.Start(); err != nil {
-			return fmt.Errorf("restartlocalmanage器failed: %v", err)
+			return fmt.Errorf("restartlocal managerfailed: %v", err)
 		}
-		log.Info("localMCPmanage器restartcomplete")
+		log.Info("local MCP managerrestartcomplete")
 
 	case "global":
-		log.Info("restartglobalMCPmanage器...")
+		log.Info("restartglobal MCP manager...")
 		if err := m.globalManager.Stop(); err != nil {
-			log.Errorf("stopglobalmanage器failed: %v", err)
+			log.Errorf("stopglobal managerfailed: %v", err)
 		}
 		if err := m.globalManager.Start(); err != nil {
-			return fmt.Errorf("restartglobalmanage器failed: %v", err)
+			return fmt.Errorf("restartglobal managerfailed: %v", err)
 		}
-		log.Info("globalMCPmanage器restartcomplete")
+		log.Info("global MCP managerrestartcomplete")
 
 	default:
-		return fmt.Errorf("unsupportedofmanage器type: %s", managerType)
+		return fmt.Errorf("unsupported manager type: %s", managerType)
 	}
 
 	return nil
@@ -197,17 +197,17 @@ func (m *MCPManager) RestartManager(managerType string) error {
 
 // istoafter兼容，provide便捷function
 
-// StartMCPManagers startallMCPmanage器（便捷function）
+// StartMCPManagers startallMCP manager（便捷function）
 func StartMCPManagers() error {
 	return GetMCPManager().Start()
 }
 
-// StopMCPManagers stopallMCPmanage器（便捷function）
+// StopMCPManagers stopallMCP manager（便捷function）
 func StopMCPManagers() error {
 	return GetMCPManager().Stop()
 }
 
-// GetMCPManagerStatus getMCPmanage器state（便捷function）
+// GetMCPManagerStatus getMCP managerstate（便捷function）
 func GetMCPManagerStatus() map[string]interface{} {
 	return GetMCPManager().GetAllManagersStatus()
 }

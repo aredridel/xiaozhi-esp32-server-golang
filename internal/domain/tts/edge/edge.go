@@ -13,7 +13,7 @@ import (
 	"github.com/difyz9/edge-tts-go/pkg/communicate"
 )
 
-// EdgeTTSProvider Edge TTS provide者
+// EdgeTTSProvider Edge TTS provider
 // supportatimes性andstreaming TTS，outputOpusframe
 // configparameter：voice, rate, volume, pitch, connectTimeout, receiveTimeout
 type EdgeTTSProvider struct {
@@ -100,7 +100,7 @@ func (p *EdgeTTSProvider) TextToSpeech(ctx context.Context, text string, sampleR
 	}()
 	mp3Decoder, err := util.CreateAudioDecoder(ctx, pipeReader, outputChan, frameDuration, "mp3")
 	if err != nil {
-		return nil, fmt.Errorf("createMP3decode器failed: %v", err)
+		return nil, fmt.Errorf("createMP3 decoderfailed: %v", err)
 	}
 	var opusFrames [][]byte
 	done := make(chan struct{})
@@ -138,7 +138,7 @@ func (p *EdgeTTSProvider) TextToSpeechStream(ctx context.Context, text string, s
 	chunkChan, errChan := comm.Stream(ctx)
 	outputChan := make(chan []byte, 100)
 	pipeReader, pipeWriter := io.Pipe()
-	// MP3转Opusdecode器
+	// MP3转Opusdecoder
 	go func() {
 		defer func() {
 			pipeWriter.Close()
@@ -171,7 +171,7 @@ func (p *EdgeTTSProvider) TextToSpeechStream(ctx context.Context, text string, s
 	go func() {
 		mp3Decoder, err := util.CreateAudioDecoder(ctx, pipeReader, outputChan, frameDuration, "mp3")
 		if err != nil {
-			log.Errorf("EdgeTTS MP3decode器createfailed: %v", err)
+			log.Errorf("EdgeTTS MP3 decodercreatefailed: %v", err)
 			return
 		}
 		if err := mp3Decoder.Run(startTs); err != nil {

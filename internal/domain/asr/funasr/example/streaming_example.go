@@ -13,32 +13,32 @@ import (
 	"xiaozhi-esp32-server-golang/internal/domain/asr/funasr"
 )
 
-// readWavFile readWAVfileandconvertisPCM []float32data
+// readWavFile read WAV file and convert to PCM []float32 data
 func readWavFile(filePath string) ([]float32, error) {
-	// openWAVfile
+	// open WAV file
 	file, err := os.Open(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("openWAVfilefailed: %v", err)
+		return nil, fmt.Errorf("open WAV file failed: %v", err)
 	}
 	defer file.Close()
 
-	// createWAVdecode器
+	// create WAV decoder
 	wavDecoder := wav.NewDecoder(file)
 	if !wavDecoder.IsValidFile() {
-		return nil, fmt.Errorf("invalidofWAVfile")
+		return nil, fmt.Errorf("invalid WAV file")
 	}
 
-	// readWAVfileinfo
+	// read WAV file info
 	wavDecoder.ReadInfo()
 	format := wavDecoder.Format()
 
-	fmt.Printf("WAVformat: sampling率=%dHz, channelcount=%d\n",
+	fmt.Printf("WAV format: sampling rate=%dHz, channel count=%d\n",
 		int(format.SampleRate), format.NumChannels)
 
-	// readallPCMdata
+	// read all PCM data
 	var allPcmData []float32
 
-	// use20msframesizeasisbuffer区
+	// use 20ms frame size as buffer
 	perFrameDuration := 20
 	frameSize := int(format.SampleRate) * perFrameDuration / 1000
 	audioBuf := &audio.IntBuffer{
@@ -47,51 +47,51 @@ func readWavFile(filePath string) ([]float32, error) {
 		Data:           make([]int, frameSize*format.NumChannels),
 	}
 
-	fmt.Printf("useframesize: %d samplingpoint (%.1fms)\n", frameSize, float64(perFrameDuration))
-	fmt.Println("startreadWAVdata...")
+	fmt.Printf("use frame size: %d sampling point (%.1fms)\n", frameSize, float64(perFrameDuration))
+	fmt.Println("start read WAV data...")
 
 	for {
-		// readWAVdata
+		// read WAV data
 		n, err := wavDecoder.PCMBuffer(audioBuf)
 		if err == io.EOF || n == 0 {
 			break
 		}
 		if err != nil {
-			return nil, fmt.Errorf("readWAVdatafailed: %v", err)
+			return nil, fmt.Errorf("read WAV data failed: %v", err)
 		}
 
-		// willintdataconvertisfloat32 (range-1.0to1.0)
+		// convert int data to float32 (range -1.0 to 1.0)
 		for i := 0; i < n; i++ {
-			// willintconvertisfloat32，rangefrom[-32768, 32767]to[-1.0, 1.0]
+			// convert int to float32, range from [-32768, 32767] to [-1.0, 1.0]
 			floatSample := float32(audioBuf.Data[i]) / 32767.0
 			allPcmData = append(allPcmData, floatSample)
 		}
 	}
 
-	fmt.Printf("successfulreadWAVfile，总samplingpointcount: %d, duration: %.2fsecond\n",
+	fmt.Printf("successful read WAV file, total sampling point count: %d, duration: %.2f second\n",
 		len(allPcmData), float64(len(allPcmData))/float64(format.SampleRate))
 
 	return allPcmData, nil
 }
 
 func main() {
-	// 定义command行parameter
+	// define command line parameters
 	var (
-		host = flag.String("host", "192.168.208.214", "FunASRserverIPaddress")
-		port = flag.String("port", "10096", "FunASRserverport")
-		mode = flag.String("mode", "offline", "recognizepattern (online/offline)")
-		file = flag.String("file", "test.wav", "要recognizeofWAVfilepath")
+		host = flag.String("host", "192.168.208.214", "FunASR server IP address")
+		port = flag.String("port", "10096", "FunASR server port")
+		mode = flag.String("mode", "offline", "recognition pattern (online/offline)")
+		file = flag.String("file", "test.wav", "WAV file path to recognize")
 	)
 
-	// parsecommand行parameter
+	// parse command line parameters
 	flag.Parse()
 
-	// 显示useinstruction
+	// show usage instructions
 	if len(os.Args) < 2 {
-		fmt.Println("use法: ./streaming_example [option]")
-		fmt.Println("option:")
+		fmt.Println("usage: ./streaming_example [option]")
+		fmt.Println("options:")
 		flag.PrintDefaults()
-		fmt.Println("\nexample:")
+		fmt.Println("\nexamples:")
 		fmt.Println("  ./streaming_example -host=192.168.1.100 -port=10095 -file=audio.wav")
 		fmt.Println("  ./streaming_example -mode=online -file=test.wav")
 		return
@@ -108,41 +108,41 @@ func main() {
 		AutoEnd:       false,
 	}
 
-	// useconfigcreateASRinstance
+	// use config create ASR instance
 	asr, err := funasr.NewFunasr(config)
 	if err != nil {
-		fmt.Printf("createASRinstancefailed: %v\n", err)
+		fmt.Printf("create ASR instance failed: %v\n", err)
 		return
 	}
 
-	fmt.Printf("目标server: %s:%s, pattern: %s\n", config.Host, config.Port, config.Mode)
+	fmt.Printf("target server: %s:%s, pattern: %s\n", config.Host, config.Port, config.Mode)
 
-	// usecommand行parameterspecifyofaudiofilepath
+	// use command line parameter specified audio file path
 	audioFilePath := *file
 
-	// inspectaudiofilewhether存at
+	// inspect audio file whether exists
 	if _, err := os.Stat(audioFilePath); os.IsNotExist(err) {
-		fmt.Printf("audiofile %s no存at\n", audioFilePath)
-		fmt.Println("pleaseprovidevalidofaudiofilepath")
+		fmt.Printf("audio file %s does not exist\n", audioFilePath)
+		fmt.Println("please provide valid audio file path")
 		return
 	}
 
-	// readWAVfileandconvertisPCMdata
+	// read WAV file and convert to PCM data
 	pcmData, err := readWavFile(audioFilePath)
 	if err != nil {
-		fmt.Printf("readWAVfilefailed: %v\n", err)
+		fmt.Printf("read WAV file failed: %v\n", err)
 		return
 	}
 
-	// executerecognize
+	// execute recognition
 	result, err := asr.Process(pcmData)
 	if err != nil {
 		fmt.Printf("recognize failed: %v\n", err)
 		return
 	}
 
-	// formatand打印result
-	fmt.Println("recognizeresult:")
+	// format and print result
+	fmt.Println("recognition result:")
 	fmt.Println(strings.Repeat("-", 40))
 	fmt.Println(result)
 	fmt.Println(strings.Repeat("-", 40))

@@ -9,22 +9,22 @@ import (
 	mcp_go "github.com/mark3labs/mcp-go/mcp"
 )
 
-// MCPResponseType 定义MCPrespondoftype
+// MCPResponseType define MCP response type
 type MCPResponseType string
 
 const (
-	// 动asclass：needexecute特定动as，通常willterminate subsequent process
+	// action class: need execute specific action, usually will terminate subsequent process
 	MCPResponseTypeAction MCPResponseType = "action"
-	// audioresourceclass：needexecute特定动as，通常willterminate subsequent process, alsononeedreturnstop
+	// audio resource class: need execute specific action, usually will terminate subsequent process, also no need return stop
 	MCPResponseTypeAudio MCPResponseType = "audio"
 
-	// inside容class：returninfoinside容，allowaftercontinueprocess
+	// content class: return info content, allow after continue process
 	MCPResponseTypeContent MCPResponseType = "content"
-	// errorclass：processerrorsituation
+	// error class: process error situation
 	MCPResponseTypeError MCPResponseType = "error"
 )
 
-// MCPResponseBase allMCPrespondoffoundationstructure
+// MCPResponseBase all MCP response of foundation structure
 type MCPResponseBase struct {
 	Type      MCPResponseType `json:"type"`
 	Success   bool            `json:"success"`
@@ -32,14 +32,14 @@ type MCPResponseBase struct {
 	ToolName  string          `json:"tool_name"`
 }
 
-// MCPActionResponse action class respond - used forplay music、exittoconversationetcneedexecute动asofscenario
+// MCPActionResponse action class respond - used for play music, exit to conversation etc need execute action of scenario
 type MCPActionResponse struct {
 	MCPResponseBase
 	Action   string            `json:"action"`
 	Message  string            `json:"message"`
 	Status   string            `json:"status"`
 	Metadata map[string]string `json:"metadata,omitempty"`
-	// controlflag
+	// control flag
 	FinalAction       bool   `json:"final_action"`
 	NoFurtherResponse bool   `json:"no_further_response"`
 	SilenceLLM        bool   `json:"silence_llm"`
@@ -47,7 +47,7 @@ type MCPActionResponse struct {
 	Instruction       string `json:"instruction,omitempty"`
 }
 
-// MCPActionResponse action class respond - used forplay music、exittoconversationetcneedexecute动asofscenario
+// MCPActionResponse action class respond - used for play music, exit to conversation etc need execute action of scenario
 type MCPAudioResponse struct {
 	MCPResponseBase
 	Data      []byte            `json:"data"`
@@ -55,37 +55,37 @@ type MCPAudioResponse struct {
 	Action    string            `json:"action"`
 	Status    string            `json:"status"`
 	Metadata  map[string]string `json:"metadata,omitempty"`
-	// controlflag
+	// control flag
 	FinalAction bool `json:"final_action"`
 }
 
-// MCPContentResponse inside容classrespond - used forgettime、queryinfoetcreturndataofscenario
+// MCPContentResponse content class respond - used for get time, query info etc return data of scenario
 type MCPContentResponse struct {
 	MCPResponseBase
 	Data    interface{} `json:"data"`
 	Message string      `json:"message"`
 }
 
-// MCPErrorResponse errorclassrespond - unifiedoferrorprocess
+// MCPErrorResponse error class respond - unified of error process
 type MCPErrorResponse struct {
 	MCPResponseBase
 	Error      string `json:"error"`
 	ErrorCode  string `json:"error_code,omitempty"`
 	Details    string `json:"details,omitempty"`
-	Suggestion string `json:"suggestion,omitempty"` // 给userofsuggestion
+	Suggestion string `json:"suggestion,omitempty"` // suggestion for user
 }
 
-// MCPResponse unifiedofMCPrespondinterface
+// MCPResponse unified of MCP respond interface
 type MCPResponse interface {
 	GetType() MCPResponseType
 	GetSuccess() bool
-	IsTerminal() bool // whetheryesterminating operation
+	IsTerminal() bool // whether yes terminating operation
 	ToJSON() (string, error)
 	GetContent() []mcp_go.Content
-	GetAction() string // get动astype
+	GetAction() string // get action type
 }
 
-// implementMCPResponseinterface
+// implement MCPResponse interface
 func (r *MCPActionResponse) GetType() MCPResponseType { return MCPResponseTypeAction }
 func (r *MCPActionResponse) GetSuccess() bool         { return r.Success }
 func (r *MCPActionResponse) IsTerminal() bool         { return r.FinalAction || r.NoFurtherResponse }
@@ -99,7 +99,7 @@ func (r *MCPActionResponse) GetContent() []mcp_go.Content {
 	}
 }
 
-// isMCPAudioResponseaddinterfacemethodimplement
+// is MCPAudioResponse add interface method implement
 func (r *MCPAudioResponse) GetType() MCPResponseType { return MCPResponseTypeAudio }
 func (r *MCPAudioResponse) GetSuccess() bool         { return r.Success }
 func (r *MCPAudioResponse) IsTerminal() bool         { return r.FinalAction }
@@ -120,8 +120,8 @@ func (r *MCPAudioResponse) GetContent() []mcp_go.Content {
 
 func (r *MCPContentResponse) GetType() MCPResponseType { return MCPResponseTypeContent }
 func (r *MCPContentResponse) GetSuccess() bool         { return r.Success }
-func (r *MCPContentResponse) IsTerminal() bool         { return false } // inside容class通常noterminate
-func (r *MCPContentResponse) GetAction() string        { return "" }    // inside容classno动as
+func (r *MCPContentResponse) IsTerminal() bool         { return false } // content class usually no terminate
+func (r *MCPContentResponse) GetAction() string        { return "" }    // content class no action
 func (r *MCPContentResponse) GetContent() []mcp_go.Content {
 	return []mcp_go.Content{
 		mcp_go.TextContent{
@@ -133,8 +133,8 @@ func (r *MCPContentResponse) GetContent() []mcp_go.Content {
 
 func (r *MCPErrorResponse) GetType() MCPResponseType { return MCPResponseTypeError }
 func (r *MCPErrorResponse) GetSuccess() bool         { return r.Success }
-func (r *MCPErrorResponse) IsTerminal() bool         { return false } // errorclassallowaftercontinueprocess
-func (r *MCPErrorResponse) GetAction() string        { return "" }    // errorclassno动as
+func (r *MCPErrorResponse) IsTerminal() bool         { return false } // error class allow after continue process
+func (r *MCPErrorResponse) GetAction() string        { return "" }    // error class no action
 func (r *MCPErrorResponse) GetContent() []mcp_go.Content {
 	return []mcp_go.Content{
 		mcp_go.TextContent{
@@ -144,13 +144,13 @@ func (r *MCPErrorResponse) GetContent() []mcp_go.Content {
 	}
 }
 
-// ToJSON methodimplement
+// ToJSON method implement
 func (r *MCPActionResponse) ToJSON() (string, error) {
 	data, err := json.Marshal(r)
 	return string(data), err
 }
 
-// isMCPAudioResponseaddToJSONmethod
+// is MCPAudioResponse add ToJSON method
 func (r *MCPAudioResponse) ToJSON() (string, error) {
 	data, err := json.Marshal(r)
 	return string(data), err
@@ -166,9 +166,9 @@ func (r *MCPErrorResponse) ToJSON() (string, error) {
 	return string(data), err
 }
 
-// 便利constructfunction
+// convenient construct function
 
-// NewActionResponse createaction class respond
+// NewActionResponse create action class respond
 func NewActionResponse(toolName, action, message, status string, terminal bool) *MCPActionResponse {
 	return &MCPActionResponse{
 		MCPResponseBase: MCPResponseBase{
@@ -186,7 +186,7 @@ func NewActionResponse(toolName, action, message, status string, terminal bool) 
 	}
 }
 
-// NewAudioResponse createaudioclassrespond - 修positivereturntype
+// NewAudioResponse create audio class respond - fix positive return type
 func NewAudioResponse(toolName, action, status string, terminal bool, data []byte) *MCPAudioResponse {
 	return &MCPAudioResponse{
 		MCPResponseBase: MCPResponseBase{
@@ -216,7 +216,7 @@ func NewContentResponse(toolName string, data interface{}, message string) *MCPC
 	}
 }
 
-// NewErrorResponse createerrorclassrespond
+// NewErrorResponse create error class respond
 func NewErrorResponse(toolName, error, errorCode, suggestion string) *MCPErrorResponse {
 	return &MCPErrorResponse{
 		MCPResponseBase: MCPResponseBase{
@@ -231,7 +231,7 @@ func NewErrorResponse(toolName, error, errorCode, suggestion string) *MCPErrorRe
 	}
 }
 
-// ParseMCPResponse fromJSONcharstringparseMCPrespond
+// ParseMCPResponse from JSON char string parse MCP respond
 func ParseMCPResponse(jsonStr string) (MCPResponse, error) {
 	var base MCPResponseBase
 	if err := json.Unmarshal([]byte(jsonStr), &base); err != nil {
@@ -264,6 +264,6 @@ func ParseMCPResponse(jsonStr string) (MCPResponse, error) {
 		}
 		return &response, nil
 	default:
-		return NewErrorResponse("unknown", "not知ofrespondtype", "INVALID_TYPE", "pleaseinspecttoolimplement"), fmt.Errorf("not知ofrespondtype: %s", base.Type)
+		return NewErrorResponse("unknown", "unknown response type", "INVALID_TYPE", "please inspect tool implement"), fmt.Errorf("unknown response type: %s", base.Type)
 	}
 }

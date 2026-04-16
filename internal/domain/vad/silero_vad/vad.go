@@ -10,7 +10,7 @@ import (
 	"github.com/streamer45/silero-vad-go/speech"
 )
 
-// VADdefaultconfig
+// VAD default config
 var defaultVADConfig = map[string]interface{}{
 	"threshold":               0.5,
 	"min_silence_duration_ms": int64(100),
@@ -19,61 +19,61 @@ var defaultVADConfig = map[string]interface{}{
 	"speech_pad_ms":           60,
 }
 
-// globalvariableandinitialize
+// global variable and initialize
 var (
-	// globaldecode器instancepool
+	// global decoder instance pool
 	opusDecoderMap sync.Map
-	// globalVADdetect器instancepool
+	// global VAD detector instance pool
 	vadDetectorMap sync.Map
-	// globalinitializelock
+	// global initialize lock
 	initMutex sync.Mutex
-	// initializeflag
+	// initialize flag
 	initialized = false
 )
 
-// SileroVAD Silero VADmodelimplement
+// SileroVAD Silero VAD model implementation
 type SileroVAD struct {
 	detector         *speech.Detector
 	vadThreshold     float32
-	silenceThreshold int64 // 单bit:毫second
-	sampleRate       int   // sampling率
-	channels         int   // channelcount
+	silenceThreshold int64 // unit: millisecond
+	sampleRate       int   // sampling rate
+	channels         int   // channel count
 	mu               sync.Mutex
 }
 
-// NewSileroVAD createSileroVADinstance
+// NewSileroVAD create SileroVAD instance
 func NewSileroVAD(config map[string]interface{}) (*SileroVAD, error) {
 	threshold, ok := config["threshold"].(float64)
 	if !ok {
-		threshold = 0.5 // default阈value
+		threshold = 0.5 // default threshold value
 	}
 
 	silenceMs, ok := config["min_silence_duration_ms"].(int64)
 	if !ok {
-		silenceMs = 800 // default500毫second
+		silenceMs = 800 // default 500 millisecond
 	}
 
 	sampleRate, ok := config["sample_rate"].(int)
 	if !ok {
-		sampleRate = 16000 // defaultsampling率
+		sampleRate = 16000 // default sampling rate
 	}
 
 	channels, ok := config["channels"].(int)
 	if !ok {
-		channels = 1 // default单声道
+		channels = 1 // default mono
 	}
 
 	speechPadMs, ok := config["speech_pad_ms"].(int)
 	if !ok {
-		speechPadMs = 30 // defaultvoicebeforeafter填充
+		speechPadMs = 30 // default voice before after padding
 	}
 
 	modelPath, ok := config["model_path"].(string)
 	if !ok {
-		return nil, errors.New("Missingmodelpathconfig")
+		return nil, errors.New("Missing model path config")
 	}
 
-	// createvoicedetect器
+	// create voice detector
 	detector, err := speech.NewDetector(speech.DetectorConfig{
 		ModelPath:            modelPath,
 		SampleRate:           sampleRate,
@@ -99,14 +99,14 @@ func (s *SileroVAD) IsVADExt(pcmData []float32, sampleRate int, frameSize int) (
 	return s.IsVAD(pcmData)
 }
 
-// IsVAD implementVADinterfaceofIsVADmethod
+// IsVAD implement VAD interface IsVAD method
 func (s *SileroVAD) IsVAD(pcmData []float32) (bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	segments, err := s.detector.Detect(pcmData)
 	if err != nil {
-		log.Errorf("detectfailed: %s", err)
+		log.Errorf("detect failed: %s", err)
 		return false, err
 	}
 
@@ -120,7 +120,7 @@ func (s *SileroVAD) IsVAD(pcmData []float32) (bool, error) {
 	return len(segments) > 0, nil
 }
 
-// Close closeandreleaseresource
+// Close close and release resource
 func (s *SileroVAD) Close() error {
 	if s.detector != nil {
 		return s.detector.Destroy()
@@ -128,14 +128,14 @@ func (s *SileroVAD) Close() error {
 	return nil
 }
 
-// IsValid inspectresourcewhethervalid
+// IsValid inspect resource whether valid
 func (s *SileroVAD) IsValid() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.detector != nil
 }
 
-// AcquireVAD createandreturn Silero VAD instance（byglobalresourcepoolmanage）
+// AcquireVAD create and return Silero VAD instance (by global resource pool manage)
 func AcquireVAD(config map[string]interface{}) (VAD, error) {
 	return NewSileroVAD(config)
 }
@@ -148,7 +148,7 @@ func ReleaseVAD(vad VAD) error {
 	return nil
 }
 
-// Reset resetVADdetect器state
+// Reset reset VAD detector state
 func (s *SileroVAD) Reset() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -156,12 +156,12 @@ func (s *SileroVAD) Reset() error {
 	return s.detector.Reset()
 }
 
-// SetThreshold setVADdetect阈value
+// SetThreshold set VAD detect threshold value
 func (s *SileroVAD) SetThreshold(threshold float32) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	s.vadThreshold = threshold
-	// 注意：silero-vad-go libraryof detector nodirectprovide SetThreshold method
-	// only能modifyinstanceof阈value，atdowntimesdetectwheneffective
+	// Note: silero-vad-go library detector does not directly provide SetThreshold method
+	// can only modify instance threshold value, effective during next detection
 }

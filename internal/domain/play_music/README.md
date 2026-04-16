@@ -1,20 +1,20 @@
-# play music功能
+# Music Playback Feature
 
-这个模块providefromURLstreamingplay musicof功能，支持from网络URLgetaudio文件并实when解码isaudio frame流。
+This module provides URL-based streaming music playback functionality, supporting downloading audio files from network URLs and real-time decoding into audio frame streams.
 
-## 功能特性
+## Feature Highlights
 
-- ✅ **streaming播放**: 支持fromURL实when下载和play music
-- ✅ **格式支持**: 主要支持MP3格式，自动解码isOpusaudio frame
-- ✅ **audio解码**: 基于成熟ofaudio解码器，高效稳定
-- ✅ **上下文控制**: 支持throughcontext取消和超when控制
-- ✅ **连接池优化**: useHTTP连接池，提高网络性能
-- ✅ **config灵活**: 可configframewhen长和audio格式
-- ✅ **统计信息**: provide播放统计和状态监控
+- ✅ **Streaming Playback**: Supports real-time download and music playback from URLs
+- ✅ **Format Support**: Primarily supports MP3 format, automatically decodes to Opus audio frames
+- ✅ **Audio Decoding**: Based on mature audio decoder, efficient and stable
+- ✅ **Context Control**: Supports cancellation and timeout control through context
+- ✅ **Connection Pool Optimization**: Uses HTTP connection pool to improve network performance
+- ✅ **Flexible Configuration**: Configurable frame duration and audio format
+- ✅ **Statistics**: Provides playback statistics and status monitoring
 
-## 快速start
+## Quick Start
 
-### 1. 基础use
+### 1. Basic Usage
 
 ```go
 package main
@@ -27,43 +27,43 @@ import (
 )
 
 func main() {
-    // 创建音乐播放器
+    // Create music player
     config := play_music.DefaultMusicPlayerConfig()
     player := play_music.NewMusicPlayer(config.ToMap())
     
-    // startplay music
+    // Start music playback
     ctx := context.Background()
     audioChan, err := player.PlayMusicStream(ctx, "https://example.com/music.mp3")
     if err != nil {
         panic(err)
     }
     
-    // processaudio frame
+    // Process audio frames
     for audioFrame := range audioChan {
-        fmt.Printf("收toaudio frame: %d 字节\n", len(audioFrame))
-        // 这里canwillaudio framesendto播放device或其他process
+        fmt.Printf("Received audio frame: %d bytes\n", len(audioFrame))
+        // Here you can send audio frames to playback device or other processing
     }
 }
 ```
 
-### 2. 自定义config
+### 2. Custom Configuration
 
 ```go
-// 创建自定义config
+// Create custom configuration
 config := &play_music.MusicPlayerConfig{
-    FrameDuration: 20,   // 20msframewhen长
+    FrameDuration: 20,   // 20ms frame duration
 }
 
 player := play_music.NewMusicPlayer(config.ToMap())
 
-// or直接传入config映射
+// Or directly pass configuration map
 player := play_music.NewMusicPlayer(map[string]interface{}{
     "frame_duration": 20,
     "audio_format":   "mp3",
 })
 ```
 
-### 3. 带统计信息of完整示例
+### 3. Complete Example with Statistics
 
 ```go
 package main
@@ -88,7 +88,7 @@ func main() {
         panic(err)
     }
     
-    // 统计信息
+    // Statistics
     stats := &play_music.StreamingStats{
         StartTime: time.Now().UnixMilli(),
     }
@@ -101,69 +101,69 @@ func main() {
         
         if frameCount == 1 {
             stats.FirstFrameTime = time.Now().UnixMilli()
-            fmt.Printf("首frame延迟: %d ms\n", stats.FirstFrameTime - stats.StartTime)
+            fmt.Printf("First frame latency: %d ms\n", stats.FirstFrameTime - stats.StartTime)
         }
         
-        // processaudio frame...
+        // Process audio frame...
     }
     
-    fmt.Printf("播放complete，总frame数: %d\n", frameCount)
+    fmt.Printf("Playback complete, total frames: %d\n", frameCount)
 }
 ```
 
-## API 参考
+## API Reference
 
 ### MusicPlayer
 
-主要of音乐播放器结构体。
+Main music player struct.
 
-#### 方法
+#### Methods
 
 ##### `NewMusicPlayer(config map[string]interface{}) *MusicPlayer`
 
-创建new音乐播放器实例。
+Creates a new music player instance.
 
-**参数:**
-- `config`: config参数映射
+**Parameters:**
+- `config`: Configuration parameter map
 
-**config选项:**
-- `frame_duration` (int): framewhen长(ms)，default20
-- `audio_format` (string): audio格式，default"mp3"
+**Configuration Options:**
+- `frame_duration` (int): Frame duration (ms), default 20
+- `audio_format` (string): Audio format, default "mp3"
 
 ##### `PlayMusicStream(ctx context.Context, url string) (chan []byte, error)`
 
-fromURLstartstreamingplay music。
+Starts streaming music playback from URL.
 
-**参数:**
-- `ctx`: 上下文to象，used for取消和超when控制
-- `url`: 音乐文件ofURL地址
+**Parameters:**
+- `ctx`: Context object, used for cancellation and timeout control
+- `url`: URL address of the music file
 
-**return:**
-- `chan []byte`: audio framedata通道
-- `error`: error信息
+**Returns:**
+- `chan []byte`: Audio frame data channel
+- `error`: Error information
 
 ##### `GetPlayerInfo() map[string]interface{}`
 
-get播放器config信息。
+Gets player configuration information.
 
 ##### `Stop() error`
 
-stop播放器并清理resource。
+Stops the player and cleans up resources.
 
-### config类型
+### Configuration Types
 
 #### `MusicPlayerConfig`
 
 ```go
 type MusicPlayerConfig struct {
-    FrameDuration int    `json:"frame_duration"` // framewhen长(ms)
-    AudioFormat   string `json:"audio_format"`   // audio格式，default"mp3"
+    FrameDuration int    `json:"frame_duration"` // Frame duration (ms)
+    AudioFormat   string `json:"audio_format"`   // Audio format, default "mp3"
 }
 ```
 
 #### `StreamingStats`
 
-播放统计信息结构体，used for监控播放状态。
+Playback statistics struct, used for monitoring playback status.
 
 ```go
 type StreamingStats struct {
@@ -177,53 +177,53 @@ type StreamingStats struct {
 }
 ```
 
-## 测试
+## Testing
 
-运行测试示例：
+Run test example:
 
 ```bash
 cd test/music_player
 go run main.go "https://example.com/music.mp3"
 ```
 
-## 支持ofaudio格式
+## Supported Audio Formats
 
-目before主要支持：
-- **MP3**: 完全支持，推荐use
-- **WAV**: 部分支持（through通用解码器）
+Currently mainly supports:
+- **MP3**: Fully supported, recommended for use
+- **WAV**: Partially supported (through general decoder)
 
-## errorprocess
+## Error Handling
 
-播放器provide简洁oferrorprocess机制：
+Player provides concise error handling mechanism:
 
-1. **连接池优化**: useHTTP连接池提高网络稳定性
-2. **上下文控制**: 支持throughcontext取消操作
-3. **优雅exit**: 遇toerrorwhen优雅关闭通道
+1. **Connection Pool Optimization**: Uses HTTP connection pool to improve network stability
+2. **Context Control**: Supports cancellation of operations through context
+3. **Graceful Exit**: Gracefully closes channel when encountering errors
 
-## 性能优化建议
+## Performance Optimization Suggestions
 
-1. **合理设置framewhen长**: default20ms适合大多数场景
-2. **网络优化**: use稳定of网络连接，播放器already优化HTTP连接池
-3. **内存管理**: andwhenprocessaudio framedata，避免通道阻塞
-4. **并发控制**: 避免同when播放过多audio stream
+1. **Set reasonable frame duration**: Default 20ms is suitable for most scenarios
+2. **Network optimization**: Use stable network connections, player already optimizes HTTP connection pool
+3. **Memory management**: Process audio frame data in a timely manner to avoid channel blocking
+4. **Concurrency control**: Avoid playing too many audio streams simultaneously
 
-## 集成示例
+## Integration Examples
 
-### andWebSocket集成
+### Integration with WebSocket
 
 ```go
 func streamToWebSocket(audioChan <-chan []byte, ws *websocket.Conn) {
     for frame := range audioChan {
         err := ws.WriteMessage(websocket.BinaryMessage, frame)
         if err != nil {
-            log.Errorf("sendWebSocketmessagefailed: %v", err)
+            log.Errorf("Failed to send WebSocket message: %v", err)
             return
         }
     }
 }
 ```
 
-### 保存to文件
+### Save to File
 
 ```go
 func saveToFile(audioChan <-chan []byte, filename string) error {
@@ -243,26 +243,26 @@ func saveToFile(audioChan <-chan []byte, filename string) error {
 }
 ```
 
-## 注意事项
+## Notes
 
-1. **URL有效性**: 确保audioURL可访问且return有效audio文件
-2. **内存use**: 长time播放need注意内存use情况
-3. **网络稳定性**: use稳定of网络连接以获得最佳播放体验
-4. **上下文管理**: andwhen取消不needof播放任务
+1. **URL Validity**: Ensure audio URL is accessible and returns valid audio file
+2. **Memory Usage**: Long-time playback requires attention to memory usage
+3. **Network Stability**: Use stable network connections for best playback experience
+4. **Context Management**: Cancel unnecessary playback tasks in a timely manner
 
-## 故障排除
+## Troubleshooting
 
-### 常见问题
+### Common Issues
 
-**Q: 播放no声音**
-A: checkURLwhether有效，audio格式whether支持
+**Q: No sound during playback**
+A: Check if URL is valid and if audio format is supported
 
-**Q: 播放延迟很高**
-A: check网络连接，确保URL响应速度较快
+**Q: High playback latency**
+A: Check network connection, ensure URL responds quickly
 
-**Q: 内存use过高**
-A: checkaudio frameprocesswhetherandwhen，避免通道积压
+**Q: High memory usage**
+A: Check if audio frame processing is timely, avoid channel backlog
 
 ## License
 
-MIT License 
+MIT License

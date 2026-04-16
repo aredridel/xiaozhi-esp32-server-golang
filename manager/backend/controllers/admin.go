@@ -563,7 +563,7 @@ func (ac *AdminController) getSystemConfigsData() (gin.H, error) {
 		configsByType[config.Type] = append(configsByType[config.Type], config)
 	}
 
-	// 从 configs 中选出“currentuse”的一条：defaultconfig优先，否则第一条
+	// Select one "current use" from configs: default config takes priority, otherwise first one
 	getSelectedConfig := func(configs []models.Config) *models.Config {
 		if len(configs) == 0 {
 			return nil
@@ -2463,7 +2463,7 @@ func (ac *AdminController) GetUserVoiceCloneQuotas(c *gin.Context) {
 		})
 	}
 
-	// 保留已delete的历史configquota，避免“quotaconfig丢失不可见”
+	// Keep historical deleted config quota to avoid "quota config lost invisible"
 	for _, quota := range quotas {
 		if configIDSet[quota.TTSConfigID] {
 			continue
@@ -2836,7 +2836,7 @@ func (ac *AdminController) GetAgents(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": result})
 }
 
-// GetDeviceMcpTools getdevicedimensionMCPtoollist（managementadmin version）
+// GetDeviceMcpTools getdevicedimensionMCPtoollist(managementadmin version)
 func (ac *AdminController) GetDeviceMcpTools(c *gin.Context) {
 	deviceID := c.Param("id")
 	if deviceID == "" {
@@ -2859,7 +2859,7 @@ func (ac *AdminController) GetDeviceMcpTools(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": gin.H{"tools": tools}})
 }
 
-// CallAgentMcpTool callagentdimensionMCPtool（managementadmin version）
+// CallAgentMcpTool callagentdimensionMCPtool(managementadmin version)
 func (ac *AdminController) CallAgentMcpTool(c *gin.Context) {
 	agentID := c.Param("id")
 	var req struct {
@@ -2891,7 +2891,7 @@ func (ac *AdminController) CallAgentMcpTool(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": result})
 }
 
-// CallDeviceMcpTool calldevicedimensionMCPtool（managementadmin version）
+// CallDeviceMcpTool calldevicedimensionMCPtool(managementadmin version)
 func (ac *AdminController) CallDeviceMcpTool(c *gin.Context) {
 	deviceID := c.Param("id")
 	var req struct {
@@ -3263,7 +3263,7 @@ func (ac *AdminController) DeleteAgent(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "delete successful"})
 }
 
-// VADconfigmanagement（compatible with frontend）
+// VADconfigmanagement(compatible with frontend)
 func (ac *AdminController) GetVADConfigs(c *gin.Context) {
 	var configs []models.Config
 	if err := ac.DB.Where("type = ?", "vad").Find(&configs).Error; err != nil {
@@ -3291,7 +3291,7 @@ func (ac *AdminController) DeleteVADConfig(c *gin.Context) {
 	ac.deleteConfigWithType(c, "vad")
 }
 
-// ASRconfigmanagement（compatible with frontend）
+// ASRconfigmanagement(compatible with frontend)
 func (ac *AdminController) GetASRConfigs(c *gin.Context) {
 	var configs []models.Config
 	if err := ac.DB.Where("type = ?", "asr").Find(&configs).Error; err != nil {
@@ -3319,7 +3319,7 @@ func (ac *AdminController) DeleteASRConfig(c *gin.Context) {
 	ac.deleteConfigWithType(c, "asr")
 }
 
-// LLMconfigmanagement（compatible with frontend）
+// LLMconfigmanagement(compatible with frontend)
 func (ac *AdminController) GetLLMConfigs(c *gin.Context) {
 	var configs []models.Config
 	if err := ac.DB.Where("type = ?", "llm").Find(&configs).Error; err != nil {
@@ -3347,7 +3347,7 @@ func (ac *AdminController) DeleteLLMConfig(c *gin.Context) {
 	ac.deleteConfigWithType(c, "llm")
 }
 
-// TTSconfigmanagement（compatible with frontend）
+// TTSconfigmanagement(compatible with frontend)
 func (ac *AdminController) GetTTSConfigs(c *gin.Context) {
 	var configs []models.Config
 	if err := ac.DB.Where("type = ?", "tts").Find(&configs).Error; err != nil {
@@ -3375,7 +3375,7 @@ func (ac *AdminController) DeleteTTSConfig(c *gin.Context) {
 	ac.deleteConfigWithType(c, "tts")
 }
 
-// Speakerconfigmanagement（compatible with frontend）
+// Speakerconfigmanagement(compatible with frontend)
 func (ac *AdminController) GetSpeakerConfigs(c *gin.Context) {
 	var configs []models.Config
 	if err := ac.DB.Where("type = ?", "voice_identify").Find(&configs).Error; err != nil {
@@ -3424,7 +3424,7 @@ func (ac *AdminController) UpdateSpeakerConfig(c *gin.Context) {
 	config.Enabled = updateData.Enabled
 	config.IsDefault = updateData.IsDefault
 
-	// 如果提供了新的config_id，则update它
+	// If new config_id is provided, update it
 	if updateData.ConfigID != "" {
 		config.ConfigID = updateData.ConfigID
 	}
@@ -3441,7 +3441,7 @@ func (ac *AdminController) DeleteSpeakerConfig(c *gin.Context) {
 	ac.deleteConfigWithType(c, "voice_identify")
 }
 
-// Visionconfigmanagement（compatible with frontend）
+// Visionconfigmanagement(compatible with frontend)
 func (ac *AdminController) GetVisionConfigs(c *gin.Context) {
 	var configs []models.Config
 	if err := ac.DB.Where("type = ? AND config_id != ?", "vision", "vision_base").Find(&configs).Error; err != nil {
@@ -3524,7 +3524,7 @@ func (ac *AdminController) UpdateVisionBaseConfig(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Vision base config updated successfully"})
 }
 
-// GetChatSettings getchatset（auth.enable + chat.*）
+// GetChatSettings getchatset(auth.enable + chat.*)
 func (ac *AdminController) GetChatSettings(c *gin.Context) {
 	response := gin.H{
 		"auth": gin.H{
@@ -3570,7 +3570,7 @@ func (ac *AdminController) GetChatSettings(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": response})
 }
 
-// UpdateChatSettings updatechatset（auth.enable + chat.*）
+// UpdateChatSettings updatechatset(auth.enable + chat.*)
 func (ac *AdminController) UpdateChatSettings(c *gin.Context) {
 	var req struct {
 		Auth struct {
@@ -3719,7 +3719,7 @@ func (ac *AdminController) DeleteVisionConfig(c *gin.Context) {
 	ac.deleteConfigWithType(c, "vision")
 }
 
-// OTAconfigmanagement（compatible with frontend）
+// OTAconfigmanagement(compatible with frontend)
 func (ac *AdminController) GetOTAConfigs(c *gin.Context) {
 	var configs []models.Config
 	if err := ac.DB.Where("type = ?", "ota").Find(&configs).Error; err != nil {
@@ -3747,7 +3747,7 @@ func (ac *AdminController) DeleteOTAConfig(c *gin.Context) {
 	ac.deleteConfigWithType(c, "ota")
 }
 
-// MQTTconfigmanagement（compatible with frontend）
+// MQTTconfigmanagement(compatible with frontend)
 func (ac *AdminController) GetMQTTConfigs(c *gin.Context) {
 	var configs []models.Config
 	if err := ac.DB.Where("type = ?", "mqtt").Find(&configs).Error; err != nil {
@@ -3775,7 +3775,7 @@ func (ac *AdminController) DeleteMQTTConfig(c *gin.Context) {
 	ac.deleteConfigWithType(c, "mqtt")
 }
 
-// MQTT Serverconfigmanagement（compatible with frontend）
+// MQTT Serverconfigmanagement(compatible with frontend)
 func (ac *AdminController) GetMQTTServerConfigs(c *gin.Context) {
 	var configs []models.Config
 	if err := ac.DB.Where("type = ?", "mqtt_server").Find(&configs).Error; err != nil {
@@ -3803,7 +3803,7 @@ func (ac *AdminController) DeleteMQTTServerConfig(c *gin.Context) {
 	ac.deleteConfigWithType(c, "mqtt_server")
 }
 
-// UDPconfigmanagement（compatible with frontend）
+// UDPconfigmanagement(compatible with frontend)
 func (ac *AdminController) GetUDPConfigs(c *gin.Context) {
 	var configs []models.Config
 	if err := ac.DB.Where("type = ?", "udp").Find(&configs).Error; err != nil {
@@ -3943,7 +3943,7 @@ func (ac *AdminController) updateConfigWithType(c *gin.Context, configType strin
 		config.JsonData = string(bytes)
 	}
 
-	// 如果提供了新的config_id，则update它
+	// If new config_id is provided, update it
 	if updateData.ConfigID != "" {
 		config.ConfigID = updateData.ConfigID
 	}
@@ -4090,22 +4090,22 @@ func (ac *AdminController) ExportConfigs(c *gin.Context) {
 				}
 			}
 		case "ota":
-			// ota、mqtt、mqtt_server、udpnot neededproviderfield，merge directlyconfig
+			// ota、mqtt、mqtt_server、udpnot neededproviderfield,merge directlyconfig
 			for key, value := range jsonData {
 				exportConfig.OTA[key] = value
 			}
 		case "mqtt":
-			// ota、mqtt、mqtt_server、udpnot neededproviderfield，merge directlyconfig
+			// ota、mqtt、mqtt_server、udpnot neededproviderfield,merge directlyconfig
 			for key, value := range jsonData {
 				exportConfig.MQTT[key] = value
 			}
 		case "mqtt_server":
-			// ota、mqtt、mqtt_server、udpnot neededproviderfield，merge directlyconfig
+			// ota、mqtt、mqtt_server、udpnot neededproviderfield,merge directlyconfig
 			for key, value := range jsonData {
 				exportConfig.MQTTServer[key] = value
 			}
 		case "udp":
-			// ota、mqtt、mqtt_server、udpnot neededproviderfield，merge directlyconfig
+			// ota、mqtt、mqtt_server、udpnot neededproviderfield,merge directlyconfig
 			for key, value := range jsonData {
 				exportConfig.UDP[key] = value
 			}
@@ -4244,7 +4244,7 @@ func (ac *AdminController) ImportConfigs(c *gin.Context) {
 
 	// Import config - only process actually existing modules
 	configTypes := []string{"vad", "asr", "llm", "tts", "memory", "auth", "chat", "ota", "mqtt", "mqtt_server", "udp", "mcp", "local_mcp"}
-	log.Printf("startimportconfig，configtype: %v", configTypes)
+	log.Printf("startimportconfig,configtype: %v", configTypes)
 
 	// Process voice_identify config (map to speaker type)
 	if voiceIdentifyData, exists := importConfig["voice_identify"]; exists {
@@ -4326,7 +4326,7 @@ func (ac *AdminController) ImportConfigs(c *gin.Context) {
 		if configData, exists := importConfig[configType]; exists {
 			log.Printf("found config type %s  data", configType)
 			if configMap, ok := configData.(map[string]interface{}); ok {
-				// For modules requiring providermodule（vad, asr, llm, tts, memory），process provider field
+				// For modules requiring providermodule(vad, asr, llm, tts, memory),process provider field
 				if configType == "vad" || configType == "asr" || configType == "llm" || configType == "tts" || configType == "memory" || configType == "voice_identify" {
 					log.Printf("Process requiring providerconfig type: %s", configType)
 					// getproviderfield
@@ -4376,7 +4376,7 @@ func (ac *AdminController) ImportConfigs(c *gin.Context) {
 							// first check ifalready existssameconfig
 							var existingConfig models.Config
 							if err := tx.Where("type = ? AND config_id = ?", config.Type, config.ConfigID).First(&existingConfig).Error; err == nil {
-								log.Printf("config already exists，will update: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
+								log.Printf("config already exists,will update: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
 								// updateexistingconfig
 								existingConfig.Name = config.Name
 								existingConfig.Provider = config.Provider
@@ -4391,7 +4391,7 @@ func (ac *AdminController) ImportConfigs(c *gin.Context) {
 								}
 								log.Printf("configupdatesuccess: %s", configID)
 							} else if err == gorm.ErrRecordNotFound {
-								log.Printf("config does not exist，will create new config: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
+								log.Printf("config does not exist,will create new config: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
 								// Create new config
 								if err := tx.Create(&config).Error; err != nil {
 									log.Printf("createconfigfailed: %v", err)
@@ -4409,7 +4409,7 @@ func (ac *AdminController) ImportConfigs(c *gin.Context) {
 						}
 					}
 				} else {
-					// For modules not requiring providermodule（ota, mqtt, mqtt_server, udp, mcp, local_mcp），directly create config
+					// For modules not requiring providermodule(ota, mqtt, mqtt_server, udp, mcp, local_mcp),directly create config
 					log.Printf("processnot neededproviderconfig type: %s", configType)
 					jsonData, err := json.Marshal(configMap)
 					if err != nil {
@@ -4434,7 +4434,7 @@ func (ac *AdminController) ImportConfigs(c *gin.Context) {
 					// first check ifalready existssameconfig
 					var existingConfig models.Config
 					if err := tx.Where("type = ? AND config_id = ?", config.Type, config.ConfigID).First(&existingConfig).Error; err == nil {
-						log.Printf("config already exists，will update: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
+						log.Printf("config already exists,will update: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
 						// updateexistingconfig
 						existingConfig.Name = config.Name
 						existingConfig.Provider = config.Provider
@@ -4449,7 +4449,7 @@ func (ac *AdminController) ImportConfigs(c *gin.Context) {
 						}
 						log.Printf("configupdatesuccess: %s", configType)
 					} else if err == gorm.ErrRecordNotFound {
-						log.Printf("config does not exist，will create new config: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
+						log.Printf("config does not exist,will create new config: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
 						// Create new config
 						if err := tx.Create(&config).Error; err != nil {
 							log.Printf("createconfigfailed: %v", err)
@@ -4476,7 +4476,7 @@ func (ac *AdminController) ImportConfigs(c *gin.Context) {
 		if visionMap, ok := visionData.(map[string]interface{}); ok {
 			log.Printf("visionconfigmap keys: %v", getMapKeys(visionMap))
 
-			// processvision base config（enable_auth, vision_url等）
+			// Process vision base config (enable_auth, vision_url, etc.)
 			baseVisionConfig := make(map[string]interface{})
 			for key, value := range visionMap {
 				if key != "vllm" {
@@ -4509,7 +4509,7 @@ func (ac *AdminController) ImportConfigs(c *gin.Context) {
 				// first check ifalready existssameconfig
 				var existingConfig models.Config
 				if err := tx.Where("type = ? AND config_id = ?", config.Type, config.ConfigID).First(&existingConfig).Error; err == nil {
-					log.Printf("visionbaseconfig already exists，will update: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
+					log.Printf("visionbaseconfig already exists,will update: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
 					// updateexistingconfig
 					existingConfig.Name = config.Name
 					existingConfig.Provider = config.Provider
@@ -4524,7 +4524,7 @@ func (ac *AdminController) ImportConfigs(c *gin.Context) {
 					}
 					log.Printf("visionbaseconfigupdatesuccess")
 				} else if err == gorm.ErrRecordNotFound {
-					log.Printf("visionbaseconfig does not exist，will create new config: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
+					log.Printf("visionbaseconfig does not exist,will create new config: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
 					// Create new config
 					if err := tx.Create(&config).Error; err != nil {
 						log.Printf("createvisionbaseconfigfailed: %v", err)
@@ -4594,7 +4594,7 @@ func (ac *AdminController) ImportConfigs(c *gin.Context) {
 							// first check ifalready existssameconfig
 							var existingConfig models.Config
 							if err := tx.Where("type = ? AND config_id = ?", config.Type, config.ConfigID).First(&existingConfig).Error; err == nil {
-								log.Printf("vllmconfig already exists，will update: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
+								log.Printf("vllmconfig already exists,will update: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
 								// updateexistingconfig
 								existingConfig.Name = config.Name
 								existingConfig.Provider = config.Provider
@@ -4609,7 +4609,7 @@ func (ac *AdminController) ImportConfigs(c *gin.Context) {
 								}
 								log.Printf("vllmconfigupdatesuccess: %s", configID)
 							} else if err == gorm.ErrRecordNotFound {
-								log.Printf("vllmconfig does not exist，will create new config: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
+								log.Printf("vllmconfig does not exist,will create new config: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
 								// Create new config
 								if err := tx.Create(&config).Error; err != nil {
 									log.Printf("createvllmconfigfailed: %v", err)
@@ -4661,7 +4661,7 @@ func (ac *AdminController) ImportConfigs(c *gin.Context) {
 			// first check ifalready existssameconfig
 			var existingConfig models.Config
 			if err := tx.Where("type = ? AND config_id = ?", config.Type, config.ConfigID).First(&existingConfig).Error; err == nil {
-				log.Printf("local_mcpconfig already exists，will update: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
+				log.Printf("local_mcpconfig already exists,will update: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
 				// updateexistingconfig
 				existingConfig.Name = config.Name
 				existingConfig.Provider = config.Provider
@@ -4676,7 +4676,7 @@ func (ac *AdminController) ImportConfigs(c *gin.Context) {
 				}
 				log.Printf("local_mcpconfigupdatesuccess")
 			} else if err == gorm.ErrRecordNotFound {
-				log.Printf("local_mcpconfig does not exist，will create new config: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
+				log.Printf("local_mcpconfig does not exist,will create new config: Type=%s, ConfigID=%s", config.Type, config.ConfigID)
 				// Create new config
 				if err := tx.Create(&config).Error; err != nil {
 					log.Printf("createlocal_mcpconfigfailed: %v", err)
@@ -4989,7 +4989,7 @@ func (ac *AdminController) SetDefaultMemoryConfig(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "setdefaultMemoryconfigsuccess", "data": config})
 }
 
-// generateMCPToken generate stableMCP JWT Token（remain unchanged under same agentID+userID）
+// generateMCPToken generate stableMCP JWT Token(remain unchanged under same agentID+userID)
 func generateMCPToken(agentID string, userID uint, endpointAuthToken string) (string, error) {
 	// create custom JWT Claims
 	type MCPClaims struct {
@@ -5026,7 +5026,7 @@ func generateMCPToken(agentID string, userID uint, endpointAuthToken string) (st
 	return tokenString, nil
 }
 
-// generateOpenClawToken generate stableOpenClaw JWT Token（remain unchanged under same agentID+userID）
+// generateOpenClawToken generate stableOpenClaw JWT Token(remain unchanged under same agentID+userID)
 func generateOpenClawToken(agentID string, userID uint, endpointAuthToken string) (string, error) {
 	type OpenClawClaims struct {
 		UserID     uint   `json:"user_id"`
@@ -5057,7 +5057,7 @@ func generateOpenClawToken(agentID string, userID uint, endpointAuthToken string
 
 // ==================== New role management API ====================
 
-// GetGlobalRolesNew Get global role list（Only global roles in roles table）
+// GetGlobalRolesNew Get global role list(Only global roles in roles table)
 func (ac *AdminController) GetGlobalRolesNew(c *gin.Context) {
 	var globalRoles []models.Role
 	if err := ac.DB.Where("user_id IS NULL AND role_type = ?", "global").
@@ -5070,8 +5070,8 @@ func (ac *AdminController) GetGlobalRolesNew(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": globalRoles})
 }
 
-// GetRolesNew getrolelist（globalrole + userrole）
-// Admin can view all roles，Regular user can only view global roles and own roles
+// GetRolesNew getrolelist(globalrole + userrole)
+// Admin can view all roles,Regular user can only view global roles and own roles
 func (ac *AdminController) GetRolesNew(c *gin.Context) {
 	// Get userID and role from JWT
 	userID, exists := c.Get("user_id")
@@ -5155,7 +5155,7 @@ func normalizeRoleStatus(status string) string {
 	return trimmed
 }
 
-// CreateRoleNew Create role (admin creates global role，user creates own role）
+// CreateRoleNew Create role (admin creates global role,user creates own role)
 func (ac *AdminController) CreateRoleNew(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	userRole, roleExists := c.Get("role")
@@ -5176,7 +5176,7 @@ func (ac *AdminController) CreateRoleNew(c *gin.Context) {
 		role.RoleType = "user"
 		uid := userID.(uint)
 		role.UserID = &uid
-		// userrole不能设为default
+		// User role cannot be set as default
 		role.IsDefault = false
 	} else {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
@@ -5199,7 +5199,7 @@ func (ac *AdminController) CreateRoleNew(c *gin.Context) {
 		return
 	}
 
-	// If set as default role，first unset other default role
+	// If set as default role,first unset other default role
 	if role.IsDefault && role.RoleType == "global" {
 		ac.DB.Model(&models.Role{}).
 			Where("role_type = ? AND is_default = ?", "global", true).
@@ -5233,7 +5233,7 @@ func (ac *AdminController) UpdateRoleNew(c *gin.Context) {
 	userRole, roleExists := c.Get("role")
 
 	isAdmin := roleExists && userRole.(string) == "admin"
-	IsOwner := false
+	isOwner := false
 	if exists && role.UserID != nil {
 		if uid, ok := userID.(uint); ok {
 			isOwner = uid == *role.UserID
@@ -5251,7 +5251,7 @@ func (ac *AdminController) UpdateRoleNew(c *gin.Context) {
 		return
 	}
 
-	// If set as default role，first unset other default role
+	// If set as default role,first unset other default role
 	if updateData.IsDefault && role.RoleType == "global" {
 		ac.DB.Model(&models.Role{}).
 			Where("role_type = ? AND is_default = ? AND id != ?", "global", true, id).
@@ -5310,7 +5310,7 @@ func (ac *AdminController) DeleteRoleNew(c *gin.Context) {
 	userRole, roleExists := c.Get("role")
 
 	isAdmin := roleExists && userRole.(string) == "admin"
-	IsOwner := false
+	isOwner := false
 	if exists && role.UserID != nil {
 		if uid, ok := userID.(uint); ok {
 			isOwner = uid == *role.UserID
@@ -5327,7 +5327,7 @@ func (ac *AdminController) DeleteRoleNew(c *gin.Context) {
 	ac.DB.Model(&models.Device{}).Where("role_id = ?", id).Count(&deviceCount)
 	if deviceCount > 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": fmt.Sprintf("有 %d devices are using this role，Please remove association first", deviceCount),
+			"error": fmt.Sprintf("%d devices are using this role, please remove association first", deviceCount),
 		})
 		return
 	}
@@ -5340,7 +5340,7 @@ func (ac *AdminController) DeleteRoleNew(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "delete successful"})
 }
 
-// ToggleRoleStatus Switch role status（enable/disable）
+// ToggleRoleStatus Switch role status(enable/disable)
 func (ac *AdminController) ToggleRoleStatus(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	var role models.Role
@@ -5359,7 +5359,7 @@ func (ac *AdminController) ToggleRoleStatus(c *gin.Context) {
 	userRole, roleExists := c.Get("role")
 
 	isAdmin := roleExists && userRole.(string) == "admin"
-	IsOwner := false
+	isOwner := false
 	if exists && role.UserID != nil {
 		if uid, ok := userID.(uint); ok {
 			isOwner = uid == *role.UserID
@@ -5387,7 +5387,7 @@ func (ac *AdminController) ToggleRoleStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": role})
 }
 
-// SetDefaultRole Set default role（仅globalrole）
+// SetDefaultRole Set default role (global role only)
 func (ac *AdminController) SetDefaultRole(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	var role models.Role
@@ -5403,10 +5403,10 @@ func (ac *AdminController) SetDefaultRole(c *gin.Context) {
 		return
 	}
 
-	// Permission check：onlymanagement员可以Set default role
+	// Permission check: only admin can set default role
 	userRole, roleExists := c.Get("role")
 	if !roleExists || userRole.(string) != "admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "onlymanagement员可以Set default role"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "Only admin can set default role"})
 		return
 	}
 
@@ -5415,7 +5415,7 @@ func (ac *AdminController) SetDefaultRole(c *gin.Context) {
 		Where("role_type = ? AND is_default = ?", "global", true).
 		Update("is_default", false)
 
-	// setcurrentrole为default
+	// Set current role as default
 	role.IsDefault = true
 	if err := ac.DB.Save(&role).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Set default rolefailed"})
@@ -5514,7 +5514,7 @@ func getRequestUserInfo(c *gin.Context) (uint, bool, bool) {
 	return uid, hasUserID, isAdmin
 }
 
-// ApplyRoleToDevice Apply role to device（Regular user can operate own device）
+// ApplyRoleToDevice Apply role to device(Regular user can operate own device)
 func (ac *AdminController) ApplyRoleToDevice(c *gin.Context) {
 	deviceID, err := strconv.Atoi(c.Param("id"))
 	if err != nil || deviceID <= 0 {
@@ -5648,7 +5648,7 @@ func (ac *AdminController) SwitchDeviceRoleByNameInternal(c *gin.Context) {
 	})
 }
 
-// RestoreDeviceDefaultRoleInternal 内部接口：Restore device default role（Clear device bound role）
+// RestoreDeviceDefaultRoleInternal internal interface: restore device default role (clear device bound role)
 func (ac *AdminController) RestoreDeviceDefaultRoleInternal(c *gin.Context) {
 	deviceName := strings.TrimSpace(c.Param("device_name"))
 	if deviceName == "" {

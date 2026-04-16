@@ -19,75 +19,75 @@ var realtimeMcpAudioControlRules = []realtimeMusicControlRule{
 	{
 		action: "play_playlist",
 		keywords: []string{
-			"playplaylist",
-			"playplaylistinofsong",
-			"playplaylist",
+			"play playlist",
+			"play playlist songs",
+			"play playlist",
 			"playlist",
 		},
 	},
 	{
 		action: "enqueue_current",
 		keywords: []string{
-			"add toplaylist",
-			"add toplaylist",
-			"addtoplaylist",
-			"addtoplaylist",
+			"add to playlist",
+			"add to playlist",
+			"add to playlist",
+			"add to playlist",
 		},
 	},
 	{
 		action: "resume",
 		keywords: []string{
-			"continueplay",
-			"recoveryplay",
-			"continuelisten",
-			"接着play",
-			"接着播",
+			"continue play",
+			"resume play",
+			"continue listen",
+			"continue play",
+			"continue playing",
 		},
 	},
 	{
 		action: "pause",
 		keywords: []string{
 			"pause",
-			"firstpause",
-			"first停adown",
+			"first pause",
+			"first stop",
 		},
 	},
 	{
 		action: "stop",
 		keywords: []string{
-			"stopplay",
+			"stop play",
 			"stop",
-			"停播",
-			"别播",
+			"stop playing",
+			"don't play",
 		},
 	},
 	{
 		action: "next",
 		keywords: []string{
-			"downafirst",
-			"downfirst",
-			"切todownafirst",
-			"切歌",
+			"next one",
+			"next song",
+			"switch to next",
+			"next song",
 		},
 	},
 	{
 		action: "prev",
 		keywords: []string{
-			"upafirst",
-			"upfirst",
-			"切toupafirst",
+			"previous one",
+			"previous song",
+			"switch to previous",
 		},
 	},
 }
 
 var realtimeMcpAudioExitKeywords = []string{
 	"goodbye",
-	"拜拜",
-	"拜",
-	"回见",
+	"bye bye",
+	"bye",
+	"see you",
 	"exit",
-	"exittoconversation",
-	"退down吧",
+	"exit conversation",
+	"quit",
 }
 
 func normalizeRealtimeMcpAudioText(text string) string {
@@ -159,12 +159,12 @@ func (s *ChatSession) tryHandleRealtimeMcpAudioASR(ctx context.Context, text str
 	if isRealtimeMcpAudioExitCommand(text) {
 		eventbus.Get().Publish(eventbus.TopicExitChat, &eventbus.ExitChatEvent{
 			ClientState: s.clientState,
-			Reason:      "realtimemediaplayinuserexit",
+			Reason:      "realtime media play user exit",
 			TriggerType: "realtime_media_exit_words",
 			UserText:    text,
 			Timestamp:   time.Now(),
 		})
-		log.Infof("device %s realtimemediaplay门控命inexit指令: %s", s.clientState.DeviceID, text)
+		log.Infof("device %s realtime media play gate exit command: %s", s.clientState.DeviceID, text)
 		return true, nil
 	}
 
@@ -172,13 +172,13 @@ func (s *ChatSession) tryHandleRealtimeMcpAudioASR(ctx context.Context, text str
 	if action != "" {
 		_, err := controlMusicPlayback(ctx, s, &MusicPlaybackControlParams{Action: action})
 		if err != nil {
-			log.Warnf("device %s realtimemediaplay门控executecontrol动asfailed: action=%s, text=%s, err=%v", s.clientState.DeviceID, action, text, err)
+			log.Warnf("device %s realtime media play gate execute control action failed: action=%s, text=%s, err=%v", s.clientState.DeviceID, action, text, err)
 			return true, nil
 		}
-		log.Infof("device %s realtimemediaplay门控executecontrol动as: action=%s, text=%s", s.clientState.DeviceID, action, text)
+		log.Infof("device %s realtime media play gate execute control action: action=%s, text=%s", s.clientState.DeviceID, action, text)
 		return true, nil
 	}
 
-	log.Debugf("device %s realtimemediaplay门控ignoreASRtext: %s", s.clientState.DeviceID, text)
+	log.Debugf("device %s realtime media play gate ignore ASR text: %s", s.clientState.DeviceID, text)
 	return true, nil
 }

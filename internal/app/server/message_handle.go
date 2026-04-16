@@ -21,17 +21,17 @@ import (
 )
 
 var (
-	// MessageWorkerNum messageprocessworkercount（基于CPUcorecount，unifiedconfig，used forRedis+Historyprocess）
-	// 必须yes2of幂times以便hashminute布
+	// MessageWorkerNum message process worker count (based on CPU core count, unified config, used for Redis+History process)
+	// must be power of 2 for hash distribution
 	MessageWorkerNum = getMessageWorkerNum()
 )
 
-// getMessageWorkerNum according toCPUcorecountcalculateworkercount，toup取to最近of2of幂times
-// minimumis4，maximumis64
+// getMessageWorkerNum according to CPU core count calculate worker count, round up to nearest power of 2
+// minimum is 4, maximum is 64
 func getMessageWorkerNum() int {
 	cpuNum := runtime.NumCPU()
 
-	// minimumis4，maximumis64
+	// minimum is 4, maximum is 64
 	if cpuNum < 4 {
 		return 4
 	}
@@ -39,7 +39,7 @@ func getMessageWorkerNum() int {
 		return 64
 	}
 
-	// toup取to最近of2of幂times
+	// round up to nearest power of 2
 	power := 1
 	for power < cpuNum {
 		power <<= 1
@@ -47,18 +47,18 @@ func getMessageWorkerNum() int {
 	return power
 }
 
-// MessageWorker messageprocess器
-// usefixedcountofgoroutinepool，按SessionIDofhashvalueroute，保证at the same timeasessionofmessagesequentialprocess
-// unifiedprocessRedis、MemoryProviderandHistorymessage
+// MessageWorker message processor
+// use fixed count of goroutine pool, route by SessionID hash value, guarantee sequential processing of same session messages
+// unified process Redis, MemoryProvider and History messages
 type MessageWorker struct {
 	client  *history.HistoryClient
-	workers []chan *eventbus.AddMessageEvent // 每个workerofchannel
+	workers []chan *eventbus.AddMessageEvent // each worker's channel
 	ctx     context.Context
 	cancel  context.CancelFunc
 	wg      sync.WaitGroup
 }
 
-// NewMessageWorker createmessageprocess器
+// NewMessageWorker create message processor
 func NewMessageWorker(cfg history.HistoryClientConfig) *MessageWorker {
 	client := history.NewHistoryClient(cfg)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -70,19 +70,19 @@ func NewMessageWorker(cfg history.HistoryClientConfig) *MessageWorker {
 		cancel:  cancel,
 	}
 
-	// initialize每个workerofchannelandstartgoroutine
+	// initialize each worker's channel and start goroutine
 	for i := 0; i < MessageWorkerNum; i++ {
-		worker.workers[i] = make(chan *eventbus.AddMessageEvent, 100) // buffer100个message
+		worker.workers[i] = make(chan *eventbus.AddMessageEvent, 100) // buffer 100 messages
 		worker.wg.Add(1)
 		go worker.workerLoop(i)
 	}
 
 	worker.subscribeEvents()
-	log.Infof("MessageWorkerinitializecomplete，start %d 个worker goroutine（unifiedprocessRedis+MemoryProvider+History）", MessageWorkerNum)
+	log.Infof("MessageWorker initialize complete, start %d worker goroutines (unified process Redis+MemoryProvider+History)", MessageWorkerNum)
 	return worker
 }
 
-// workerLoop 每个workerofprocessloop（保证sequentialprocess）
+// workerLoop each worker's process loop (guarantees sequential processing)
 func (w *MessageWorker) workerLoop(index int) {
 	defer w.wg.Done()
 	defer log.Infof("MessageWorker worker %d exit", index)
@@ -91,7 +91,7 @@ func (w *MessageWorker) workerLoop(index int) {
 	for {
 		select {
 		case <-w.ctx.Done():
-			// cleanupchannelinofremainingmessage
+			// cleanup remaining messages in channel
 			for {
 				select {
 				case event := <-ch:
@@ -114,32 +114,32 @@ func (w *MessageWorker) workerLoop(index int) {
 	}
 }
 
-// processMessage processmessage（atworker goroutineinsequentialexecute）
-// unifiedprocessRedis、MemoryProviderandHistory，保证at the same timeadevice/sessionofmessagesequentialprocess
+// processMessage process message (execute sequentially in worker goroutine)
+// unified process Redis, MemoryProvider and History, guarantee sequential processing of same device/session messages
 func (w *MessageWorker) processMessage(event *eventbus.AddMessageEvent) {
-	// 1. process History（allmessage）
-	// useindependentof context，no受 event.ClientState.Ctx 影响，ensurehistorymessagesaveno受toconversationcancel影响
+	// 1. process History (all messages)
+	// use independent context, not affected by event.ClientState.Ctx, ensure history message save not affected by conversation cancel
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// judgeyes新增oryesupdate
+	// judge if new or update
 	if event.IsUpdate {
-		// nth二阶段：updateaudio
+		// nth stage: update audio
 		w.updateMessageAudio(ctx, event)
 	} else {
-		// first阶段：savetextmessage（includeRedisprocess）
+		// first stage: save text message (include Redis process)
 		w.saveMessageText(ctx, event)
 	}
 
-	// 2. process MemoryProvider（only!IsUpdatewhen，independent于redisandmanager）
-	// long期记忆body（memobase/mem0）process，no管yesredisoryesmanagerscenarioareneed
+	// 2. process MemoryProvider (only when !IsUpdate, independent of redis and manager)
+	// long-term memory body (memobase/mem0) process, regardless of redis or manager scenario are needed
 	if !event.IsUpdate {
 		w.processMemoryProvider(event)
 	}
 }
 
-// processMemoryProvider processlong期记忆body（memobase/mem0）
-// independent于redisandmanager，no管yesredisoryesmanagerscenarioareneedprocess
+// processMemoryProvider process long-term memory body (memobase/mem0)
+// independent of redis and manager, regardless of redis or manager scenario are needed to process
 func (w *MessageWorker) processMemoryProvider(event *eventbus.AddMessageEvent) {
 	clientState := event.ClientState
 	if clientState.MemoryProvider == nil {
@@ -158,61 +158,61 @@ func (w *MessageWorker) processMemoryProvider(event *eventbus.AddMessageEvent) {
 	}
 }
 
-// hashSessionID calculateSessionIDofhashvalue，returnworkerindex
+// hashSessionID calculate SessionID hash value, return worker index
 func (w *MessageWorker) hashSessionID(sessionID string) int {
 	if sessionID == "" {
-		return 0 // ifSessionIDisempty，usenthaworker
+		return 0 // if SessionID is empty, use nth worker
 	}
 
-	// useFNV-1ahashfunction
+	// use FNV-1a hash function
 	h := fnv.New32a()
 	h.Write([]byte(sessionID))
 	hash := h.Sum32()
 	return int(hash) % MessageWorkerNum
 }
 
-// subscribeEvents subscribeEventBusevent
+// subscribeEvents subscribe EventBus event
 func (w *MessageWorker) subscribeEvents() {
 	bus := eventbus.Get()
-	// subscribeunifiedofmessageaddevent（and EventHandle listenat the same timea Topic）
+	// subscribe unified message add event (and EventHandle listen to same Topic)
 	bus.Subscribe(eventbus.TopicAddMessage, w.handleAddMessage)
 }
 
-// handleAddMessage unifiedprocessmessageaddevent（routetocorrespondingworker）
+// handleAddMessage unified process message add event (route to corresponding worker)
 func (w *MessageWorker) handleAddMessage(event *eventbus.AddMessageEvent) {
 	if event == nil || event.ClientState == nil {
 		return
 	}
 
-	// determineused forrouteofkey：priorityuseSessionID，ifisemptythenuseDeviceID
+	// determine key used for routing: priority use SessionID, if empty then use DeviceID
 	key := event.ClientState.SessionID
 	if key == "" {
 		key = event.ClientState.DeviceID
 	}
 	if key == "" {
-		log.Warnf("SessionIDandDeviceIDareisempty，no法routemessage")
+		log.Warnf("SessionID and DeviceID are empty, cannot route message")
 		return
 	}
 
-	// calculatehashvalue，routetocorrespondingworker
+	// calculate hash value, route to corresponding worker
 	workerIndex := w.hashSessionID(key)
 
-	// non-blockingsendtocorrespondingworker channel
+	// non-blocking send to corresponding worker channel
 	select {
 	case w.workers[workerIndex] <- event:
-		// successfulsend
+		// successful send
 	default:
-		// channelalreadyfull，recordwarn（通常nowilloccur，becauseischannelhavebuffer）
-		log.Warnf("worker %d ofchannelalreadyfull，discardmessage, session_id: %s, device_id: %s",
+		// channel already full, record warn (usually won't occur, because channel has buffer)
+		log.Warnf("worker %d channel already full, discard message, session_id: %s, device_id: %s",
 			workerIndex, event.ClientState.SessionID, event.ClientState.DeviceID)
 	}
 }
 
-// saveMessageText savetextmessage（first阶段，oratimes性savetext+audio）
-// includeRedisprocess（whenconfig_provider.typeisrediswhen）
+// saveMessageText save text message (first stage, or one-time save text+audio)
+// include Redis process (when config_provider.type is redis)
 func (w *MessageWorker) saveMessageText(ctx context.Context, event *eventbus.AddMessageEvent) {
-	// process Redis（onlywhenconfig_provider.typeisrediswhen）
-	// addto Redis messagelist（used forLLM context）
+	// process Redis (only when config_provider.type is redis)
+	// add to Redis message list (used for LLM context)
 	providerType := viper.GetString("config_provider.type")
 	if providerType == "redis" {
 		clientState := event.ClientState
@@ -224,7 +224,7 @@ func (w *MessageWorker) saveMessageText(ctx context.Context, event *eventbus.Add
 		return
 	}
 
-	// determinemessagerole
+	// determine message role
 	var role history.MessageType
 	switch event.Msg.Role {
 	case schema.User:
@@ -236,31 +236,31 @@ func (w *MessageWorker) saveMessageText(ctx context.Context, event *eventbus.Add
 	case schema.System:
 		role = history.MessageTypeSystem
 	default:
-		log.Warnf("unsupportedofmessagerole: %s", event.Msg.Role)
+		log.Warnf("unsupported message role: %s", event.Msg.Role)
 		return
 	}
 
-	// convertaudioformat（if存at）
+	// convert audio format (if exists)
 	var audioBase64 string
 	var audioFormat string
 	var audioSize int
 
 	if len(event.AudioData) > 0 {
-		// ASR message：textandaudioat the same timewhenget，atimes性save
+		// ASR message: text and audio get at the same time, one-time save
 		var wavData []byte
 		var err error
 
-		// according tomessageroleselectnoat the same timeofaudioconvertmethod
+		// according to message role select different audio convert method
 		if event.Msg.Role == schema.User {
-			// User message（ASR）：PCM float32 format
+			// User message (ASR): PCM float32 format
 			if len(event.AudioData) > 0 {
 				wavData, err = util.PCMFloat32BytesToWav(
-					event.AudioData[0], // User messageonlyhaveaelement
+					event.AudioData[0], // User message only has one element
 					event.SampleRate,
 					event.Channels)
 			}
 		} else {
-			// Assistant message（TTS）：Opus format（理论upnoshouldat这in，becauseis Assistant yes两阶段save）
+			// Assistant message (TTS): Opus format (theoretically should not be here, because Assistant is two-stage save)
 			wavData, err = util.OpusFramesToWav(
 				event.AudioData,
 				event.SampleRate,
@@ -268,16 +268,16 @@ func (w *MessageWorker) saveMessageText(ctx context.Context, event *eventbus.Add
 		}
 
 		if err != nil {
-			log.Errorf("audioconvertfailed, device_id: %s, message_id: %s, role: %s, error: %v",
+			log.Errorf("audio convert failed, device_id: %s, message_id: %s, role: %s, error: %v",
 				event.ClientState.DeviceID, event.MessageID, event.Msg.Role, err)
-			// degradationprocess：directconcatallframe
+			// degradation process: direct concat all frames
 			var fallbackData []byte
 			for _, frame := range event.AudioData {
 				fallbackData = append(fallbackData, frame...)
 			}
 			audioBase64 = base64.StdEncoding.EncodeToString(fallbackData)
 			audioSize = event.AudioSize
-			audioFormat = "raw" // degradationprocessuseoriginal format
+			audioFormat = "raw" // degradation process use original format
 		} else {
 			audioBase64 = base64.StdEncoding.EncodeToString(wavData)
 			audioSize = len(wavData)
@@ -285,23 +285,23 @@ func (w *MessageWorker) saveMessageText(ctx context.Context, event *eventbus.Add
 		}
 	}
 
-	// build Metadata（onlysavetimestamp）
+	// build Metadata (only save timestamp)
 	metadata := map[string]interface{}{
 		"timestamp": event.Timestamp.Format(time.RFC3339),
 	}
 
-	// preparetoolcallrelevantfield
+	// prepare tool call relevant field
 	var toolCallID string
 	var toolCallsJSON *string
 
-	// Tool role：save tool_call_id
+	// Tool role: save tool_call_id
 	if event.Msg.Role == schema.Tool && event.Msg.ToolCallID != "" {
 		toolCallID = event.Msg.ToolCallID
 	}
 
-	// Assistant role：save ToolCalls（ifhave）
+	// Assistant role: save ToolCalls (if has)
 	if event.Msg.Role == schema.Assistant && len(event.Msg.ToolCalls) > 0 {
-		// serialize ToolCalls is JSON charstring
+		// serialize ToolCalls as JSON string
 		toolCallsBytes, err := json.Marshal(event.Msg.ToolCalls)
 		if err != nil {
 			log.Warnf("serialize ToolCalls failed, device_id: %s, message_id: %s, error: %v",
@@ -328,14 +328,14 @@ func (w *MessageWorker) saveMessageText(ctx context.Context, event *eventbus.Add
 	}
 
 	if err := w.client.SaveMessage(ctx, req); err != nil {
-		log.Errorf("savemessagefailed, device_id: %s, message_id: %s, error: %v",
+		log.Errorf("save message failed, device_id: %s, message_id: %s, error: %v",
 			event.ClientState.DeviceID, event.MessageID, err)
 	}
 }
 
-// updateMessageAudio updatemessageaudio（nth二阶段）
+// updateMessageAudio update message audio (nth stage)
 func (w *MessageWorker) updateMessageAudio(ctx context.Context, event *eventbus.AddMessageEvent) {
-	// convertaudioformat
+	// convert audio format
 	var audioBase64 string
 	var audioSize int
 
@@ -343,20 +343,20 @@ func (w *MessageWorker) updateMessageAudio(ctx context.Context, event *eventbus.
 		var wavData []byte
 		var err error
 
-		// according tomessageroleselectnoat the same timeofaudioconvertmethod
-		// User message（ASR）：PCM float32 format，use PCMFloat32BytesToWav
-		// Assistant message（TTS）：Opus format，use OpusFramesToWav
+		// according to message role select different audio convert method
+		// User message (ASR): PCM float32 format, use PCMFloat32BytesToWav
+		// Assistant message (TTS): Opus format, use OpusFramesToWav
 		if event.Msg.Role == schema.User {
-			// User message：PCM float32 format
-			// event.AudioData yes [][]byte，but User messageonlyhaveaelement（完bodyof PCM float32 bytearray）
+			// User message: PCM float32 format
+			// event.AudioData is [][]byte, but User message only has one element (complete PCM float32 byte array)
 			if len(event.AudioData) > 0 {
 				wavData, err = util.PCMFloat32BytesToWav(
-					event.AudioData[0], // User messageonlyhaveaelement
+					event.AudioData[0], // User message only has one element
 					event.SampleRate,
 					event.Channels)
 			}
 		} else {
-			// Assistant message：Opus format
+			// Assistant message: Opus format
 			wavData, err = util.OpusFramesToWav(
 				event.AudioData,
 				event.SampleRate,
@@ -364,9 +364,9 @@ func (w *MessageWorker) updateMessageAudio(ctx context.Context, event *eventbus.
 		}
 
 		if err != nil {
-			log.Errorf("audioconvertfailed, device_id: %s, message_id: %s, role: %s, error: %v",
+			log.Errorf("audio convert failed, device_id: %s, message_id: %s, role: %s, error: %v",
 				event.ClientState.DeviceID, event.MessageID, event.Msg.Role, err)
-			// degradationprocess：directconcatallframe
+			// degradation process: direct concat all frames
 			var fallbackData []byte
 			for _, frame := range event.AudioData {
 				fallbackData = append(fallbackData, frame...)
@@ -379,7 +379,7 @@ func (w *MessageWorker) updateMessageAudio(ctx context.Context, event *eventbus.
 		}
 	}
 
-	// buildupdaterequest
+	// build update request
 	req := &history.UpdateMessageAudioRequest{
 		MessageID:   event.MessageID,
 		AudioData:   audioBase64,
@@ -390,9 +390,9 @@ func (w *MessageWorker) updateMessageAudio(ctx context.Context, event *eventbus.
 		},
 	}
 
-	// callupdateinterface
+	// call update interface
 	if err := w.client.UpdateMessageAudio(ctx, req); err != nil {
-		log.Errorf("updatemessageaudio failed, device_id: %s, message_id: %s, error: %v",
+		log.Errorf("update message audio failed, device_id: %s, message_id: %s, error: %v",
 			event.ClientState.DeviceID, event.MessageID, err)
 	}
 }

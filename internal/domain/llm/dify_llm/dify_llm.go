@@ -93,7 +93,7 @@ func NewDifyLLMProvider(config map[string]interface{}) (*DifyLLMProvider, error)
 	apiKey, _ := config["api_key"].(string)
 	apiKey = strings.TrimSpace(apiKey)
 	if apiKey == "" {
-		return nil, fmt.Errorf("dify api_keycannot be empty")
+		return nil, fmt.Errorf("dify api_key cannot be empty")
 	}
 
 	baseURL, _ := config["base_url"].(string)
@@ -163,14 +163,14 @@ func (p *DifyLLMProvider) ResponseWithContext(ctx context.Context, sessionID str
 
 		resp, err := p.httpClient.Do(req)
 		if err != nil {
-			sendLLMError(out, fmt.Errorf("difyrequestfailed: %w", err))
+			sendLLMError(out, fmt.Errorf("dify request failed: %w", err))
 			return
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 			errBody, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
-			sendLLMError(out, fmt.Errorf("difyrequestfailed status=%d body=%s", resp.StatusCode, strings.TrimSpace(string(errBody))))
+			sendLLMError(out, fmt.Errorf("dify request failed status=%d body=%s", resp.StatusCode, strings.TrimSpace(string(errBody))))
 			return
 		}
 
@@ -180,7 +180,7 @@ func (p *DifyLLMProvider) ResponseWithContext(ctx context.Context, sessionID str
 				if ctx.Err() != nil {
 					break
 				}
-				sendLLMError(out, fmt.Errorf("difystreamreadfailed: %w", eventErr))
+				sendLLMError(out, fmt.Errorf("dify stream read failed: %w", eventErr))
 				return
 			}
 
@@ -194,7 +194,7 @@ func (p *DifyLLMProvider) ResponseWithContext(ctx context.Context, sessionID str
 
 			var streamEvent difyStreamEvent
 			if err := json.Unmarshal([]byte(data), &streamEvent); err != nil {
-				log.Warnf("parsedifystreameventfailed: %v, data=%s", err, previewString(data, 256))
+				log.Warnf("Parse dify stream event failed: %v, data=%s", err, previewString(data, 256))
 				continue
 			}
 
@@ -209,7 +209,7 @@ func (p *DifyLLMProvider) ResponseWithContext(ctx context.Context, sessionID str
 			case "error":
 				msg := streamEvent.Message
 				if msg == "" {
-					msg = "difyreturnerror"
+					msg = "dify return error"
 				}
 				sendLLMError(out, errors.New(msg))
 				return
@@ -260,7 +260,7 @@ func (p *DifyLLMProvider) stopTask(taskID, userID string) {
 
 	resp, err := p.httpClient.Do(req)
 	if err != nil {
-		log.Debugf("dify stop taskrequestfailed: %v", err)
+		log.Debugf("dify stop task request failed: %v", err)
 		return
 	}
 	defer resp.Body.Close()
@@ -287,7 +287,7 @@ func (p *DifyLLMProvider) setConversationID(sessionID, conversationID string) {
 }
 
 func (p *DifyLLMProvider) ResponseWithVllm(_ context.Context, _ []byte, _ string, _ string) (string, error) {
-	return "", fmt.Errorf("dify providerunsupportedvllm能力")
+	return "", fmt.Errorf("dify provider does not support vllm capability")
 }
 
 func buildDifyQuery(dialogue []*schema.Message) string {
@@ -295,7 +295,7 @@ func buildDifyQuery(dialogue []*schema.Message) string {
 		return ""
 	}
 
-	// Difysessionpatterndownonlysendcurrent轮input，noatqueryinconcathistory。
+	// Dify session pattern only sends current round input, does not concat history in query.
 	for i := len(dialogue) - 1; i >= 0; i-- {
 		msg := dialogue[i]
 		if msg == nil || msg.Role != schema.User {
@@ -306,7 +306,7 @@ func buildDifyQuery(dialogue []*schema.Message) string {
 		}
 	}
 
-	// 兜底：ifno存atusermessage，use最aftera条可extracttextofmessage。
+	// Fallback: if no user message, use last message that can extract text.
 	for i := len(dialogue) - 1; i >= 0; i-- {
 		if text := extractDifyMessageText(dialogue[i]); text != "" {
 			return text

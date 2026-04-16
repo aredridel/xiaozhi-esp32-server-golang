@@ -32,7 +32,7 @@ type EinoLLMProvider struct {
 	reasoningTracker *reasoningContentTracker
 }
 
-// EinoConfig EinoLLMconfig
+// EinoConfig Eino LLM config
 type EinoConfig struct {
 	Type       string                 `json:"type"` // "openai" or "ollama"
 	ModelName  string                 `json:"model_name"`
@@ -43,7 +43,7 @@ type EinoConfig struct {
 	Streamable bool                   `json:"streamable,omitempty"`
 }
 
-// joinpoolconfig
+// Connection pool config
 const (
 	maxIdleConns          = 200
 	maxIdleConnsPerHost   = 50
@@ -54,13 +54,13 @@ const (
 	responseHeaderTimeout = 60 * time.Second
 )
 
-// globalHTTPclient-side，used forallOpenAIrequest
+// Global HTTP client, used for all OpenAI requests
 var (
 	httpClient     *http.Client
 	httpClientOnce sync.Once
 )
 
-// getHTTPClient returnconfigjoinpoolofHTTPclient-side
+// getHTTPClient returns configured connection pool HTTP client
 func getHTTPClient() *http.Client {
 	httpClientOnce.Do(func() {
 		transport := &http.Transport{
@@ -80,7 +80,7 @@ func getHTTPClient() *http.Client {
 
 		httpClient = &http.Client{
 			Transport: transport,
-			// streaming outputscenariono要use http.Client.Timeout 截断body个join，改by ctx controlrequest生命period。
+			// For streaming output scenarios, do not use http.Client.Timeout to truncate body connection, instead control request lifecycle via ctx.
 			Timeout: 0,
 		}
 	})
@@ -98,17 +98,17 @@ func NewEinoLLMProvider(config map[string]interface{}) (*EinoLLMProvider, error)
 	}
 	parsedConfig, err := decodeOpenAICompatibleConfig(config)
 	if err != nil {
-		return nil, fmt.Errorf("parseLLMconfigfailed: %v", err)
+		return nil, fmt.Errorf("parse LLM config failed: %v", err)
 	}
 
 	providerType := parsedConfig.Type
 	if providerType == "" {
-		return nil, fmt.Errorf("typecannot be empty，必须yes 'openai' or 'ollama'")
+		return nil, fmt.Errorf("type cannot be empty, must be 'openai' or 'ollama'")
 	}
 
 	modelName := parsedConfig.ModelName
 	if modelName == "" {
-		return nil, fmt.Errorf("model_namecannot be empty")
+		return nil, fmt.Errorf("model_name cannot be empty")
 	}
 
 	maxTokens := 500
@@ -123,20 +123,20 @@ func NewEinoLLMProvider(config map[string]interface{}) (*EinoLLMProvider, error)
 
 	var chatModel model.ToolCallingChatModel
 
-	// according totypecreatenoat the same timeofChatModelimplement
+	// Create different ChatModel implementations according to type
 	switch providerType {
 	case "openai":
 		chatModel, err = createOpenAIChatModel(config)
 		if err != nil {
-			return nil, fmt.Errorf("createOpenAI ChatModelfailed: %v", err)
+			return nil, fmt.Errorf("create OpenAI ChatModel failed: %v", err)
 		}
 	case "ollama":
 		chatModel, err = createOllamaChatModel(config)
 		if err != nil {
-			return nil, fmt.Errorf("createOllama ChatModelfailed: %v", err)
+			return nil, fmt.Errorf("create Ollama ChatModel failed: %v", err)
 		}
 	default:
-		return nil, fmt.Errorf("unsupportedofmodeltype: %s", providerType)
+		return nil, fmt.Errorf("unsupported model type: %s", providerType)
 	}
 
 	provider := &EinoLLMProvider{
@@ -156,13 +156,13 @@ func (p *EinoLLMProvider) HasReasoningContent() bool {
 	return p != nil && p.reasoningTracker != nil && p.reasoningTracker.HasReturned()
 }
 
-// createOpenAIChatModel createOpenAIofChatModelimplement
+// createOpenAIChatModel creates OpenAI ChatModel implementation
 func createOpenAIChatModel(config map[string]interface{}) (model.ToolCallingChatModel, error) {
 	ctx := context.Background()
 
 	parsedConfig, err := decodeOpenAICompatibleConfig(config)
 	if err != nil {
-		return nil, fmt.Errorf("parseOpenAI兼容configfailed: %v", err)
+		return nil, fmt.Errorf("parse OpenAI compatible config failed: %v", err)
 	}
 
 	modelName := parsedConfig.ModelName
@@ -178,7 +178,7 @@ func createOpenAIChatModel(config map[string]interface{}) (model.ToolCallingChat
 	httpClient := buildThinkingHTTPClient(config, getHTTPClient())
 	useMaxCompletionTokens := shouldUseMaxCompletionTokens(parsedConfig.Provider, modelName)
 
-	// createOpenAI ChatModelconfig
+	// Create OpenAI ChatModel config
 	openaiConfig := &openai.ChatModelConfig{
 		Model:      modelName,
 		APIKey:     apiKey,
@@ -203,17 +203,17 @@ func createOpenAIChatModel(config map[string]interface{}) (model.ToolCallingChat
 
 	log.Debugf("openaiConfig: %+v", openaiConfig)
 
-	// useeino-ext官方OpenAIimplement
+	// Use eino-ext official OpenAI implementation
 	chatModel, err := openai.NewChatModel(ctx, openaiConfig)
 	if err != nil {
-		return nil, fmt.Errorf("createOpenAI ChatModelfailed: %v", err)
+		return nil, fmt.Errorf("create OpenAI ChatModel failed: %v", err)
 	}
 
-	log.Infof("successfulcreateOpenAI ChatModel，model: %s", modelName)
+	log.Infof("Successfully created OpenAI ChatModel, model: %s", modelName)
 	return chatModel, nil
 }
 
-// createOllamaChatModel createOllamaofChatModelimplement
+// createOllamaChatModel creates Ollama ChatModel implementation
 func createOllamaChatModel(config map[string]interface{}) (model.ToolCallingChatModel, error) {
 	ctx := context.Background()
 
@@ -221,27 +221,27 @@ func createOllamaChatModel(config map[string]interface{}) (model.ToolCallingChat
 	baseURL, _ := config["base_url"].(string)
 
 	if modelName == "" || baseURL == "" {
-		log.Warnf("model_nameandbase_urlcannot be empty，usedefaultmodel: %s", modelName)
-		return nil, fmt.Errorf("model_nameandbase_urlcannot be empty")
+		log.Warnf("model_name and base_url cannot be empty, use default model: %s", modelName)
+		return nil, fmt.Errorf("model_name and base_url cannot be empty")
 	}
 
-	// createOllama ChatModelconfig
+	// Create Ollama ChatModel config
 	ollamaConfig := &ollama.ChatModelConfig{
 		BaseURL: baseURL,
 		Model:   modelName,
 	}
 
-	// useeino-ext官方Ollamaimplement
+	// Use eino-ext official Ollama implementation
 	chatModel, err := ollama.NewChatModel(ctx, ollamaConfig)
 	if err != nil {
-		return nil, fmt.Errorf("createOllama ChatModelfailed: %v", err)
+		return nil, fmt.Errorf("create Ollama ChatModel failed: %v", err)
 	}
 
-	log.Infof("successfulcreateOllama ChatModel，model: %s", modelName)
+	log.Infof("Successfully created Ollama ChatModel, model: %s", modelName)
 	return chatModel, nil
 }
 
-// GetModelInfo getmodelinfo
+// GetModelInfo gets model info
 func (p *EinoLLMProvider) GetModelInfo() map[string]interface{} {
 	return map[string]interface{}{
 		"model_name":      p.modelName,
@@ -255,16 +255,16 @@ func (p *EinoLLMProvider) GetModelInfo() map[string]interface{} {
 	}
 }
 
-// ResponseWithFunctions 带functioncallofrespond，useEino原生tooltype，directcallEinoResponseWithTools
+// ResponseWithFunctions response with function call, uses Eino native tool types, directly calls EinoResponseWithTools
 func (p *EinoLLMProvider) ResponseWithContext(ctx context.Context, sessionID string, dialogue []*schema.Message, functions []*schema.ToolInfo) chan *schema.Message {
 
-	log.Infof("[Eino-LLM] startprocess带toolofrequest - SessionID: %s, Type: %s", sessionID, p.providerType)
+	log.Infof("[Eino-LLM] Start processing request with tools - SessionID: %s, Type: %s", sessionID, p.providerType)
 
 	logMessages(dialogue)
-	// directcallEinoResponseWithToolsgetEino原生respond
+	// Directly call EinoResponseWithTools to get Eino native response
 	einoResponseChan := p.EinoResponseWithTools(ctx, sessionID, dialogue, functions)
 
-	log.Infof("[Eino-LLM] toolcallrequestprocesscomplete - SessionID: %s", sessionID)
+	log.Infof("[Eino-LLM] Tool call request processing complete - SessionID: %s", sessionID)
 
 	return einoResponseChan
 }
@@ -279,10 +279,10 @@ func logMessages(messages []*schema.Message) {
 	}
 }
 
-// llmExtraErrorKey and domain/llm.LLMExtraErrorKey keepconsistent，failedwhen透传erroruse（avoidloop依赖）
+// llmExtraErrorKey and domain/llm.LLMExtraErrorKey keep consistent, used when passing through errors (avoid circular dependencies)
 const llmExtraErrorKey = "error"
 
-// sendLLMError to channel send带 Extra.error oferrormessage
+// sendLLMError sends error message with Extra.error to channel
 func sendLLMError(ch chan *schema.Message, err error) {
 	ch <- &schema.Message{
 		Role:  schema.System,
@@ -290,7 +290,7 @@ func sendLLMError(ch chan *schema.Message, err error) {
 	}
 }
 
-// EinoResponseWithTools directuseEinotypeof带toolrespond
+// EinoResponseWithTools directly uses Eino types for tool response
 func (p *EinoLLMProvider) EinoResponseWithTools(ctx context.Context, sessionID string, messages []*schema.Message, tools []*schema.ToolInfo) chan *schema.Message {
 	responseChan := make(chan *schema.Message, 200)
 
@@ -301,13 +301,13 @@ func (p *EinoLLMProvider) EinoResponseWithTools(ctx context.Context, sessionID s
 			p.reasoningTracker.Reset()
 		}
 
-		log.Infof("[Eino-LLM] startprocessEinotoolrequest - SessionID: %s, tools: %+v", sessionID, tools)
+		log.Infof("[Eino-LLM] Start processing Eino tool request - SessionID: %s, tools: %+v", sessionID, tools)
 
-		// ifhavetool，needbindtooltoChatModel
+		// If have tools, need to bind tools to ChatModel
 		if len(tools) > 0 {
 			p.chatModel, err = p.chatModel.WithTools(tools)
 			if err != nil {
-				log.Errorf("bindtoolfailed: %v", err)
+				log.Errorf("Bind tools failed: %v", err)
 				sendLLMError(responseChan, err)
 				return
 			}
@@ -315,14 +315,14 @@ func (p *EinoLLMProvider) EinoResponseWithTools(ctx context.Context, sessionID s
 
 		if p.streamable {
 			log.Debugf("EinoLLMProvider.EinoResponseWithTools() streamable: %t", p.streamable)
-			// directuseEinoofStreammethod
+			// Directly use Eino's Stream method
 			streamReader, err := p.chatModel.Stream(ctx, messages, p.buildModelCallOptions()...)
 			if err != nil {
-				log.Errorf("Einotoolstreamingcallfailed: %v", err)
-				// to于mockimplement，ifStreamfailed，回退toGenerate
+				log.Errorf("Eino tool streaming call failed: %v", err)
+				// For mock implementations, if Stream fails, fall back to Generate
 				message, genErr := p.chatModel.Generate(ctx, messages, p.buildModelCallOptions()...)
 				if genErr != nil {
-					log.Errorf("Einotoolgeneraterespondfailed: %v", genErr)
+					log.Errorf("Eino tool generate response failed: %v", genErr)
 					sendLLMError(responseChan, genErr)
 					return
 				}
@@ -340,16 +340,16 @@ func (p *EinoLLMProvider) EinoResponseWithTools(ctx context.Context, sessionID s
 				var isToolCallComplete bool
 				var streamChunkCount int
 
-				// processstreamingrespond
+				// Process streaming response
 				for {
 					message, err := streamReader.Recv()
 					//log.Debugf("streamReader.Recv() message: %+v", message)
 					if err == io.EOF {
 						if streamChunkCount == 0 {
-							sendLLMError(responseChan, errors.New("streamingrespondisempty"))
+							sendLLMError(responseChan, errors.New("streaming response is empty"))
 							break
 						}
-						// ifhavenotcompleteoftoolcall，send最afteratimes
+						// If have incomplete tool call, send one last time
 						if currentToolCall != nil {
 							completeMessage := &schema.Message{
 								Role:      schema.Assistant,
@@ -362,40 +362,40 @@ func (p *EinoLLMProvider) EinoResponseWithTools(ctx context.Context, sessionID s
 					if err != nil {
 						if ctxErr := ctx.Err(); ctxErr != nil {
 							if errors.Is(ctxErr, context.Canceled) {
-								log.Debugf("streamingrespondalreadycancel: %v", ctxErr)
+								log.Debugf("Streaming response already cancelled: %v", ctxErr)
 							} else {
-								log.Warnf("streamingrespondalreadyend: %v", ctxErr)
+								log.Warnf("Streaming response already ended: %v", ctxErr)
 							}
 							break
 						}
-						log.Errorf("receivestreamingrespondfailed: %v", err)
+						log.Errorf("Receive streaming response failed: %v", err)
 						sendLLMError(responseChan, err)
 						break
 					}
 
 					if message != nil {
 						streamChunkCount++
-						// check ifyestoolcallofstart
+						// Check if it's tool call start
 						if len(message.ToolCalls) > 0 {
 							toolCall := message.ToolCalls[0]
 
 							if toolCall.Function.Name != "" {
-								// 新toolcallstart
+								// New tool call start
 								currentToolCall = &toolCall
 								toolCallBuffer = toolCall.Function.Arguments
 								isToolCallComplete = false
 							} else if currentToolCall != nil {
-								// accumulatetoolcallparameter
+								// Accumulate tool call parameters
 								toolCallBuffer += toolCall.Function.Arguments
 								currentToolCall.Function.Arguments = toolCallBuffer
 
-								// inspectparameterwhetheryes完bodyof JSON
+								// Check if parameters are complete JSON
 								if isValidJSON(toolCallBuffer) {
 									isToolCallComplete = true
 								}
 							}
 
-							// iftoolcall完body，sendmessage
+							// If tool call is complete, send message
 							if isToolCallComplete {
 								completeMessage := &schema.Message{
 									Role:      schema.Assistant,
@@ -403,26 +403,26 @@ func (p *EinoLLMProvider) EinoResponseWithTools(ctx context.Context, sessionID s
 								}
 								responseChan <- completeMessage
 
-								// resetstate
+								// Reset state
 								currentToolCall = nil
 								toolCallBuffer = ""
 								isToolCallComplete = false
 							}
 						} else if message.Content != "" {
-							// sendnontoolcallof普通message
+							// Send non-tool call normal message
 							message.ToolCalls = nil
 							responseChan <- message
 						}
 					}
 				}
 			} else {
-				sendLLMError(responseChan, errors.New("streamingrespondisempty"))
+				sendLLMError(responseChan, errors.New("streaming response is empty"))
 			}
 		} else {
-			// directuseEinoofGeneratemethod
+			// Directly use Eino's Generate method
 			message, err := p.chatModel.Generate(ctx, messages, p.buildModelCallOptions()...)
 			if err != nil {
-				log.Errorf("Einotoolgeneraterespondfailed: %v", err)
+				log.Errorf("Eino tool generate response failed: %v", err)
 				sendLLMError(responseChan, err)
 				return
 			}
@@ -432,7 +432,7 @@ func (p *EinoLLMProvider) EinoResponseWithTools(ctx context.Context, sessionID s
 			}
 		}
 
-		log.Infof("[Eino-LLM] Einotoolrequestprocesscomplete - SessionID: %s", sessionID)
+		log.Infof("[Eino-LLM] Eino tool request processing complete - SessionID: %s", sessionID)
 	}()
 
 	return responseChan
@@ -457,42 +457,42 @@ func (p *EinoLLMProvider) buildModelCallOptions() []model.Option {
 	return []model.Option{model.WithMaxTokens(p.maxTokens)}
 }
 
-// isValidJSON inspectcharstringwhetheryesvalidofJSON
+// isValidJSON checks if string is valid JSON
 func isValidJSON(str string) bool {
 	var js map[string]interface{}
 	return json.Unmarshal([]byte(str), &js) == nil
 }
 
-// GetChatModel getunderlyingofEino ChatModel
+// GetChatModel gets underlying Eino ChatModel
 func (p *EinoLLMProvider) GetChatModel() model.ToolCallingChatModel {
 	return p.chatModel
 }
 
-// GetProviderType get provider type
+// GetProviderType gets provider type
 func (p *EinoLLMProvider) GetProviderType() string {
 	return p.providerType
 }
 
-// WithMaxTokens setmaximumtokencount
+// WithMaxTokens sets maximum token count
 func (p *EinoLLMProvider) WithMaxTokens(maxTokens int) *EinoLLMProvider {
 	newProvider := *p
 	newProvider.maxTokens = maxTokens
 	return &newProvider
 }
 
-// WithStreamable setwhethersupportstreaming
+// WithStreamable sets whether to support streaming
 func (p *EinoLLMProvider) WithStreamable(streamable bool) *EinoLLMProvider {
 	newProvider := *p
 	newProvider.streamable = streamable
 	return &newProvider
 }
 
-// Close closeresource（nostate Provider，noneedclose）
+// Close closes resources (stateless Provider, no need to close)
 func (p *EinoLLMProvider) Close() error {
 	return nil
 }
 
-// IsValid inspectresourcewhethervalid
+// IsValid checks if resource is valid
 func (p *EinoLLMProvider) IsValid() bool {
 	return p != nil && p.chatModel != nil
 }

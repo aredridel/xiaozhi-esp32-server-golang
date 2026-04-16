@@ -25,13 +25,13 @@ type toolCallResponseSummary struct {
 	hasMediaOutput    bool
 }
 
-// handleToolCallResponse processtoolcallrespond
+// handleToolCallResponse process tool call respond
 func (l *LLMManager) handleToolCallResponse(ctx context.Context, respMsg *schema.Message, tools []schema.ToolCall, executor *toolCallExecutor) (toolCallResponseSummary, error) {
 	if len(tools) == 0 {
 		return toolCallResponseSummary{}, nil
 	}
 
-	log.Infof("process %d 个toolcall", len(tools))
+	log.Infof("process %d tool calls", len(tools))
 	if executor == nil {
 		executor = newToolCallExecutor(l, ctx)
 		executor.Submit(tools)
@@ -39,8 +39,8 @@ func (l *LLMManager) handleToolCallResponse(ctx context.Context, respMsg *schema
 
 	var messageList []*schema.Message
 
-	// onlyhavewhenrespMsghaveinside容（ContentnoisemptyorToolCallsnoisempty）whenonly thenaddtomessageList
-	// avoidsaveemptyofassistantmessagecauseaftercontinueLLMcallout现400error
+	// only have when respMsg have content (Content not is empty or ToolCalls not is empty) when only then add to messageList
+	// avoid save empty of assistant message cause after continue LLM call appear 400 error
 	if respMsg != nil && (respMsg.Content != "" || len(respMsg.ToolCalls) > 0) {
 		messageList = append(messageList, respMsg)
 	}
@@ -69,10 +69,10 @@ func (l *LLMManager) handleToolCallResponse(ctx context.Context, respMsg *schema
 
 	if len(messageList) > 0 {
 		for _, msg := range messageList {
-			// filter掉Contentisemptyofassistantmessage，avoidsavetohistoryrecordin
-			// emptyofassistantmessagewillcauseaftercontinueLLMcallwhenout现400error
+			// filter out Content is empty of assistant message, avoid save to history record in
+			// empty of assistant message will cause after continue LLM call when appear 400 error
 			if msg != nil && msg.Role == schema.Assistant && msg.Content == "" && len(msg.ToolCalls) == 0 {
-				log.Debugf("skipsaveemptyofassistantmessage")
+				log.Debugf("skip save empty of assistant message")
 				continue
 			}
 			l.AddLlmMessage(ctx, msg)
@@ -86,10 +86,10 @@ func (l *LLMManager) handleToolCallResponse(ctx context.Context, respMsg *schema
 	executor.WaitMedia()
 
 	if findExitTool {
-		// publishexitchatevent
+		// publish exit chat event
 		eventbus.Get().Publish(eventbus.TopicExitChat, &eventbus.ExitChatEvent{
 			ClientState: l.clientState,
-			Reason:      "toolcallexit",
+			Reason:      "tool call exit",
 			TriggerType: "tool_call",
 			UserText:    "",
 			Timestamp:   time.Now(),
@@ -101,7 +101,7 @@ func (l *LLMManager) handleToolCallResponse(ctx context.Context, respMsg *schema
 		}, nil
 	}
 
-	// iftoolcallsuccessfulandnobemarkisstopprocess，thencontinueLLMcall
+	// if tool call successful and not be mark is stop process, then continue LLM call
 	if invokeToolSuccess && !shouldStopLLMProcessing {
 		l.DoLLmRequest(ctx, nil, l.einoTools, true, nil)
 	}
@@ -206,24 +206,24 @@ func (e *toolCallExecutor) executeToolCall(order int, toolCall schema.ToolCall) 
 	toolName := toolCall.Function.Name
 	toolObj, ok := mcp.GetToolByName(state.DeviceID, state.AgentID, toolName, state.DeviceConfig.MCPServiceNames)
 	if !ok || toolObj == nil {
-		log.Errorf("not找totool: %s", toolName)
-		resultMessage.Content = fmt.Sprintf("not找totool: %s", toolName)
+		log.Errorf("not found tool: %s", toolName)
+		resultMessage.Content = fmt.Sprintf("not found tool: %s", toolName)
 		return toolCallExecutionResult{order: order, message: resultMessage}
 	}
 
-	log.Infof("performtoolcallrequest: %s, parameter: %+v", toolName, toolCall.Function.Arguments)
+	log.Infof("perform tool call request: %s, parameter: %+v", toolName, toolCall.Function.Arguments)
 	startTs := time.Now().UnixMilli()
 	fcResult, err := toolObj.InvokableRun(e.toolCtx, toolCall.Function.Arguments)
 	if err != nil {
-		log.Errorf("toolcallfailed: %v", err)
-		resultMessage.Content = fmt.Sprintf("tool %s callfailed: %v", toolName, err)
+		log.Errorf("tool call failed: %v", err)
+		resultMessage.Content = fmt.Sprintf("tool %s call failed: %v", toolName, err)
 		return toolCallExecutionResult{order: order, message: resultMessage}
 	}
 	costTs := time.Now().UnixMilli() - startTs
 	if len(fcResult) > 2048 {
-		log.Infof("toolcallresult len: %d, time consumption: %dms", len(fcResult), costTs)
+		log.Infof("tool call result len: %d, time consumption: %dms", len(fcResult), costTs)
 	} else {
-		log.Infof("toolcallresult %s, time consumption: %dms", fcResult, costTs)
+		log.Infof("tool call result %s, time consumption: %dms", fcResult, costTs)
 	}
 
 	execResult := toolCallExecutionResult{
@@ -246,7 +246,7 @@ func (e *toolCallExecutor) executeToolCall(order int, toolCall schema.ToolCall) 
 		contentList = mcpResp.GetContent()
 	} else if toolCallResult, ok := e.manager.handleToolResult(fcResult); ok {
 		if toolCallResult.IsError {
-			log.Errorf("toolcallfailed: %s, errormark: %t", fcResult, toolCallResult.IsError)
+			log.Errorf("tool call failed: %s, error mark: %t", fcResult, toolCallResult.IsError)
 		}
 		contentList = toolCallResult.Content
 	}
@@ -255,29 +255,29 @@ func (e *toolCallExecutor) executeToolCall(order int, toolCall schema.ToolCall) 
 		var mcpContent string
 		for _, content := range contentList {
 			if audioContent, ok := content.(mcp_go.AudioContent); ok {
-				log.Debugf("calltool %s returnaudioresourcelength: %d", toolName, len(audioContent.Data))
-				mcpContent = "executesuccessful"
+				log.Debugf("call tool %s return audio resource length: %d", toolName, len(audioContent.Data))
+				mcpContent = "execute successful"
 				if err := e.manager.handleAudioContent(e.ctx, toolName, audioContent, &e.mediaWg); err != nil {
-					log.Errorf("mcpplayaudioresourcefailed: %v", err)
-					mcpContent = "executefailed"
+					log.Errorf("mcp play audio resource failed: %v", err)
+					mcpContent = "execute failed"
 				}
 				execResult.shouldStopLLMProcessing = true
 				execResult.hasMediaOutput = true
 				break
 			}
 			if resourceLink, ok := content.(mcp_go.ResourceLink); ok {
-				log.Debugf("calltool %s returnresourcelink: %+v", toolName, resourceLink)
-				mcpContent = "executesuccessful"
+				log.Debugf("call tool %s return resource link: %+v", toolName, resourceLink)
+				mcpContent = "execute successful"
 				if err := e.manager.handleResourceLink(e.ctx, resourceLink, toolObj, &e.mediaWg); err != nil {
-					log.Errorf("mcpplayresourcelinkfailed: %v", err)
-					mcpContent = "executefailed"
+					log.Errorf("mcp play resource link failed: %v", err)
+					mcpContent = "execute failed"
 				}
 				execResult.shouldStopLLMProcessing = true
 				execResult.hasMediaOutput = true
 				break
 			}
 			if textContent, ok := content.(mcp_go.TextContent); ok {
-				log.Debugf("calltool %s returntextresourcelength: %s", toolName, textContent.Text)
+				log.Debugf("call tool %s return text resource length: %s", toolName, textContent.Text)
 				mcpContent += textContent.Text
 			}
 		}
@@ -324,7 +324,7 @@ func (l *LLMManager) handleAudioContent(ctx context.Context, realMusicName strin
 	source, err := buildMediaSourceFromAudioContent(realMusicName, audioContent)
 	if err != nil {
 		wg.Done()
-		log.Errorf("decodeaudio datafailed: %v", err)
+		log.Errorf("decode audio data failed: %v", err)
 		return err
 	}
 
@@ -350,12 +350,12 @@ func (l *LLMManager) handleAudioContent(ctx context.Context, realMusicName strin
 func buildMediaSourceFromAudioContent(title string, audioContent mcp_go.AudioContent) (MediaSourceDescriptor, error) {
 	rawAudioData, err := base64.StdEncoding.DecodeString(audioContent.Data)
 	if err != nil {
-		return MediaSourceDescriptor{}, fmt.Errorf("decodeaudio datafailed: %v", err)
+		return MediaSourceDescriptor{}, fmt.Errorf("decode audio data failed: %v", err)
 	}
 
 	title = strings.TrimSpace(title)
-	if title == "" || title == "executesuccessful" {
-		title = "toolaudio"
+	if title == "" || title == "execute successful" {
+		title = "tool audio"
 	}
 
 	return MediaSourceDescriptor{
@@ -375,7 +375,7 @@ func buildMediaSourceFromAudioContent(title string, audioContent mcp_go.AudioCon
 func buildMediaSourceFromResourceLink(resourceLink mcp_go.ResourceLink, toolCall tool.InvokableTool) (MediaSourceDescriptor, error) {
 	mcpTool, ok := toolCall.(*mcp.McpTool)
 	if !ok || mcpTool == nil {
-		return MediaSourceDescriptor{}, fmt.Errorf("resource link playonlysupport MCP remotetool")
+		return MediaSourceDescriptor{}, fmt.Errorf("resource link play only support MCP remote tool")
 	}
 
 	serverName := mcpTool.GetServerName()
@@ -426,7 +426,7 @@ func buildMediaSourceFromResourceLink(resourceLink mcp_go.ResourceLink, toolCall
 }
 
 func (l *LLMManager) handleLocalToolResult(toolResult string) (MCPResponse, bool) {
-	// ifyesmcpreturnformat, thenparse
+	// if yes mcp return format, then parse
 	var response MCPResponse
 	var err error
 	if response, err = ParseMCPResponse(toolResult); err != nil {

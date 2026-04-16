@@ -39,19 +39,19 @@ func InitChatLocalMCPTools() {
 		},*/
 		"exit_conversation": {
 			Name:        "exit_conversation",
-			Description: "used when user explicitly indicates to end conversation, exit system, or say goodbye，used to gracefully close current chat session",
+			Description: "used when user explicitly indicates to end conversation, exit system, or say goodbye, used to gracefully close current chat session",
 			Params:      struct{}{},
 			Handle:      exitConversationHandler,
 		},
 		"clear_conversation_history": {
 			Name:        "clear_conversation_history",
-			Description: "used when user requests to clear, delete, or reset conversation history，used to clear all conversation history of current session",
+			Description: "used when user requests to clear, delete, or reset conversation history, used to clear all conversation history of current session",
 			Params:      struct{}{},
 			Handle:      clearConversationHistoryHandler,
 		},
 		"switch_device_role": {
 			Name:        "switch_device_role",
-			Description: "used when user requests to switch current device to a certain role，parameter role_name supportfuzzymatching（will match in global roles and user roles belonging to this device）",
+			Description: "used when user requests to switch current device to a certain role, parameter role_name supports fuzzy matching (will match in global roles and user roles belonging to this device)",
 			Params:      SwitchDeviceRoleParams{},
 			Handle:      switchDeviceRoleHandler,
 		},
@@ -63,20 +63,20 @@ func InitChatLocalMCPTools() {
 		},
 		"search_knowledge": {
 			Name:        "search_knowledge",
-			Description: "when user questions require factual basis, process rules, parameter details, or document clauses，retrieve current agent associated knowledge base and return relevant snippets；optional传 knowledge_base_ids only查specifyknowledgelibrary；do not call for casual chat or pure creation scenarios",
+			Description: "when user questions require factual basis, process rules, parameter details, or document clauses, retrieve current agent associated knowledge base and return relevant snippets; optionally pass knowledge_base_ids to only search specified knowledge libraries; do not call for casual chat or pure creation scenarios",
 			Params:      SearchKnowledgeParams{},
 			Handle:      searchKnowledgeHandler,
 		},
 		/*"play_music": {
 			Name:        "play_music",
-			Description: "whenuserwantlisten to music、boredwhen、wantplayemptylargebrainwhenuse，used forplayspecifynameof音乐，whenuserwantrandomlistenafirst音乐whenpleaserecommendationoutconcreteofsongname，whenhavemultiple音乐playtoolwhenpriorityusethistool，**thistoolcalltime consumptionrelativelylong，needfirstreturnfriendlyofpast渡性hintphrase**",
+			Description: "when user wants to listen to music, when bored, when want to play to empty brain use, used for playing specified name of music, when user wants random listen to first music please recommend out concrete song name, when have multiple music play tools priority use this tool, **this tool call time consumption relatively long, need first return friendly transition hint phrase**",
 			Params:      PlayMusicParams{},
 			Handle:      playMusicHandler,
 		},*/
 	}
 
 	for toolName, localTool := range localTools {
-		// only skip when config explicitly set to false，enable when config not exist or true
+		// only skip when config explicitly set to false, enable when config not exist or true
 		if viper.IsSet("local_mcp."+toolName) && !viper.GetBool("local_mcp."+toolName) {
 			continue
 		}
@@ -117,14 +117,14 @@ type SwitchDeviceRoleParams struct {
 type SearchKnowledgeParams struct {
 	Query            string `json:"query" description:"query content to search" required:"true"`
 	TopK             int    `json:"top_k,omitempty" description:"return count, default 5"`
-	KnowledgeBaseIDs []uint `json:"knowledge_base_ids,omitempty" description:"optional: only search within these knowledge library IDs（current agent already related）"`
+	KnowledgeBaseIDs []uint `json:"knowledge_base_ids,omitempty" description:"optional: only search within these knowledge library IDs (current agent already related)"`
 }
 
-// playMusicHandler play musicofprocess function
+// playMusicHandler play music processing function
 func playMusicHandler(ctx context.Context, argumentsInJSON string) (string, error) {
 	log.Info("execute play music tool")
 
-	// parseparameter
+	// parse parameters
 	var params PlayMusicParams
 
 	if argumentsInJSON != "" {
@@ -134,14 +134,14 @@ func playMusicHandler(ctx context.Context, argumentsInJSON string) (string, erro
 		}
 	}
 
-	log.Infof("found ChatSessionOperator，calling LocalMcpPlayMusic method to play music: %s", params.Name)
+	log.Infof("found ChatSessionOperator, calling LocalMcpPlayMusic method to play music: %s", params.Name)
 	audioData, realMusicName, err := GetMusicAudioData(ctx, &params)
 	if err != nil {
 		log.Errorf("failed to get music data: %v", err)
 		response := NewErrorResponse("play_music", fmt.Sprintf("failed to get music data: %v", err), "PLAYBACK_ERROR", "please check music name or network connection")
 		return response.ToJSON()
 	} else {
-		// successful playback - action class respond，terminate subsequent process
+		// successful playback - action class response, terminate subsequent process
 		response := NewAudioResponse("play_music", "play_music", fmt.Sprintf("start playing music: %s", realMusicName), true, audioData)
 		response.MusicName = realMusicName
 		return response.ToJSON()
@@ -150,11 +150,11 @@ func playMusicHandler(ctx context.Context, argumentsInJSON string) (string, erro
 }
 
 /*
-// getCurrentDateTimeHandler get currenttimeanddateofprocess function
+// getCurrentDateTimeHandler get current time and date processing function
 func getCurrentDateTimeHandler(ctx context.Context, argumentsInJSON string) (string, error) {
-	log.Info("executeget currenttimedatetool")
+	log.Info("execute get current time date tool")
 
-	// parseparameter
+	// parse parameters
 	var params map[string]interface{}
 	timezone := "Local" // default timezone
 
@@ -173,11 +173,11 @@ func getCurrentDateTimeHandler(ctx context.Context, argumentsInJSON string) (str
 		if loc, err := time.LoadLocation(timezone); err == nil {
 			now = now.In(loc)
 		} else {
-			log.Warnf("cannot load timezone %s，use local timezone", timezone)
+			log.Warnf("cannot load timezone %s, use local timezone", timezone)
 		}
 	}
 
-	// constructreturndata
+	// construct return data
 	data := map[string]interface{}{
 		"datetime": map[string]interface{}{
 			"formatted":     now.Format("2006-01-02 15:04:05"),
@@ -198,20 +198,20 @@ func getCurrentDateTimeHandler(ctx context.Context, argumentsInJSON string) (str
 		},
 	}
 
-	// create content class respond
+	// create content class response
 	response := NewContentResponse("get_current_datetime", data, fmt.Sprintf("current time:%s", formatChineseDateTime(now)))
 	// response.Format = "datetime"
 	// response.DisplayHint = "can be used to display current date time info"
 
-	log.Infof("get currenttimedatesuccessful: %s", now.Format("2006-01-02 15:04:05"))
+	log.Infof("get current time date successful: %s", now.Format("2006-01-02 15:04:05"))
 	return response.ToJSON(),nil
 }
 */
-// exitConversationHandler exittoconversationofprocess function
+// exitConversationHandler exit conversation processing function
 func exitConversationHandler(ctx context.Context, argumentsInJSON string) (string, error) {
 	log.Info("execute exit conversation tool")
 
-	// parseparameter
+	// parse parameters
 	var params map[string]interface{}
 	reason := "user actively exited" // default reason
 
@@ -223,23 +223,23 @@ func exitConversationHandler(ctx context.Context, argumentsInJSON string) (strin
 		}
 	}
 
-	// createaction class respond - terminating operation
-	response := NewActionResponse("exit_conversation", "exit_conversation", "conversation is about to end，thank you for using！", "exiting", true)
+	// create action class response - terminating operation
+	response := NewActionResponse("exit_conversation", "exit_conversation", "conversation is about to end, thank you for using!", "exiting", true)
 	response.UserState = "conversation_ended"
-	response.Instruction = "conversation has ended，please do not generate additional text responses"
+	response.Instruction = "conversation has ended, please do not generate additional text responses"
 	response.Metadata = map[string]string{
 		"reason":           reason,
 		"exit_code":        "0",
-		"farewell_chinese": "goodbye！looking forward to communicating with you next time。",
+		"farewell_chinese": "goodbye! looking forward to communicating with you next time.",
 		"farewell_english": "Goodbye! Looking forward to our next conversation.",
 	}
 
-	log.Infof("exit conversation process complete，reason: %s", reason)
+	log.Infof("exit conversation process complete, reason: %s", reason)
 
 	// get from context ChatSessionOperator and call Close method
 	if chatSessionOperatorValue := ctx.Value("chat_session_operator"); chatSessionOperatorValue != nil {
 		if chatSessionOperator, ok := chatSessionOperatorValue.(ChatSessionOperator); ok {
-			log.Info("found ChatSessionOperator，calling Close method to close session")
+			log.Info("found ChatSessionOperator, calling Close method to close session")
 			defer chatSessionOperator.LocalMcpCloseChat()
 		} else {
 			log.Warn("chat_session_operator obtained from context is not of type ChatSessionOperator")
@@ -256,11 +256,11 @@ func exitConversationHandler(ctx context.Context, argumentsInJSON string) (strin
 	return responseStr, nil
 }
 
-// clearConversationHistoryHandler clear historytoconversationofprocess function
+// clearConversationHistoryHandler clear history conversation processing function
 func clearConversationHistoryHandler(ctx context.Context, argumentsInJSON string) (string, error) {
 	log.Info("execute clear conversation history tool")
 
-	// parseparameter
+	// parse parameters
 	var params map[string]interface{}
 	reason := "user actively cleared history" // default reason
 
@@ -275,13 +275,13 @@ func clearConversationHistoryHandler(ctx context.Context, argumentsInJSON string
 	// get from context ChatSessionOperator and call LocalMcpClearHistory method
 	if chatSessionOperatorValue := ctx.Value("chat_session_operator"); chatSessionOperatorValue != nil {
 		if chatSessionOperator, ok := chatSessionOperatorValue.(ChatSessionOperator); ok {
-			log.Info("found ChatSessionOperator，calling LocalMcpClearHistory method to clear history")
+			log.Info("found ChatSessionOperator, calling LocalMcpClearHistory method to clear history")
 			if err := chatSessionOperator.LocalMcpClearHistory(); err != nil {
-				log.Errorf("clear historytoconversationfailed: %v", err)
+				log.Errorf("clear history conversation failed: %v", err)
 				return "", err
 			} else {
-				// successful clear - action class respond，butnoterminatetoconversation
-				response := NewActionResponse("clear_conversation_history", "clear_history", "conversation history cleared successfully，you can start a fresh conversation。", "completed", false)
+				// successful clear - action class response, but not terminate conversation
+				response := NewActionResponse("clear_conversation_history", "clear_history", "conversation history cleared successfully, you can start a fresh conversation.", "completed", false)
 				response.Metadata = map[string]string{
 					"reason": reason,
 					"status": "cleared",
@@ -299,7 +299,7 @@ func clearConversationHistoryHandler(ctx context.Context, argumentsInJSON string
 	return "", fmt.Errorf("chat_session_operator not found in context")
 }
 
-// switchDeviceRoleHandler switchdeviceroleofprocess function
+// switchDeviceRoleHandler switch device role processing function
 func switchDeviceRoleHandler(ctx context.Context, argumentsInJSON string) (string, error) {
 	log.Info("execute switch device role tool")
 
@@ -314,7 +314,7 @@ func switchDeviceRoleHandler(ctx context.Context, argumentsInJSON string) (strin
 	}
 	params.RoleName = strings.TrimSpace(params.RoleName)
 	if params.RoleName == "" {
-		response := NewErrorResponse("switch_device_role", "role name cannot be empty", "INVALID_ROLE_NAME", "pleaseprovidevalidof role_name")
+		response := NewErrorResponse("switch_device_role", "role name cannot be empty", "INVALID_ROLE_NAME", "please provide valid role_name")
 		return response.ToJSON()
 	}
 
@@ -346,14 +346,14 @@ func switchDeviceRoleHandler(ctx context.Context, argumentsInJSON string) (strin
 	return "", fmt.Errorf("chat_session_operator not found in context")
 }
 
-// restoreDeviceDefaultRoleHandler recoverydevicedefaultroleofprocess function
+// restoreDeviceDefaultRoleHandler restore device default role processing function
 func restoreDeviceDefaultRoleHandler(ctx context.Context, argumentsInJSON string) (string, error) {
 	log.Info("execute restore device default role tool")
 
 	if chatSessionOperatorValue := ctx.Value("chat_session_operator"); chatSessionOperatorValue != nil {
 		if chatSessionOperator, ok := chatSessionOperatorValue.(ChatSessionOperator); ok {
 			if err := chatSessionOperator.LocalMcpRestoreDeviceDefaultRole(ctx); err != nil {
-				log.Errorf("recovery device default role failed: %v", err)
+				log.Errorf("restore device default role failed: %v", err)
 				response := NewErrorResponse("restore_device_default_role", fmt.Sprintf("failed to restore default role: %v", err), "RESTORE_ROLE_FAILED", "please retry later")
 				return response.ToJSON()
 			}
@@ -445,16 +445,16 @@ func getWeekNumber(t time.Time) int {
 // formatChineseDateTime format Chinese date time
 func formatChineseDateTime(t time.Time) string {
 	weekdays := map[time.Weekday]string{
-		time.Sunday:    "星期day",
-		time.Monday:    "星期a",
-		time.Tuesday:   "星期二",
-		time.Wednesday: "星期三",
-		time.Thursday:  "星期四",
-		time.Friday:    "星期五",
-		time.Saturday:  "星期六",
+		time.Sunday:    "Sunday",
+		time.Monday:    "Monday",
+		time.Tuesday:   "Tuesday",
+		time.Wednesday: "Wednesday",
+		time.Thursday:  "Thursday",
+		time.Friday:    "Friday",
+		time.Saturday:  "Saturday",
 	}
 
-	return fmt.Sprintf("%dyear%dmonth%dday %s %02d:%02d:%02d",
+	return fmt.Sprintf("%d year %d month %d day %s %02d:%02d:%02d",
 		t.Year(), int(t.Month()), t.Day(),
 		weekdays[t.Weekday()],
 		t.Hour(), t.Minute(), t.Second(),
@@ -464,13 +464,13 @@ func formatChineseDateTime(t time.Time) string {
 // getWeekdayChinese get Chinese weekday
 func getWeekdayChinese(weekday time.Weekday) string {
 	weekdays := map[time.Weekday]string{
-		time.Sunday:    "星期day",
-		time.Monday:    "星期a",
-		time.Tuesday:   "星期二",
-		time.Wednesday: "星期三",
-		time.Thursday:  "星期四",
-		time.Friday:    "星期五",
-		time.Saturday:  "星期六",
+		time.Sunday:    "Sunday",
+		time.Monday:    "Monday",
+		time.Tuesday:   "Tuesday",
+		time.Wednesday: "Wednesday",
+		time.Thursday:  "Thursday",
+		time.Friday:    "Friday",
+		time.Saturday:  "Saturday",
 	}
 	return weekdays[weekday]
 }
@@ -487,7 +487,7 @@ func GetMusicAudioData(ctx context.Context, musicParams *PlayMusicParams) ([]byt
 	welcome := ""
 	log.Infof("searching for music: %s , welcome: %s", musicName, welcome)
 	// here can get music URL based on music name
-	// currently simplified implement，assume musicName is URLor get from config
+	// currently simplified implement, assume musicName is URL or get from config
 	musicURL, realMusicName, ierr := getMusicURL(musicName)
 	if ierr != nil {
 		log.Errorf("failed to get music URL: %v", ierr)
@@ -525,7 +525,7 @@ func GetMusicAudioData(ctx context.Context, musicParams *PlayMusicParams) ([]byt
 	welcome := ""
 	log.Infof("searching for music: %s , welcome: %s", musicName, welcome)
 	// here can get music URL based on music name
-	// currently simplified implement，assume musicName is URLor get from config
+	// currently simplified implement, assume musicName is URL or get from config
 	musicList := netease.Search(musicName)
 	musicList = append(musicList, qq.Search(musicName)...)
 	for id, music := range musicList {

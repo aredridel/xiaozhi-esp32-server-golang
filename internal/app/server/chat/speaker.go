@@ -6,7 +6,7 @@ import (
 	"xiaozhi-esp32-server-golang/internal/domain/speaker"
 )
 
-// SpeakerManager voiceprintrecognizemanage器（package装 SpeakerProvider）
+// SpeakerManager voiceprint recognition manager (wraps SpeakerProvider)
 type SpeakerManager struct {
 	provider speaker.SpeakerProvider
 }
@@ -15,7 +15,7 @@ type peekableSpeakerProvider interface {
 	PeekAndIdentify(ctx context.Context, requestID string) (*speaker.IdentifyResult, bool, error)
 }
 
-// NewSpeakerManager createvoiceprintmanage器
+// NewSpeakerManager create voiceprint manager
 func NewSpeakerManager(provider speaker.SpeakerProvider) *SpeakerManager {
 	return &SpeakerManager{
 		provider: provider,
@@ -32,23 +32,23 @@ func (sm *SpeakerManager) SendAudioChunk(ctx context.Context, pcmData []float32)
 	return sm.provider.SendAudioChunk(ctx, pcmData)
 }
 
-// FinishAndIdentify completerecognizeandgetresult
+// FinishAndIdentify complete recognition and get result
 func (sm *SpeakerManager) FinishAndIdentify(ctx context.Context) (*speaker.IdentifyResult, error) {
 	return sm.provider.FinishAndIdentify(ctx)
 }
 
-// Close closevoiceprintmanage器
+// Close close voiceprint manager
 func (sm *SpeakerManager) Close() error {
 	return sm.provider.Close()
 }
 
-// IsActive check if处于activatestate
+// IsActive check if in active state
 func (sm *SpeakerManager) IsActive() bool {
 	return sm.provider.IsActive()
 }
 
-// PeekAndIdentify getvoiceprintmiddlerecognizeresult（noendcurrent轮times）
-// return: recognizeresult, whetherbeserver-sidedebounce, error
+// PeekAndIdentify get voiceprint intermediate recognition result (does not end current session)
+// return: recognition result, whether server-side debounce, error
 func (sm *SpeakerManager) PeekAndIdentify(ctx context.Context, requestID string) (*speaker.IdentifyResult, bool, error) {
 	if sm == nil || sm.provider == nil {
 		return nil, false, nil

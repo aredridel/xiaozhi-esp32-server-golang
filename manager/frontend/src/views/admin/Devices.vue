@@ -1,82 +1,80 @@
 <template>
   <div class="admin-devices">
     <div class="page-header">
-      <h2>设备管理</h2>
-      <p class="page-subtitle">管理系统中的所有设备</p>
+      <h2>Device Management</h2>
+      <p class="page-subtitle">Manage all devices in the system</p>
     </div>
 
     <div class="toolbar">
       <el-button type="primary" @click="openAddDialog">
         <el-icon><Plus /></el-icon>
-        添加设备
+        Add Device
       </el-button>
       <el-button @click="loadDevices">
         <el-icon><Refresh /></el-icon>
-        刷新
+        Refresh
       </el-button>
     </div>
 
     <el-table :data="devices" v-loading="loading" stripe>
       <el-table-column prop="id" label="ID" width="80" />
-      <el-table-column prop="device_code" label="激活码" width="150" />
-      <el-table-column prop="device_name" label="设备名称" width="150" />
-      <el-table-column prop="user_id" label="用户ID" width="100" />
-      <el-table-column label="关联智能体" width="150">
+      <el-table-column prop="device_code" label="Activation Code" width="150" />
+      <el-table-column prop="device_name" label="Device Name" width="150" />
+      <el-table-column prop="user_id" label="User ID" width="100" />
+      <el-table-column label="Linked Agent" width="150">
         <template #default="{ row }">
           <span v-if="row.agent_id > 0">
-            智能体 {{ row.agent_id }}
+            Agent {{ row.agent_id }}
           </span>
-          <el-tag v-else type="info" size="small">未分配</el-tag>
+          <el-tag v-else type="info" size="small">Not Assigned</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="激活状态" width="100">
+      <el-table-column label="Activation Status" width="100">
         <template #default="{ row }">
           <el-tag :type="row.activated ? 'success' : 'warning'">
-            {{ row.activated ? '已激活' : '未激活' }}
+            {{ row.activated ? 'Activated' : 'Not Activated' }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="在线状态" width="100">
+      <el-table-column label="Online Status" width="100">
         <template #default="{ row }">
           <el-tag :type="isDeviceOnline(row.last_active_at) ? 'success' : 'danger'">
-            {{ isDeviceOnline(row.last_active_at) ? '在线' : '离线' }}
+            {{ isDeviceOnline(row.last_active_at) ? 'Online' : 'Offline' }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="last_active_at" label="最后活跃时间" width="180">
+      <el-table-column prop="last_active_at" label="Last Active Time" width="180">
         <template #default="{ row }">
-          {{ row.last_active_at ? new Date(row.last_active_at).toLocaleString() : '从未活跃' }}
+          {{ row.last_active_at ? new Date(row.last_active_at).toLocaleString() : 'Never Active' }}
         </template>
       </el-table-column>
-      <el-table-column prop="created_at" label="创建时间" width="180">
+      <el-table-column prop="created_at" label="Created At" width="180">
         <template #default="{ row }">
           {{ new Date(row.created_at).toLocaleString() }}
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="300">
+      <el-table-column label="Actions" width="300">
         <template #default="{ row }">
           <el-button size="small" @click="editDevice(row)">
-            编辑
+            Edit
           </el-button>
           <el-button size="small" type="primary" @click="showDeviceMcp(row)">
             MCP
           </el-button>
           <el-button size="small" type="danger" @click="deleteDevice(row)">
-            删除
+            Delete
           </el-button>
         </template>
       </el-table-column>
     </el-table>
 
-    <!-- 添加/编辑设备对话框 -->
-
-    <el-dialog v-model="showMcpDialog" title="设备MCP工具" width="760px">
+    <el-dialog v-model="showMcpDialog" title="Device MCP Tools" width="760px">
       <div v-loading="mcpLoading">
         <div class="mcp-tools-header">
-          <el-button size="small" type="primary" @click="refreshDeviceMcpTools" :loading="toolsLoading">刷新工具列表</el-button>
+          <el-button size="small" type="primary" @click="refreshDeviceMcpTools" :loading="toolsLoading">Refresh Tool List</el-button>
         </div>
 
-        <div v-if="mcpTools.length === 0" class="tools-empty">暂无工具数据</div>
+        <div v-if="mcpTools.length === 0" class="tools-empty">No tool data available</div>
         <div v-else class="tools-tags">
           <el-tag v-for="tool in mcpTools" :key="tool.name" class="tool-tag">{{ tool.name }}</el-tag>
         </div>
@@ -84,63 +82,63 @@
         <el-divider />
 
         <el-form :model="mcpCallForm" label-width="90px">
-          <el-form-item label="工具">
-            <el-select v-model="mcpCallForm.tool_name" placeholder="请选择工具" style="width:100%" @change="handleMcpToolChange">
+          <el-form-item label="Tool">
+            <el-select v-model="mcpCallForm.tool_name" placeholder="Please select tool" style="width:100%" @change="handleMcpToolChange">
               <el-option v-for="tool in mcpTools" :key="tool.name" :label="tool.name" :value="tool.name" />
             </el-select>
           </el-form-item>
-          <el-form-item label="参数JSON">
-            <el-input v-model="mcpCallForm.argumentsText" type="textarea" :rows="6" placeholder='例如: {"query":"hello"}' />
+          <el-form-item label="Params JSON">
+            <el-input v-model="mcpCallForm.argumentsText" type="textarea" :rows="6" placeholder='e.g. {"query":"hello"}' />
           </el-form-item>
         </el-form>
 
-        <el-button type="primary" @click="callDeviceMcpTool" :loading="callingTool">调用工具</el-button>
+        <el-button type="primary" @click="callDeviceMcpTool" :loading="callingTool">Call Tool</el-button>
 
         <el-divider />
-        <div class="endpoint-content">{{ mcpCallResult || '暂无调用结果' }}</div>
+        <div class="endpoint-content">{{ mcpCallResult || 'No call result yet' }}</div>
       </div>
     </el-dialog>
 
     <el-dialog
       v-model="showAddDialog"
-      :title="editingDevice ? '编辑设备' : '添加设备'"
+      :title="editingDevice ? 'Edit Device' : 'Add Device'"
       width="500px"
     >
       <el-form :model="deviceForm" :rules="deviceRules" ref="deviceFormRef" label-width="100px">
-        <el-form-item label="用户ID" prop="user_id">
+        <el-form-item label="User ID" prop="user_id">
           <el-input-number v-model="deviceForm.user_id" :min="1" style="width: 100%" />
         </el-form-item>
-        <el-form-item label="激活码" prop="device_code">
+        <el-form-item label="Activation Code" prop="device_code">
           <el-input 
             v-model="deviceForm.device_code" 
-            :placeholder="editingDevice ? '请输入激活码' : '请输入激活码（与设备名称二选一）'" 
+            :placeholder="editingDevice ? 'Please enter activation code' : 'Please enter activation code (optional with device name)'" 
           />
         </el-form-item>
-        <el-form-item label="设备名称" prop="device_name">
+        <el-form-item label="Device Name" prop="device_name">
           <el-input 
             v-model="deviceForm.device_name" 
-            :placeholder="editingDevice ? '请输入设备名称' : '请输入设备名称（与设备代码二选一）'" 
+            :placeholder="editingDevice ? 'Please enter device name' : 'Please enter device name (optional with device code)'" 
           />
         </el-form-item>
-        <el-form-item label="激活状态" prop="activated">
+        <el-form-item label="Activation Status" prop="activated">
           <el-switch v-model="deviceForm.activated" />
         </el-form-item>
-        <el-form-item label="关联智能体" prop="agent_id">
-          <el-select v-model="deviceForm.agent_id" placeholder="请选择智能体" style="width: 100%" clearable>
-            <el-option label="不关联智能体" :value="0" />
+        <el-form-item label="Linked Agent" prop="agent_id">
+          <el-select v-model="deviceForm.agent_id" placeholder="Please select agent" style="width: 100%" clearable>
+            <el-option label="No Agent Linked" :value="0" />
             <el-option 
               v-for="agent in agents" 
               :key="agent.id" 
-              :label="`${agent.name} (用户${agent.user_id})`" 
+              :label="`${agent.name} (User${agent.user_id})`" 
               :value="agent.id" 
             />
           </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showAddDialog = false">取消</el-button>
+        <el-button @click="showAddDialog = false">Cancel</el-button>
         <el-button type="primary" @click="saveDevice" :loading="saving">
-          {{ editingDevice ? '更新' : '添加' }}
+          {{ editingDevice ? 'Update' : 'Add' }}
         </el-button>
       </template>
     </el-dialog>
@@ -181,23 +179,21 @@ const deviceForm = ref({
 })
 
 const deviceRules = {
-  user_id: [{ required: true, message: '请输入用户ID', trigger: 'blur' }],
+  user_id: [{ required: true, message: 'Please enter user ID', trigger: 'blur' }],
   device_code: [
     {
       validator: (rule, value, callback) => {
-        // 如果是编辑模式，激活码必填
         if (editingDevice.value) {
           if (!value) {
-            callback(new Error('请输入激活码'))
+            callback(new Error('Please enter activation code'))
           } else {
             callback()
           }
           return
         }
         
-        // 如果是新增模式，激活码和设备名称至少填一个
         if (!value && !deviceForm.value.device_name) {
-          callback(new Error('激活码和设备名称至少填写一个'))
+          callback(new Error('Please enter at least one of activation code or device name'))
         } else {
           callback()
         }
@@ -208,19 +204,17 @@ const deviceRules = {
   device_name: [
     {
       validator: (rule, value, callback) => {
-        // 如果是编辑模式，设备名称必填
         if (editingDevice.value) {
           if (!value) {
-            callback(new Error('请输入设备名称'))
+            callback(new Error('Please enter device name'))
           } else {
             callback()
           }
           return
         }
         
-        // 如果是新增模式，激活码和设备名称至少填一个
         if (!value && !deviceForm.value.device_code) {
-          callback(new Error('激活码和设备名称至少填写一个'))
+          callback(new Error('Please enter at least one of activation code or device name'))
         } else {
           callback()
         }
@@ -236,7 +230,7 @@ const loadDevices = async () => {
     const response = await api.get('/admin/devices')
     devices.value = response.data.data || []
   } catch (error) {
-    ElMessage.error('加载设备列表失败')
+    ElMessage.error('Failed to load device list')
     console.error('Error loading devices:', error)
   } finally {
     loading.value = false
@@ -248,7 +242,7 @@ const loadAgents = async () => {
     const response = await api.get('/admin/agents')
     agents.value = response.data.data || []
   } catch (error) {
-    ElMessage.error('加载智能体列表失败')
+    ElMessage.error('Failed to load agent list')
     console.error('Error loading agents:', error)
   }
 }
@@ -265,7 +259,6 @@ const openAddDialog = () => {
   showAddDialog.value = true
 }
 
-// 验证激活码是否存在
 const validateDeviceCode = async (deviceCode) => {
   if (!deviceCode) return null
   
@@ -273,7 +266,7 @@ const validateDeviceCode = async (deviceCode) => {
     const response = await api.get(`/admin/devices/validate-code?code=${deviceCode}`)
     return response.data.exists
   } catch (error) {
-    console.error('验证激活码失败:', error)
+    console.error('Failed to validate activation code:', error)
     return null
   }
 }
@@ -300,18 +293,17 @@ const saveDevice = async () => {
   try {
     if (editingDevice.value) {
       await api.put(`/admin/devices/${editingDevice.value.id}`, deviceForm.value)
-      ElMessage.success('设备更新成功')
+      ElMessage.success('Device updated successfully')
     } else {
       const response = await api.post('/admin/devices', deviceForm.value)
-      // 根据后端返回的消息显示不同的提示
-      const message = response.data.message || '设备添加成功'
+      const message = response.data.message || 'Device added successfully'
       ElMessage.success(message)
     }
     showAddDialog.value = false
     resetForm()
     loadDevices()
   } catch (error) {
-    const errorMessage = error.response?.data?.error || (editingDevice.value ? '设备更新失败' : '设备添加失败')
+    const errorMessage = error.response?.data?.error || (editingDevice.value ? 'Failed to update device' : 'Failed to add device')
     ElMessage.error(errorMessage)
     console.error('Error saving device:', error)
   } finally {
@@ -322,27 +314,25 @@ const saveDevice = async () => {
 const deleteDevice = async (device) => {
   try {
     await ElMessageBox.confirm(
-      `确定要删除设备 "${device.device_name}" 吗？`,
-      '确认删除',
+      `Are you sure you want to delete device "${device.device_name}"?`,
+      'Confirm Delete',
       {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
+        confirmButtonText: 'Confirm',
+        cancelButtonText: 'Cancel',
         type: 'warning'
       }
     )
     
     await api.delete(`/admin/devices/${device.id}`)
-    ElMessage.success('设备删除成功')
+    ElMessage.success('Device deleted successfully')
     loadDevices()
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('设备删除失败')
+      ElMessage.error('Failed to delete device')
       console.error('Error deleting device:', error)
     }
   }
 }
-
-
 
 const showDeviceMcp = async (device) => {
   currentDeviceId.value = device.id
@@ -367,14 +357,12 @@ const refreshDeviceMcpTools = async () => {
       mcpCallForm.value.tool_name = mcpTools.value[0].name
     }
   } catch (error) {
-    ElMessage.error('获取设备MCP工具失败')
+    ElMessage.error('Failed to get device MCP tools')
     mcpTools.value = []
   } finally {
     toolsLoading.value = false
   }
 }
-
-
 
 const buildExampleFromSchema = (schema = {}) => {
   if (!schema || typeof schema !== 'object') return {}
@@ -480,7 +468,7 @@ const formatMcpCallResult = (payload) => {
 
 const callDeviceMcpTool = async () => {
   if (!currentDeviceId.value || !mcpCallForm.value.tool_name) {
-    ElMessage.warning('请选择工具')
+    ElMessage.warning('Please select a tool')
     return
   }
 
@@ -488,7 +476,7 @@ const callDeviceMcpTool = async () => {
   try {
     argumentsObj = mcpCallForm.value.argumentsText ? JSON.parse(mcpCallForm.value.argumentsText) : {}
   } catch (e) {
-    ElMessage.error('参数JSON格式错误')
+    ElMessage.error('Invalid JSON format for parameters')
     return
   }
 
@@ -499,10 +487,10 @@ const callDeviceMcpTool = async () => {
       arguments: argumentsObj
     })
     mcpCallResult.value = formatMcpCallResult(response.data.data || {})
-    ElMessage.success('MCP工具调用成功')
+    ElMessage.success('MCP tool called successfully')
   } catch (error) {
     mcpCallResult.value = JSON.stringify(error.response?.data || { error: error.message }, null, 2)
-    ElMessage.error('MCP工具调用失败')
+    ElMessage.error('Failed to call MCP tool')
   } finally {
     callingTool.value = false
   }
@@ -522,12 +510,10 @@ const resetForm = () => {
   }
 }
 
-// 判断设备是否在线（基于最后活跃时间）
 const isDeviceOnline = (lastActiveAt) => {
   if (!lastActiveAt) return false
   const now = new Date()
   const lastActive = new Date(lastActiveAt)
-  // 5分钟内有活动认为在线
   return (now - lastActive) < 5 * 60 * 1000
 }
 

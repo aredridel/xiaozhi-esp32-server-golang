@@ -2,15 +2,15 @@
   <div class="config-page">
     <div class="page-header">
       <div class="header-left">
-        <h2>Vision配置管理</h2>
+        <h2>Vision Configuration Management</h2>
       </div>
     </div>
 
-    <!-- 基础配置部分 -->
+    <!-- Base Configuration Section -->
     <el-card class="base-config-card" style="margin-bottom: 20px;">
       <template #header>
         <div class="card-header">
-          <span>基础配置</span>
+          <span>Base Configuration</span>
         </div>
       </template>
       
@@ -21,45 +21,45 @@
         label-width="120px"
         style="max-width: 600px;"
       >
-        <el-form-item label="启用认证" prop="enable_auth">
+        <el-form-item label="Enable Authentication" prop="enable_auth">
           <el-switch v-model="baseForm.enable_auth" />
-          <div class="form-tip">是否启用视觉识别接口的鉴权</div>
+          <div class="form-tip">Whether to enable authentication for the vision recognition API</div>
         </el-form-item>
         
         <el-form-item label="Vision URL" prop="vision_url">
           <el-input 
             v-model="baseForm.vision_url" 
-            placeholder="请输入Vision API地址"
+            placeholder="Please enter Vision API address"
             style="width: 100%;"
           />
-          <div class="form-tip">返回给客户端用于图片识别的HTTP请求地址</div>
+          <div class="form-tip">HTTP request address returned to the client for image recognition</div>
         </el-form-item>
         
         <el-form-item>
           <el-button type="primary" @click="saveBaseConfig" :loading="baseSaving">
-            保存基础配置
+            Save Base Configuration
           </el-button>
         </el-form-item>
       </el-form>
     </el-card>
 
-    <!-- 配置列表部分 -->
+    <!-- Configuration List Section -->
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>模型配置列表</span>
+          <span>Model Configuration List</span>
           <el-button type="primary" @click="showDialog = true">
             <el-icon><Plus /></el-icon>
-            添加配置
+            Add Configuration
           </el-button>
         </div>
       </template>
 
       <el-table :data="configs" style="width: 100%" v-loading="loading">
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="name" label="配置名称" />
-        <el-table-column prop="provider" label="提供商" />
-        <el-table-column prop="enabled" label="启用状态" width="80" align="center">
+        <el-table-column prop="name" label="Configuration Name" />
+        <el-table-column prop="provider" label="Provider" />
+        <el-table-column prop="enabled" label="Enable Status" width="80" align="center">
           <template #default="scope">
             <el-switch 
               v-model="scope.row.enabled" 
@@ -67,7 +67,7 @@
             />
           </template>
         </el-table-column>
-        <el-table-column prop="is_default" label="默认配置" width="80" align="center">
+        <el-table-column prop="is_default" label="Default Config" width="80" align="center">
           <template #default="scope">
             <el-switch 
               v-model="scope.row.is_default" 
@@ -76,30 +76,30 @@
             />
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="180">
+        <el-table-column prop="created_at" label="Created At" width="180">
           <template #default="scope">
             {{ formatDate(scope.row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="180">
+        <el-table-column label="Actions" width="180">
           <template #default="scope">
-            <el-button size="small" @click="editConfig(scope.row)">编辑</el-button>
+            <el-button size="small" @click="editConfig(scope.row)">Edit</el-button>
             <el-button
               size="small"
               type="danger"
               @click="deleteConfig(scope.row.id)"
             >
-              删除
+              Delete
             </el-button>
           </template>
         </el-table-column>
       </el-table>
     </el-card>
 
-    <!-- 添加/编辑配置弹窗 -->
+    <!-- Add/Edit Configuration Dialog -->
     <el-dialog
       v-model="showDialog"
-      :title="editingConfig ? '编辑Vision配置' : '添加Vision配置'"
+      :title="editingConfig ? 'Edit Vision Configuration' : 'Add Vision Configuration'"
       width="700px"
       @close="handleDialogClose"
     >
@@ -109,54 +109,54 @@
         :rules="rules"
         label-width="120px"
       >
-        <el-form-item label="提供商" prop="provider">
-          <el-select v-model="form.provider" placeholder="请选择提供商" style="width: 100%">
-            <el-option label="阿里云视觉" value="aliyun_vision" />
-            <el-option label="豆包视觉" value="doubao_vision" />
+        <el-form-item label="Provider" prop="provider">
+          <el-select v-model="form.provider" placeholder="Please select provider" style="width: 100%">
+            <el-option label="Aliyun Vision" value="aliyun_vision" />
+            <el-option label="Doubao Vision" value="doubao_vision" />
           </el-select>
         </el-form-item>
         
-        <el-form-item label="配置名称" prop="name">
-          <el-input v-model="form.name" placeholder="请输入配置名称" />
+        <el-form-item label="Configuration Name" prop="name">
+          <el-input v-model="form.name" placeholder="Please enter configuration name" />
         </el-form-item>
         
-        <el-form-item label="类型" prop="type">
-          <el-input v-model="form.type" placeholder="请输入类型" />
+        <el-form-item label="Type" prop="type">
+          <el-input v-model="form.type" placeholder="Please enter type" />
         </el-form-item>
         
-        <el-form-item label="模型名称" prop="model_name">
-          <el-input v-model="form.model_name" placeholder="请输入模型名称" />
+        <el-form-item label="Model Name" prop="model_name">
+          <el-input v-model="form.model_name" placeholder="Please enter model name" />
         </el-form-item>
         
-        <el-form-item label="API密钥" prop="api_key">
-          <el-input v-model="form.api_key" type="password" placeholder="请输入API密钥" show-password />
+        <el-form-item label="API Key" prop="api_key">
+          <el-input v-model="form.api_key" type="password" placeholder="Please enter API key" show-password />
         </el-form-item>
         
-        <el-form-item label="基础URL" prop="base_url">
-          <el-input v-model="form.base_url" placeholder="请输入基础URL" />
+        <el-form-item label="Base URL" prop="base_url">
+          <el-input v-model="form.base_url" placeholder="Please enter base URL" />
         </el-form-item>
         
-        <el-form-item label="最大令牌数" prop="max_tokens">
-          <el-input-number v-model="form.max_tokens" :min="1" :max="100000" placeholder="请输入最大令牌数" style="width: 100%" />
+        <el-form-item label="Max Tokens" prop="max_tokens">
+          <el-input-number v-model="form.max_tokens" :min="1" :max="100000" placeholder="Please enter max tokens" style="width: 100%" />
         </el-form-item>
         
-        <el-form-item label="温度" prop="temperature">
-          <el-input-number v-model="form.temperature" :min="0" :max="2" :step="0.1" placeholder="请输入温度" style="width: 100%" />
+        <el-form-item label="Temperature" prop="temperature">
+          <el-input-number v-model="form.temperature" :min="0" :max="2" :step="0.1" placeholder="Please enter temperature" style="width: 100%" />
         </el-form-item>
         
         <el-form-item label="Top P" prop="top_p">
-          <el-input-number v-model="form.top_p" :min="0" :max="1" :step="0.1" placeholder="请输入Top P" style="width: 100%" />
+          <el-input-number v-model="form.top_p" :min="0" :max="1" :step="0.1" placeholder="Please enter Top P" style="width: 100%" />
         </el-form-item>
         
-        <el-form-item label="超时时间(秒)" prop="timeout">
-          <el-input-number v-model="form.timeout" :min="1" :max="300" placeholder="请输入超时时间" style="width: 100%" />
+        <el-form-item label="Timeout (seconds)" prop="timeout">
+          <el-input-number v-model="form.timeout" :min="1" :max="300" placeholder="Please enter timeout" style="width: 100%" />
         </el-form-item>
       </el-form>
       
       <template #footer>
-        <el-button @click="handleDialogClose">取消</el-button>
+        <el-button @click="handleDialogClose">Cancel</el-button>
         <el-button type="primary" @click="handleSave" :loading="saving">
-          保存
+          Save
         </el-button>
       </template>
     </el-dialog>
@@ -178,17 +178,17 @@ const editingConfig = ref(null)
 const formRef = ref()
 const baseFormRef = ref()
 
-// 基础配置表单
+// Base configuration form
 const baseForm = reactive({
   enable_auth: false,
   vision_url: ''
 })
 
-// 基础配置验证规则
+// Base configuration validation rules
 const baseRules = {
   vision_url: [
-    { required: true, message: '请输入Vision URL', trigger: 'blur' },
-    { type: 'url', message: '请输入有效的URL', trigger: 'blur' }
+    { required: true, message: 'Please enter Vision URL', trigger: 'blur' },
+    { type: 'url', message: 'Please enter a valid URL', trigger: 'blur' }
   ]
 }
 
@@ -221,20 +221,20 @@ const generateConfig = () => {
 }
 
 const rules = {
-  name: [{ required: true, message: '请输入配置名称', trigger: 'blur' }],
-  provider: [{ required: true, message: '请选择提供商', trigger: 'change' }],
-  type: [{ required: true, message: '请输入类型', trigger: 'blur' }],
-  model_name: [{ required: true, message: '请输入模型名称', trigger: 'blur' }],
-  api_key: [{ required: true, message: '请输入API密钥', trigger: 'blur' }],
+  name: [{ required: true, message: 'Please enter configuration name', trigger: 'blur' }],
+  provider: [{ required: true, message: 'Please select provider', trigger: 'change' }],
+  type: [{ required: true, message: 'Please enter type', trigger: 'blur' }],
+  model_name: [{ required: true, message: 'Please enter model name', trigger: 'blur' }],
+  api_key: [{ required: true, message: 'Please enter API key', trigger: 'blur' }],
   base_url: [
-    { required: true, message: '请输入基础URL', trigger: 'blur' },
-    { type: 'url', message: '请输入有效的URL', trigger: 'blur' }
+    { required: true, message: 'Please enter base URL', trigger: 'blur' },
+    { type: 'url', message: 'Please enter a valid URL', trigger: 'blur' }
   ],
-  max_tokens: [{ required: true, message: '请输入最大令牌数', trigger: 'blur' }],
-  timeout: [{ required: true, message: '请输入超时时间', trigger: 'blur' }]
+  max_tokens: [{ required: true, message: 'Please enter max tokens', trigger: 'blur' }],
+  timeout: [{ required: true, message: 'Please enter timeout', trigger: 'blur' }]
 }
 
-// 加载基础配置
+// Load base configuration
 const loadBaseConfig = async () => {
   try {
     const response = await api.get('/admin/vision-base-config')
@@ -242,11 +242,11 @@ const loadBaseConfig = async () => {
     baseForm.enable_auth = data.enable_auth || false
     baseForm.vision_url = data.vision_url || ''
   } catch (error) {
-    console.error('加载基础配置失败:', error)
+    console.error('Failed to load base configuration:', error)
   }
 }
 
-// 保存基础配置
+// Save base configuration
 const saveBaseConfig = async () => {
   if (!baseFormRef.value) return
   
@@ -258,9 +258,9 @@ const saveBaseConfig = async () => {
           enable_auth: baseForm.enable_auth,
           vision_url: baseForm.vision_url
         })
-        ElMessage.success('基础配置保存成功')
+        ElMessage.success('Base configuration saved successfully')
       } catch (error) {
-        ElMessage.error('保存失败，请检查网络连接和输入内容')
+        ElMessage.error('Save failed, please check network connection and input content')
       } finally {
         baseSaving.value = false
       }
@@ -272,11 +272,11 @@ const loadConfigs = async () => {
   loading.value = true
   try {
     const response = await api.get('/admin/vision-configs')
-    // 过滤掉vision_base配置，确保不在列表中显示
+    // Filter out vision_base config to ensure it doesn't appear in the list
     const allConfigs = response.data.data || []
     configs.value = allConfigs.filter(config => config.config_id !== 'vision_base')
   } catch (error) {
-    ElMessage.error('加载配置失败')
+    ElMessage.error('Failed to load configurations')
   } finally {
     loading.value = false
   }
@@ -300,8 +300,8 @@ const editConfig = (config) => {
     form.top_p = configData.top_p !== undefined ? configData.top_p : 0.9
     form.timeout = configData.timeout || 30
   } catch (error) {
-    console.error('解析配置失败:', error)
-    ElMessage.warning('配置格式错误，已重置为默认值')
+    console.error('Failed to parse configuration:', error)
+    ElMessage.warning('Configuration format error, reset to default values')
   }
   
   showDialog.value = true
@@ -326,16 +326,16 @@ const handleSave = async () => {
         
         if (editingConfig.value) {
           await api.put(`/admin/vision-configs/${editingConfig.value.id}`, configData)
-          ElMessage.success('更新成功')
+          ElMessage.success('Update successful')
         } else {
           await api.post('/admin/vision-configs', configData)
-          ElMessage.success('添加成功')
+          ElMessage.success('Add successful')
         }
         
         showDialog.value = false
         loadConfigs()
       } catch (error) {
-        ElMessage.error('保存失败，请检查网络连接和输入内容')
+        ElMessage.error('Save failed, please check network connection and input content')
       } finally {
         saving.value = false
       }
@@ -346,17 +346,17 @@ const handleSave = async () => {
 const toggleEnable = async (config) => {
   try {
     await api.post(`/admin/configs/${config.id}/toggle`)
-    ElMessage.success(`${config.enabled ? '启用' : '禁用'}成功`)
+    ElMessage.success(`${config.enabled ? 'Enable' : 'Disable'} successful`)
   } catch (error) {
     config.enabled = !config.enabled
-    ElMessage.error('操作失败')
+    ElMessage.error('Operation failed')
   }
 }
 
 const toggleDefault = async (config) => {
   try {
     if (!config.enabled) {
-      ElMessage.warning('请先启用该配置才能设为默认')
+      ElMessage.warning('Please enable this configuration first before setting it as default')
       config.is_default = false
       return
     }
@@ -370,11 +370,11 @@ const toggleDefault = async (config) => {
     }
     
     await api.put(`/admin/vision-configs/${config.id}`, configData)
-    ElMessage.success(config.is_default ? '设为默认成功' : '取消默认成功')
+    ElMessage.success(config.is_default ? 'Set as default successful' : 'Cancel default successful')
     loadConfigs()
   } catch (error) {
     config.is_default = !config.is_default
-    ElMessage.error('操作失败')
+    ElMessage.error('Operation failed')
   }
 }
 
@@ -384,18 +384,18 @@ const getEnabledConfigs = () => {
 
 const deleteConfig = async (id) => {
   try {
-    await ElMessageBox.confirm('确定要删除这个配置吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
+    await ElMessageBox.confirm('Are you sure you want to delete this configuration?', 'Prompt', {
+      confirmButtonText: 'Confirm',
+      cancelButtonText: 'Cancel',
       type: 'warning'
     })
     
     await api.delete(`/admin/vision-configs/${id}`)
-    ElMessage.success('删除成功')
+    ElMessage.success('Delete successful')
     loadConfigs()
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('删除失败')
+      ElMessage.error('Delete failed')
     }
   }
 }

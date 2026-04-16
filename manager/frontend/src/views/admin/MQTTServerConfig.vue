@@ -1,29 +1,29 @@
 <template>
   <div class="mqtt-server-config">
-    <!-- 页面头部 -->
+    <!-- Page Header -->
     <div class="page-header">
       <div class="header-content">
         <div class="title-section">
           <el-icon class="title-icon">
             <Monitor />
           </el-icon>
-          <h1 class="page-title">MQTT Server配置管理</h1>
+          <h1 class="page-title">MQTT Server Configuration Management</h1>
         </div>
       </div>
     </div>
 
-    <!-- 配置说明 -->
+    <!-- Configuration Description -->
     <div class="config-description">
       <el-alert
-        title="配置说明"
-        description="配置MQTT服务器参数和安全设置。自带的mqtt server配置项"
+        title="Configuration Instructions"
+        description="Configure MQTT server parameters and security settings. Built-in mqtt server configuration items"
         type="info"
         :closable="false"
         show-icon
       />
     </div>
 
-    <!-- 表单容器 -->
+    <!-- Form Container -->
     <div class="form-container">
       <el-form
         ref="formRef"
@@ -32,89 +32,89 @@
         class="config-form"
         v-loading="loading"
       >
-        <!-- 基础配置卡片 -->
+        <!-- Basic Configuration Card -->
         <el-card class="config-card basic-config" shadow="never">
           <template #header>
             <div class="card-header">
               <el-icon class="card-icon">
                 <Setting />
               </el-icon>
-              <span class="card-title">基础配置</span>
+              <span class="card-title">Basic Configuration</span>
             </div>
           </template>
           
           <div class="form-grid basic-form-grid">
-            <el-form-item label="启用状态" prop="enable" class="form-item">
+            <el-form-item label="Enabled" prop="enable" class="form-item">
               <el-switch v-model="form.enable" />
             </el-form-item>
             
-            <el-form-item label="监听主机" prop="listen_host" class="form-item">
-              <el-input v-model="form.listen_host" placeholder="请输入监听主机地址" style="max-width: 300px" />
+            <el-form-item label="Listen Host" prop="listen_host" class="form-item">
+              <el-input v-model="form.listen_host" placeholder="Please enter listen host address" style="max-width: 300px" />
             </el-form-item>
             
-            <el-form-item label="监听端口" prop="listen_port" class="form-item">
-              <el-input-number v-model="form.listen_port" :min="1" :max="65535" placeholder="请输入监听端口号" style="max-width: 200px" />
+            <el-form-item label="Listen Port" prop="listen_port" class="form-item">
+              <el-input-number v-model="form.listen_port" :min="1" :max="65535" placeholder="Please enter listen port number" style="max-width: 200px" />
             </el-form-item>
           </div>
         </el-card>
 
-        <!-- 认证配置卡片 -->
+        <!-- Authentication Configuration Card -->
         <el-card class="config-card auth-config" shadow="never">
           <template #header>
             <div class="card-header">
               <el-icon class="card-icon auth-icon">
                 <User />
               </el-icon>
-              <span class="card-title">认证配置</span>
+              <span class="card-title">Authentication Configuration</span>
             </div>
           </template>
           
-          <!-- 提示信息 -->
+          <!-- Hint Information -->
           <div class="config-tip">
             <el-icon class="tip-icon">
               <InfoFilled />
             </el-icon>
-            <span class="tip-text">主程序连接mqtt server所使用的用户名密码</span>
+            <span class="tip-text">Username and password used by the main program to connect to mqtt server</span>
           </div>
           
           <div class="form-grid auth-form-grid">
-            <el-form-item label="启用认证" prop="enable_auth" class="form-item">
+            <el-form-item label="Enable Auth" prop="enable_auth" class="form-item">
               <div class="form-item-with-help">
                 <el-switch v-model="form.enable_auth" />
-                <el-tooltip content="将校验mqtt客户连接用户名密码" placement="top">
+                <el-tooltip content="Will validate mqtt client connection username and password" placement="top">
                   <el-icon class="help-icon"><QuestionFilled /></el-icon>
                 </el-tooltip>
               </div>
             </el-form-item>
             
             <div class="form-row">
-              <el-form-item label="管理员用户" prop="username" class="form-item">
-                <el-input v-model="form.username" placeholder="请输入管理员用户名" style="max-width: 250px" />
+              <el-form-item label="Admin User" prop="username" class="form-item">
+                <el-input v-model="form.username" placeholder="Please enter admin username" style="max-width: 250px" />
               </el-form-item>
               
-              <el-form-item label="管理员密码" prop="password" class="form-item">
-                <el-input v-model="form.password" type="password" placeholder="请输入管理员密码" show-password style="max-width: 250px" />
+              <el-form-item label="Admin Password" prop="password" class="form-item">
+                <el-input v-model="form.password" type="password" placeholder="Please enter admin password" show-password style="max-width: 250px" />
               </el-form-item>
             </div>
             
-            <el-form-item label="签名密钥" prop="signature_key" class="form-item">
-              <el-input v-model="form.signature_key" placeholder="请输入签名密钥" style="max-width: 400px" />
+            <el-form-item label="Signature Key" prop="signature_key" class="form-item">
+              <el-input v-model="form.signature_key" placeholder="Please enter signature key" style="max-width: 400px" />
               <div class="form-item-hint">
-                与ota配置页面签名密钥对应
+                Corresponds to the signature key on the ota configuration page
               </div>
             </el-form-item>
           </div>
         </el-card>
 
-        <!-- TLS配置卡片 -->
+        <!-- TLS Configuration Card -->
         <el-card class="config-card tls-config" shadow="never">
           <template #header>
             <div class="card-header">
               <el-icon class="card-icon tls-icon">
                 <Lock />
               </el-icon>
-              <span class="card-title">TLS配置</span>
-              <el-tooltip content="mqtt server启用mqtts进行连接" placement="top">
+              <span class="card-title">TLS Configuration</span>
+              <el-tooltip content="Enable mqtts connection for mqtt server" placement="top">
                 <el-icon class="help-icon"><QuestionFilled /></el-icon>
               </el-tooltip>
             </div>
@@ -122,29 +122,29 @@
           
           <div class="form-grid tls-form-grid">
             <div class="form-row">
-              <el-form-item label="启用TLS" prop="tls.enable" class="form-item">
+              <el-form-item label="Enable TLS" prop="tls.enable" class="form-item">
                 <el-switch v-model="form.tls.enable" />
               </el-form-item>
               
-              <el-form-item label="TLS端口" prop="tls.port" v-if="form.tls.enable" class="form-item">
-                <el-input-number v-model="form.tls.port" :min="1" :max="65535" placeholder="请输入TLS端口号" style="max-width: 200px" />
+              <el-form-item label="TLS Port" prop="tls.port" v-if="form.tls.enable" class="form-item">
+                <el-input-number v-model="form.tls.port" :min="1" :max="65535" placeholder="Please enter TLS port number" style="max-width: 200px" />
               </el-form-item>
             </div>
             
-            <el-form-item label="证书文件" prop="tls.pem" v-if="form.tls.enable" class="form-item">
-              <el-input v-model="form.tls.pem" placeholder="请输入证书文件路径" style="max-width: 400px" />
+            <el-form-item label="Certificate File" prop="tls.pem" v-if="form.tls.enable" class="form-item">
+              <el-input v-model="form.tls.pem" placeholder="Please enter certificate file path" style="max-width: 400px" />
             </el-form-item>
             
-            <el-form-item label="密钥文件" prop="tls.key" v-if="form.tls.enable" class="form-item">
-              <el-input v-model="form.tls.key" placeholder="请输入密钥文件路径" style="max-width: 400px" />
+            <el-form-item label="Key File" prop="tls.key" v-if="form.tls.enable" class="form-item">
+              <el-input v-model="form.tls.key" placeholder="Please enter key file path" style="max-width: 400px" />
             </el-form-item>
           </div>
         </el-card>
 
-        <!-- 操作按钮 -->
+        <!-- Action Buttons -->
         <div class="action-section">
           <el-button type="primary" @click="handleSave" :loading="saving" class="save-button">
-            保存配置
+            Save Configuration
           </el-button>
         </div>
       </el-form>
@@ -182,19 +182,19 @@ const form = reactive({
 
 
 const rules = {
-  listen_host: [{ required: true, message: '请输入监听主机地址', trigger: 'blur' }],
+  listen_host: [{ required: true, message: 'Please enter listen host address', trigger: 'blur' }],
   listen_port: [
-    { required: true, message: '请输入监听端口号', trigger: 'blur' },
-    { type: 'number', min: 1, max: 65535, message: '端口号必须在1-65535之间', trigger: 'blur' }
+    { required: true, message: 'Please enter listen port number', trigger: 'blur' },
+    { type: 'number', min: 1, max: 65535, message: 'Port number must be between 1-65535', trigger: 'blur' }
   ],
-  username: [{ required: true, message: '请输入管理员用户名', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入管理员密码', trigger: 'blur' }],
-  signature_key: [{ required: true, message: '请输入签名密钥', trigger: 'blur' }],
+  username: [{ required: true, message: 'Please enter admin username', trigger: 'blur' }],
+  password: [{ required: true, message: 'Please enter admin password', trigger: 'blur' }],
+  signature_key: [{ required: true, message: 'Please enter signature key', trigger: 'blur' }],
   'tls.port': [
     {
       validator: (rule, value, callback) => {
         if (form.tls.enable && (!value || value < 1 || value > 65535)) {
-          callback(new Error('启用TLS时端口号必须在1-65535之间'))
+          callback(new Error('Port number must be between 1-65535 when TLS is enabled'))
         } else {
           callback()
         }
@@ -206,7 +206,7 @@ const rules = {
     {
       validator: (rule, value, callback) => {
         if (form.tls.enable && !value) {
-          callback(new Error('启用TLS时证书文件路径不能为空'))
+          callback(new Error('Certificate file path cannot be empty when TLS is enabled'))
         } else {
           callback()
         }
@@ -218,7 +218,7 @@ const rules = {
     {
       validator: (rule, value, callback) => {
         if (form.tls.enable && !value) {
-          callback(new Error('启用TLS时密钥文件路径不能为空'))
+          callback(new Error('Key file path cannot be empty when TLS is enabled'))
         } else {
           callback()
         }
@@ -237,12 +237,12 @@ const loadConfig = async () => {
       const config = configs[0]
       configId.value = config.id
       
-      // 解析JSON配置数据
+      // Parse JSON configuration data
       try {
         const configData = JSON.parse(config.json_data || '{}')
         form.enable = configData.enable !== undefined ? configData.enable : true
         form.listen_host = configData.listen_host || '0.0.0.0'
-        form.listen_port = Number(configData.listen_port) || 1883 // 确保端口是数字类型
+        form.listen_port = Number(configData.listen_port) || 1883 // Ensure port is number type
         form.username = configData.username || ''
         form.password = configData.password || ''
         form.signature_key = configData.signature_key || 'xiaozhi_ota_signature_key'
@@ -250,17 +250,17 @@ const loadConfig = async () => {
         
         if (configData.tls) {
           form.tls.enable = configData.tls.enable !== undefined ? configData.tls.enable : false
-          form.tls.port = Number(configData.tls.port) || 8883 // 确保TLS端口是数字类型
+          form.tls.port = Number(configData.tls.port) || 8883 // Ensure TLS port is number type
           form.tls.pem = configData.tls.pem || ''
           form.tls.key = configData.tls.key || ''
         }
       } catch (error) {
-        console.error('解析配置JSON失败:', error)
-        ElMessage.warning('配置格式错误，已重置为默认值')
+        console.error('Failed to parse configuration JSON:', error)
+        ElMessage.warning('Configuration format error, reset to default values')
       }
     }
   } catch (error) {
-    ElMessage.error('加载配置失败：' + error.message)
+    ElMessage.error('Failed to load configuration: ' + error.message)
   } finally {
     loading.value = false
   }
@@ -273,35 +273,35 @@ const handleSave = async () => {
     await formRef.value.validate()
     saving.value = true
     
-    // 如果TLS被禁用，清空相关字段
+    // Clear related fields if TLS is disabled
     if (!form.tls.enable) {
       form.tls.pem = ''
       form.tls.key = ''
     }
     
-    // 移除认证禁用时清空用户名密码的逻辑，因为管理员用户名密码与启用认证无关
+    // Removed logic to clear username/password when auth is disabled, as admin username/password is independent of auth enablement
     
     const configData = {
       enable: form.enable,
       listen_host: form.listen_host,
-      listen_port: Number(form.listen_port), // 确保端口是数字类型
+      listen_port: Number(form.listen_port), // Ensure port is number type
       username: form.username,
       password: form.password,
       signature_key: form.signature_key,
       enable_auth: form.enable_auth,
       tls: {
         enable: form.tls.enable,
-        port: Number(form.tls.port), // 确保TLS端口是数字类型
+        port: Number(form.tls.port), // Ensure TLS port is number type
         pem: form.tls.pem,
         key: form.tls.key
       }
     }
     
-    console.log('保存的配置数据:', configData) // 调试信息
-    console.log('监听端口值:', form.listen_port, '类型:', typeof form.listen_port) // 调试端口信息
+    console.log('Saving configuration data:', configData) // Debug info
+    console.log('Listen port value:', form.listen_port, 'Type:', typeof form.listen_port) // Debug port info
     
     const payload = {
-      name: 'MQTT Server配置',
+      name: 'MQTT Server Configuration',
       config_id: 'mqtt_server_mqtt_server_config',
       provider: 'mqtt_server',
       json_data: JSON.stringify(configData),
@@ -309,22 +309,22 @@ const handleSave = async () => {
       is_default: true
     }
     
-    console.log('发送的payload:', payload) // 调试信息
+    console.log('Sending payload:', payload) // Debug info
     
     if (configId.value) {
       const response = await api.put(`/admin/mqtt-server-configs/${configId.value}`, payload)
-      console.log('更新响应:', response) // 调试信息
-      ElMessage.success('更新配置成功')
+      console.log('Update response:', response) // Debug info
+      ElMessage.success('Configuration updated successfully')
     } else {
       const response = await api.post('/admin/mqtt-server-configs', payload)
-      console.log('创建响应:', response) // 调试信息
+      console.log('Create response:', response) // Debug info
       configId.value = response.data.data.id
-      ElMessage.success('创建配置成功')
+      ElMessage.success('Configuration created successfully')
     }
   } catch (error) {
-    console.error('保存错误:', error) // 调试信息
+    console.error('Save error:', error) // Debug info
     if (error.message) {
-      ElMessage.error('保存失败：' + error.message)
+      ElMessage.error('Save failed: ' + error.message)
     }
   } finally {
     saving.value = false
@@ -333,22 +333,22 @@ const handleSave = async () => {
 
 
 
-// 监听TLS开关状态变化，清空相关字段
+// Watch TLS switch state changes, clear related fields
 watch(() => form.tls.enable, (enabled) => {
   if (!enabled) {
-    // 当TLS禁用时，清空证书和密钥字段并重置验证
+    // Clear certificate and key fields and reset validation when TLS is disabled
     form.tls.pem = ''
     form.tls.key = ''
     formRef.value?.clearValidate(['tls.pem', 'tls.key'])
   }
 })
 
-// 监听监听端口变化，用于调试
+// Watch listen port changes, for debugging
 watch(() => form.listen_port, (newValue) => {
-  console.log('监听端口变化:', newValue, '类型:', typeof newValue)
+  console.log('Listen port changed:', newValue, 'Type:', typeof newValue)
 })
 
-// 移除认证开关状态监听，因为管理员用户名密码与启用认证无关
+// Removed auth switch state listener, as admin username/password is independent of auth enablement
 
 onMounted(() => {
   loadConfig()
@@ -362,7 +362,7 @@ onMounted(() => {
   padding: 24px;
 }
 
-/* 页面头部 */
+/* Page Header */
 .page-header {
   margin-bottom: 24px;
 }
@@ -395,13 +395,13 @@ onMounted(() => {
   background-clip: text;
 }
 
-/* 配置说明 */
+/* Configuration Description */
 .config-description {
   max-width: 1200px;
   margin: 0 auto 24px;
 }
 
-/* 表单容器 */
+/* Form Container */
 .form-container {
   max-width: 1200px;
   margin: 0 auto;
@@ -413,7 +413,7 @@ onMounted(() => {
   gap: 24px;
 }
 
-/* 配置卡片 */
+/* Configuration Card */
 .config-card {
   background: rgba(255, 255, 255, 0.95);
   border: 1px solid #e5e7eb;
@@ -444,7 +444,7 @@ onMounted(() => {
   border-left: 4px solid #f56c6c;
 }
 
-/* 卡片头部 */
+/* Card Header */
 .card-header {
   display: flex;
   align-items: center;
@@ -485,7 +485,7 @@ onMounted(() => {
   color: #6366f1;
 }
 
-/* 配置提示 */
+/* Configuration Hint */
 .config-tip {
   display: flex;
   align-items: center;
@@ -508,7 +508,7 @@ onMounted(() => {
   line-height: 1.5;
 }
 
-/* 表单网格 */
+/* Form Grid */
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -516,25 +516,25 @@ onMounted(() => {
   padding: 24px;
 }
 
-/* 基础配置表单网格 - 垂直布局 */
+/* Basic Configuration Form Grid - Vertical Layout */
 .basic-form-grid {
   grid-template-columns: 1fr;
   gap: 20px;
 }
 
-/* 认证配置表单网格 */
+/* Authentication Configuration Form Grid */
 .auth-form-grid {
   grid-template-columns: 1fr;
   gap: 20px;
 }
 
-/* TLS配置表单网格 */
+/* TLS Configuration Form Grid */
 .tls-form-grid {
   grid-template-columns: 1fr;
   gap: 20px;
 }
 
-/* 表单行 - 水平布局 */
+/* Form Row - Horizontal Layout */
 .form-row {
   display: flex;
   gap: 24px;
@@ -559,7 +559,7 @@ onMounted(() => {
   gap: 8px;
 }
 
-/* Element Plus 组件深度样式 */
+/* Element Plus Component Deep Styles */
 :deep(.el-form-item__label) {
   font-weight: 500;
   color: #374151;
@@ -602,7 +602,7 @@ onMounted(() => {
   padding: 0;
 }
 
-/* 操作按钮区域 */
+/* Action Button Area */
 .action-section {
   display: flex;
   justify-content: center;
@@ -625,7 +625,7 @@ onMounted(() => {
   box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
-/* 响应式设计 */
+/* Responsive Design */
 @media (max-width: 768px) {
   .mqtt-server-config {
     padding: 16px;

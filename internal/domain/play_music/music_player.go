@@ -119,10 +119,10 @@ func PlayMusicStream(ctx context.Context, url string, sampleRate int, frameDurat
 
 		// according toaudioformatprocessstreamingrespond
 		if audioFormat == "mp3" {
-			// create MP3 decode器，传入 context 而noyes done channel
+			// create MP3 decoder，传入 context 而noyes done channel
 			mp3Decoder, err := util.CreateAudioDecoderWithSampleRate(ctx, resp.Body, outputChan, frameDuration, audioFormat, sampleRate)
 			if err != nil {
-				log.Errorf("createMP3decode器failed: %v", err)
+				log.Errorf("createMP3 decoderfailed: %v", err)
 				close(outputChan)
 				return
 			}
@@ -180,10 +180,10 @@ func PlayMusicFromAudioData(ctx context.Context, audioData []byte, sampleRate in
 
 		// according toaudioformatprocessstreamingrespond
 		if audioFormat == "mp3" {
-			// create MP3 decode器，传入 context 而noyes done channel
+			// create MP3 decoder，传入 context 而noyes done channel
 			mp3Decoder, err := util.CreateAudioDecoderWithSampleRate(ctx, audioReader, outputChan, frameDuration, audioFormat, sampleRate)
 			if err != nil {
-				log.Errorf("createMP3decode器failed: %v", err)
+				log.Errorf("createMP3 decoderfailed: %v", err)
 				return
 			}
 
@@ -230,10 +230,10 @@ func PlayMusicFromPipe(ctx context.Context, pipeReader *io.PipeReader, sampleRat
 	go func() {
 		// according toaudioformatprocessstreamingrespond
 		if audioFormat == "mp3" {
-			// create MP3 decode器，传入 context 而noyes done channel
+			// create MP3 decoder，传入 context 而noyes done channel
 			mp3Decoder, err := util.CreateAudioDecoderWithSampleRate(ctx, pipeReader, outputChan, frameDuration, audioFormat, sampleRate)
 			if err != nil {
-				log.Errorf("createMP3decode器failed: %v", err)
+				log.Errorf("createMP3 decoderfailed: %v", err)
 				return
 			}
 

@@ -1,19 +1,19 @@
 <template>
   <div class="config-page">
     <div class="page-header">
-      <h2>知识库检索配置</h2>
-      <el-button type="primary" @click="openDialog()">添加配置</el-button>
+      <h2>Knowledge Base Search Configuration</h2>
+      <el-button type="primary" @click="openDialog()">Add Configuration</el-button>
     </div>
 
     <el-table :data="items" v-loading="loading" style="width: 100%">
       <el-table-column prop="id" label="ID" width="70" />
-      <el-table-column prop="provider" label="提供商" width="120" />
-      <el-table-column prop="name" label="名称" width="160" />
-      <el-table-column prop="config_id" label="配置ID" width="170" />
-      <el-table-column label="配置摘要">
+      <el-table-column prop="provider" label="Provider" width="120" />
+      <el-table-column prop="name" label="Name" width="160" />
+      <el-table-column prop="config_id" label="Config ID" width="170" />
+      <el-table-column label="Configuration Summary">
         <template #default="scope">{{ getConfigSummary(scope.row) }}</template>
       </el-table-column>
-      <el-table-column label="启用" width="80">
+      <el-table-column label="Enabled" width="80">
         <template #default="scope">
           <el-switch
             v-model="scope.row.enabled"
@@ -22,7 +22,7 @@
           />
         </template>
       </el-table-column>
-      <el-table-column label="默认" width="80">
+      <el-table-column label="Default" width="80">
         <template #default="scope">
           <el-switch
             v-model="scope.row.is_default"
@@ -32,24 +32,24 @@
           />
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="170">
+      <el-table-column label="Actions" width="170">
         <template #default="scope">
-          <el-button size="small" @click="openDialog(scope.row)">编辑</el-button>
-          <el-button size="small" type="danger" @click="remove(scope.row.id)">删除</el-button>
+          <el-button size="small" @click="openDialog(scope.row)">Edit</el-button>
+          <el-button size="small" type="danger" @click="remove(scope.row.id)">Delete</el-button>
         </template>
       </el-table-column>
     </el-table>
 
-    <el-dialog v-model="dialogVisible" :title="editing ? '编辑配置' : '新增配置'" width="700px">
+    <el-dialog v-model="dialogVisible" :title="editing ? 'Edit Configuration' : 'New Configuration'" width="700px">
       <el-form :model="form" label-width="100px">
-        <el-form-item label="提供商">
+        <el-form-item label="Provider">
           <el-select v-model="form.provider" style="width: 100%" @change="onProviderChange">
             <el-option value="dify" label="dify" />
             <el-option value="ragflow" label="ragflow" />
             <el-option value="weknora" label="weknora" />
           </el-select>
         </el-form-item>
-        <el-form-item label="提供商官网">
+        <el-form-item label="Provider Website">
           <a
             :href="getProviderWebsite(form.provider)"
             target="_blank"
@@ -59,48 +59,48 @@
             {{ getProviderWebsite(form.provider) }}
           </a>
         </el-form-item>
-        <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
-        <el-form-item label="配置ID"><el-input v-model="form.config_id" /></el-form-item>
+        <el-form-item label="Name"><el-input v-model="form.name" /></el-form-item>
+        <el-form-item label="Config ID"><el-input v-model="form.config_id" /></el-form-item>
         <template v-if="form.provider === 'dify'">
           <el-form-item label="Base URL"><el-input v-model="form.base_url" :placeholder="DEFAULT_DIFY_BASE_URL" /></el-form-item>
           <el-form-item label="API Key"><el-input v-model="form.api_key" type="password" show-password /></el-form-item>
-          <el-form-item label="阈值"><el-input-number v-model="form.score_threshold" :min="0" :max="1" :step="0.01" :precision="2" style="width:100%" /></el-form-item>
-          <el-form-item label="Dataset权限">
-            <el-select v-model="form.dataset_permission" style="width: 100%" placeholder="请选择">
-              <el-option value="only_me" label="only_me（仅自己可见）" />
-              <el-option value="all_team_members" label="all_team_members（团队可见）" />
-              <el-option value="partial_members" label="partial_members（部分成员可见）" />
+          <el-form-item label="Threshold"><el-input-number v-model="form.score_threshold" :min="0" :max="1" :step="0.01" :precision="2" style="width:100%" /></el-form-item>
+          <el-form-item label="Dataset Permission">
+            <el-select v-model="form.dataset_permission" style="width: 100%" placeholder="Please select">
+              <el-option value="only_me" label="only_me (Only me)" />
+              <el-option value="all_team_members" label="all_team_members (Team visible)" />
+              <el-option value="partial_members" label="partial_members (Partial members visible)" />
             </el-select>
             <div style="color:#909399; font-size:12px; line-height:1.4; margin-top:6px;">
-              控制外部知识库平台中该 dataset 的可见范围，不影响本系统用户权限。
+              Controls the visibility scope of this dataset in the external knowledge base platform, does not affect system user permissions.
             </div>
           </el-form-item>
-          <el-form-item label="Dataset提供方"><el-input v-model="form.dataset_provider" placeholder="vendor" /></el-form-item>
-          <el-form-item label="索引策略">
-            <el-select v-model="form.dataset_indexing_technique" style="width: 100%" placeholder="请选择">
-              <el-option value="high_quality" label="high_quality（高质量）" />
-              <el-option value="economy" label="economy（经济）" />
+          <el-form-item label="Dataset Provider"><el-input v-model="form.dataset_provider" placeholder="vendor" /></el-form-item>
+          <el-form-item label="Indexing Strategy">
+            <el-select v-model="form.dataset_indexing_technique" style="width: 100%" placeholder="Please select">
+              <el-option value="high_quality" label="high_quality (High Quality)" />
+              <el-option value="economy" label="economy (Economy)" />
             </el-select>
           </el-form-item>
         </template>
         <template v-else-if="form.provider === 'ragflow'">
           <el-form-item label="Base URL"><el-input v-model="form.base_url" :placeholder="DEFAULT_RAGFLOW_BASE_URL" /></el-form-item>
           <el-form-item label="API Key"><el-input v-model="form.api_key" type="password" show-password /></el-form-item>
-          <el-form-item label="相似度阈值"><el-input-number v-model="form.similarity_threshold" :min="0" :max="1" :step="0.01" :precision="2" style="width:100%" /></el-form-item>
-          <el-form-item label="向量权重"><el-input-number v-model="form.vector_similarity_weight" :min="0" :max="1" :step="0.01" :precision="2" style="width:100%" /></el-form-item>
-          <el-form-item label="启用关键词"><el-switch v-model="form.keyword" /></el-form-item>
-          <el-form-item label="启用高亮"><el-switch v-model="form.highlight" /></el-form-item>
-          <el-form-item label="Dataset权限">
-            <el-select v-model="form.dataset_permission" style="width: 100%" placeholder="请选择">
-              <el-option value="me" label="me（仅自己可见）" />
-              <el-option value="team" label="team（团队可见）" />
+          <el-form-item label="Similarity Threshold"><el-input-number v-model="form.similarity_threshold" :min="0" :max="1" :step="0.01" :precision="2" style="width:100%" /></el-form-item>
+          <el-form-item label="Vector Weight"><el-input-number v-model="form.vector_similarity_weight" :min="0" :max="1" :step="0.01" :precision="2" style="width:100%" /></el-form-item>
+          <el-form-item label="Enable Keywords"><el-switch v-model="form.keyword" /></el-form-item>
+          <el-form-item label="Enable Highlight"><el-switch v-model="form.highlight" /></el-form-item>
+          <el-form-item label="Dataset Permission">
+            <el-select v-model="form.dataset_permission" style="width: 100%" placeholder="Please select">
+              <el-option value="me" label="me (Only me)" />
+              <el-option value="team" label="team (Team visible)" />
             </el-select>
             <div style="color:#909399; font-size:12px; line-height:1.4; margin-top:6px;">
-              控制外部知识库平台中该 dataset 的可见范围，不影响本系统用户权限。
+              Controls the visibility scope of this dataset in the external knowledge base platform, does not affect system user permissions.
             </div>
           </el-form-item>
-          <el-form-item label="分块策略">
-            <el-select v-model="form.dataset_chunk_method" style="width: 100%" placeholder="请选择">
+          <el-form-item label="Chunking Strategy">
+            <el-select v-model="form.dataset_chunk_method" style="width: 100%" placeholder="Please select">
               <el-option value="naive" label="naive" />
               <el-option value="qa" label="qa" />
               <el-option value="table" label="table" />
@@ -111,16 +111,16 @@
         <template v-else-if="form.provider === 'weknora'">
           <el-form-item label="Base URL"><el-input v-model="form.base_url" :placeholder="DEFAULT_WEKNORA_BASE_URL" /></el-form-item>
           <el-form-item label="API Key"><el-input v-model="form.api_key" type="password" show-password /></el-form-item>
-          <el-form-item label="阈值"><el-input-number v-model="form.score_threshold" :min="0" :max="1" :step="0.01" :precision="2" style="width:100%" /></el-form-item>
-          <el-form-item label="模型列表">
+          <el-form-item label="Threshold"><el-input-number v-model="form.score_threshold" :min="0" :max="1" :step="0.01" :precision="2" style="width:100%" /></el-form-item>
+          <el-form-item label="Model List">
             <div style="display:flex; align-items:center; gap:10px; width:100%;">
-              <el-button size="small" :loading="weknoraModelLoading" @click="fetchWeknoraModels(true, false)">刷新模型</el-button>
-              <span v-if="weknoraModelLoading" style="color:#909399; font-size:12px;">正在拉取模型列表...</span>
+              <el-button size="small" :loading="weknoraModelLoading" @click="fetchWeknoraModels(true, false)">Refresh Models</el-button>
+              <span v-if="weknoraModelLoading" style="color:#909399; font-size:12px;">Fetching model list...</span>
               <span v-else-if="weknoraModelLoadError" style="color:#F56C6C; font-size:12px;">{{ weknoraModelLoadError }}</span>
-              <span v-else style="color:#909399; font-size:12px;">自动拉取 embedding/llm/rerank 模型；也可手动输入。</span>
+              <span v-else style="color:#909399; font-size:12px;">Auto-fetch embedding/llm/rerank models; manual input also supported.</span>
             </div>
           </el-form-item>
-          <el-form-item label="Embedding模型">
+          <el-form-item label="Embedding Model">
             <el-select
               v-model="form.embedding_model_id"
               filterable
@@ -128,7 +128,7 @@
               default-first-option
               clearable
               style="width:100%;"
-              placeholder="必填：请选择或手动输入"
+              placeholder="Required: Please select or manually enter"
             >
               <el-option
                 v-for="item in weknoraEmbeddingModels"
@@ -138,16 +138,16 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="分块大小"><el-input-number v-model="form.chunk_size" :min="1" :step="100" style="width:100%" /></el-form-item>
-          <el-form-item label="重叠大小"><el-input-number v-model="form.chunk_overlap" :min="0" :step="50" style="width:100%" /></el-form-item>
-          <el-form-item label="分隔符">
-            <el-input v-model="form.separators_raw" placeholder="逗号分隔，如 \n\n,\n,。,！,？,;,；" />
+          <el-form-item label="Chunk Size"><el-input-number v-model="form.chunk_size" :min="1" :step="100" style="width:100%" /></el-form-item>
+          <el-form-item label="Overlap Size"><el-input-number v-model="form.chunk_overlap" :min="0" :step="50" style="width:100%" /></el-form-item>
+          <el-form-item label="Separators">
+            <el-input v-model="form.separators_raw" placeholder="Comma separated, e.g. \n\n,\n,。,！,？,;,；" />
             <div style="color:#909399; font-size:12px; line-height:1.4; margin-top:6px;">
-              保存时将按逗号拆分为 separators 数组。
+              Will be split by comma into separators array when saving.
             </div>
           </el-form-item>
-          <el-form-item label="多模态"><el-switch v-model="form.enable_multimodal" /></el-form-item>
-          <el-form-item label="Summary模型">
+          <el-form-item label="Multimodal"><el-switch v-model="form.enable_multimodal" /></el-form-item>
+          <el-form-item label="Summary Model">
             <el-select
               v-model="form.summary_model_id"
               filterable
@@ -155,7 +155,7 @@
               default-first-option
               clearable
               style="width:100%;"
-              placeholder="可选：请选择或手动输入"
+              placeholder="Optional: Please select or manually enter"
             >
               <el-option
                 v-for="item in weknoraLLMModels"
@@ -165,10 +165,10 @@
               />
             </el-select>
             <div style="color:#909399; font-size:12px; line-height:1.4; margin-top:6px;">
-              用于知识摘要生成；不配置则跳过摘要步骤。
+              Used for knowledge summary generation; skip summary step if not configured.
             </div>
           </el-form-item>
-          <el-form-item label="Rerank模型">
+          <el-form-item label="Rerank Model">
             <el-select
               v-model="form.rerank_model_id"
               filterable
@@ -176,7 +176,7 @@
               default-first-option
               clearable
               style="width:100%;"
-              placeholder="可选：请选择或手动输入"
+              placeholder="Optional: Please select or manually enter"
             >
               <el-option
                 v-for="item in weknoraRerankModels"
@@ -186,16 +186,16 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="VLM模型ID"><el-input v-model="form.vlm_model_id" placeholder="可选" /></el-form-item>
-          <el-form-item label="轮询间隔ms"><el-input-number v-model="form.parse_poll_interval_ms" :min="100" :step="100" style="width:100%" /></el-form-item>
-          <el-form-item label="解析超时ms"><el-input-number v-model="form.parse_timeout_ms" :min="1000" :step="1000" style="width:100%" /></el-form-item>
+          <el-form-item label="VLM Model ID"><el-input v-model="form.vlm_model_id" placeholder="Optional" /></el-form-item>
+          <el-form-item label="Poll Interval ms"><el-input-number v-model="form.parse_poll_interval_ms" :min="100" :step="100" style="width:100%" /></el-form-item>
+          <el-form-item label="Parse Timeout ms"><el-input-number v-model="form.parse_timeout_ms" :min="1000" :step="1000" style="width:100%" /></el-form-item>
         </template>
-        <el-form-item label="启用"><el-switch v-model="form.enabled" /></el-form-item>
-        <el-form-item label="默认"><el-switch v-model="form.is_default" /></el-form-item>
+        <el-form-item label="Enabled"><el-switch v-model="form.enabled" /></el-form-item>
+        <el-form-item label="Default"><el-switch v-model="form.is_default" /></el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submit">保存</el-button>
+        <el-button @click="dialogVisible = false">Cancel</el-button>
+        <el-button type="primary" @click="submit">Save</el-button>
       </template>
     </el-dialog>
   </div>
@@ -333,7 +333,7 @@ const fetchWeknoraModels = async (force = false, silent = true) => {
   const apiKey = String(form.api_key || '').trim()
   if (!baseURL || !apiKey) {
     if (!silent) {
-      ElMessage.warning('请先填写 WeKnora Base URL 和 API Key')
+      ElMessage.warning('Please fill in WeKnora Base URL and API Key first')
     }
     return
   }
@@ -374,7 +374,7 @@ const fetchWeknoraModels = async (force = false, silent = true) => {
     }
   } catch (e) {
     if (seq !== weknoraFetchSeq) return
-    const msg = e?.response?.data?.error || '拉取 WeKnora 模型列表失败'
+    const msg = e?.response?.data?.error || 'Failed to fetch WeKnora model list'
     weknoraModelLoadError.value = msg
     if (!silent) {
       ElMessage.error(msg)
@@ -511,7 +511,7 @@ const openDialog = (row = null) => {
 
 const submit = async () => {
   if (form.provider === 'weknora' && !String(form.embedding_model_id || '').trim()) {
-    ElMessage.error('Embedding模型ID不能为空')
+    ElMessage.error('Embedding Model ID cannot be empty')
     return
   }
   const weknoraSeparators = parseSeparators(form.separators_raw)
@@ -564,11 +564,11 @@ const submit = async () => {
     } else {
       await api.post('/admin/knowledge-search-configs', payload)
     }
-    ElMessage.success('保存成功')
+    ElMessage.success('Save successful')
     dialogVisible.value = false
     await loadData()
   } catch (e) {
-    ElMessage.error('保存失败')
+    ElMessage.error('Save failed')
   }
 }
 
@@ -620,11 +620,11 @@ const onRowSwitchChange = async (row, field, value) => {
     }
     row.enabled = enabled
     row.is_default = isDefault
-    ElMessage.success('更新成功')
+    ElMessage.success('Update successful')
     await loadData()
   } catch (e) {
     await loadData()
-    ElMessage.error('更新失败')
+    ElMessage.error('Update failed')
   } finally {
     setRowSwitchLoading(id, field, false)
   }
@@ -632,9 +632,9 @@ const onRowSwitchChange = async (row, field, value) => {
 
 const remove = async (id) => {
   try {
-    await ElMessageBox.confirm('确认删除该配置吗？', '提示', { type: 'warning' })
+    await ElMessageBox.confirm('Confirm delete this configuration?', 'Prompt', { type: 'warning' })
     await api.delete(`/admin/knowledge-search-configs/${id}`)
-    ElMessage.success('删除成功')
+    ElMessage.success('Delete successful')
     await loadData()
   } catch {}
 }

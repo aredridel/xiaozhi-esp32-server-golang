@@ -1,48 +1,48 @@
-# HTTP 组件
+# HTTP Component
 
-统一of HTTP 客户端组件，used for管理所有to Manager after端of HTTP 调用。
+Unified HTTP client component, used for managing all HTTP calls to Manager backend.
 
-## 目录结构
+## Directory Structure
 
 ```
 internal/components/http/
-├── client.go          # 通用 HTTP 客户端（支持重试、认证etc）
-├── manager_client.go  # Manager after端专用客户端
-├── types.go           # 类型定义
-└── README.md          # 本文档
+├── client.go          # General HTTP client (supports retry, authentication, etc.)
+├── manager_client.go  # Manager backend dedicated client
+├── types.go           # Type definitions
+└── README.md          # This document
 ```
 
-## 设计说明
+## Design Description
 
-### Client（通用 HTTP 客户端）
+### Client (General HTTP Client)
 
-provide基础of HTTP 请求功能：
-- 支持重试机制（use exponential backoff）
-- 支持认证 Token（Bearer Token）
-- 支持自定义超whentime
-- 统一errorprocess
-- 自动 JSON 序列化/反序列化
+Provides basic HTTP request functionality:
+- Supports retry mechanism (uses exponential backoff)
+- Supports authentication Token (Bearer Token)
+- Supports custom timeout
+- Unified error processing
+- Automatic JSON serialization/deserialization
 
-### ManagerClient（Manager after端专用客户端）
+### ManagerClient (Manager Backend Dedicated Client)
 
-基于通用客户端封装，专门used for调用 Manager after端 API。
+Based on general client encapsulation, specifically used for calling Manager backend API.
 
-## use示例
+## Usage Examples
 
-### 创建 Manager 客户端
+### Create Manager Client
 
 ```go
 import "xiaozhi-esp32-server-golang/internal/components/http"
 
 client := http.NewManagerClient(http.ManagerClientConfig{
     BaseURL:    "http://localhost:8080",
-    AuthToken:  "your-token",  // 可选
+    AuthToken:  "your-token",  // optional
     Timeout:    10 * time.Second,
     MaxRetries: 3,
 })
 ```
 
-### send GET 请求
+### Send GET Request
 
 ```go
 var response MyResponse
@@ -56,7 +56,7 @@ err := client.DoRequest(ctx, http.RequestOptions{
 })
 ```
 
-### send POST 请求
+### Send POST Request
 
 ```go
 request := MyRequest{
@@ -71,7 +71,7 @@ err := client.DoRequest(ctx, http.RequestOptions{
 })
 ```
 
-### get原始响应
+### Get Raw Response
 
 ```go
 body, err := client.DoRequestRaw(ctx, http.RequestOptions{
@@ -80,29 +80,29 @@ body, err := client.DoRequestRaw(ctx, http.RequestOptions{
 })
 ```
 
-## 重构说明
+## Refactoring Notes
 
-### 重构before
+### Before Refactoring
 
-- `HistoryClient` 和 `ConfigManager` 各自实现 HTTP 调用逻辑
-- 代码重复，维护成本高
-- 重试、认证etc逻辑分散
+- `HistoryClient` and `ConfigManager` each implement HTTP call logic
+- Code duplication, high maintenance cost
+- Retry, authentication, etc. logic scattered
 
-### 重构after
+### After Refactoring
 
-- 统一of HTTP 组件，集in管理
-- 代码复用，易于维护
-- 统一oferrorprocess和重试机制
+- Unified HTTP component, centralized management
+- Code reuse, easy to maintain
+- Unified error processing and retry mechanism
 
-## already重构of模块
+## Already Refactored Modules
 
-1. **internal/data/history/client.go** - chat history客户端
-2. **internal/domain/config/manager/manager.go** - config管理器
-3. **internal/domain/config/manager/auth.go** - 认证相关 API
+1. **internal/data/history/client.go** - chat history client
+2. **internal/domain/config/manager/manager.go** - config manager
+3. **internal/domain/config/manager/auth.go** - authentication related API
 
-## 注意事项
+## Notes
 
-- 所有to Manager after端of HTTP 调用都应use `ManagerClient`
-- 如需调用其他after端服务，can基于 `Client` 创建new专用客户端
-- 重试机制default最多 3 次，可throughconfig调整
+- All HTTP calls to Manager backend should use `ManagerClient`
+- If need to call other backend services, can create new dedicated client based on `Client`
+- Retry mechanism defaults to maximum 3 times, can be adjusted through config
 

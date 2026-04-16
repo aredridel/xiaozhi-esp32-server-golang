@@ -2,28 +2,28 @@
   <div class="config-page">
     <div class="page-header">
       <div class="header-left">
-        <h2>Memory配置管理</h2>
+        <h2>Memory Configuration Management</h2>
       </div>
       <div class="header-right">
         <el-button type="primary" @click="handleAddConfig">
           <el-icon><Plus /></el-icon>
-          添加配置
+          Add Configuration
         </el-button>
       </div>
     </div>
 
     <el-table :data="safeConfigs" style="width: 100%" v-loading="loading">
       <el-table-column prop="id" label="ID" width="80" />
-      <el-table-column prop="name" label="配置名称" />
-      <el-table-column prop="config_id" label="配置ID" width="150" />
-      <el-table-column prop="provider" label="提供商" width="120">
+      <el-table-column prop="name" label="Configuration Name" />
+      <el-table-column prop="config_id" label="Config ID" width="150" />
+      <el-table-column prop="provider" label="Provider" width="120">
         <template #default="scope">
           <el-tag :type="getProviderTagType(scope.row.provider)">
             {{ scope.row.provider }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="enabled" label="启用状态" width="80" align="center">
+      <el-table-column prop="enabled" label="Status" width="80" align="center">
         <template #default="scope">
           <el-switch 
             v-model="scope.row.enabled" 
@@ -31,7 +31,7 @@
           />
         </template>
       </el-table-column>
-      <el-table-column prop="is_default" label="默认配置" width="80" align="center">
+      <el-table-column prop="is_default" label="Default" width="80" align="center">
         <template #default="scope">
           <el-switch 
             v-model="scope.row.is_default" 
@@ -39,44 +39,44 @@
           />
         </template>
       </el-table-column>
-      <el-table-column prop="created_at" label="创建时间" width="180">
+      <el-table-column prop="created_at" label="Created At" width="180">
         <template #default="scope">
           {{ formatDate(scope.row.created_at) }}
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="180">
+      <el-table-column label="Actions" width="180">
         <template #default="scope">
-          <el-button size="small" @click="editConfig(scope.row)">编辑</el-button>
+          <el-button size="small" @click="editConfig(scope.row)">Edit</el-button>
           <el-button
             size="small"
             type="danger"
             @click="deleteConfig(scope.row.id)"
           >
-            删除
+            Delete
           </el-button>
         </template>
       </el-table-column>
       
-      <!-- 空状态插槽 -->
+      <!-- Empty state slot -->
       <template #empty>
         <div class="empty-state">
           <el-icon size="64" color="#C0C4CC" class="empty-icon">
             <Box />
           </el-icon>
-          <div class="empty-text">暂无Memory配置</div>
-          <div class="empty-description">点击上方"添加配置"按钮创建您的第一个Memory配置</div>
+          <div class="empty-text">No Memory Configurations</div>
+          <div class="empty-description">Click the "Add Configuration" button above to create your first Memory configuration</div>
           <el-button type="primary" @click="handleAddConfig" class="empty-action">
             <el-icon><Plus /></el-icon>
-            添加配置
+            Add Configuration
           </el-button>
         </div>
       </template>
     </el-table>
 
-    <!-- 添加/编辑配置弹窗 -->
+    <!-- Add/Edit Configuration Dialog -->
     <el-dialog
       v-model="showDialog"
-      :title="editingConfig ? '编辑Memory配置' : '添加Memory配置'"
+      :title="editingConfig ? 'Edit Memory Configuration' : 'Add Memory Configuration'"
       width="600px"
       @close="handleDialogClose"
     >
@@ -86,75 +86,75 @@
         :rules="rules"
         label-width="120px"
       >
-        <el-form-item label="提供商" prop="provider">
-          <el-select v-model="form.provider" placeholder="请选择提供商" style="width: 100%" @change="handleProviderChange">
+        <el-form-item label="Provider" prop="provider">
+          <el-select v-model="form.provider" placeholder="Please select provider" style="width: 100%" @change="handleProviderChange">
             <el-option label="Memobase" value="memobase" />
             <el-option label="Mem0" value="mem0" />
             <el-option label="MemOS" value="memos" />
           </el-select>
         </el-form-item>
         
-        <el-form-item label="配置名称" prop="name">
-          <el-input v-model="form.name" placeholder="请输入配置名称" />
+        <el-form-item label="Configuration Name" prop="name">
+          <el-input v-model="form.name" placeholder="Please enter configuration name" />
         </el-form-item>
         
-        <el-form-item label="配置ID" prop="config_id">
-          <el-input v-model="form.config_id" placeholder="请输入唯一的配置ID" />
+        <el-form-item label="Config ID" prop="config_id">
+          <el-input v-model="form.config_id" placeholder="Please enter a unique configuration ID" />
         </el-form-item>
         
-        <!-- Memobase配置字段 -->
+        <!-- Memobase configuration fields -->
         <template v-if="form.provider === 'memobase'">
-          <el-form-item label="API密钥" prop="api_key">
-            <el-input v-model="form.api_key" type="password" placeholder="请输入Memobase API密钥" show-password />
+          <el-form-item label="API Key" prop="api_key">
+            <el-input v-model="form.api_key" type="password" placeholder="Please enter Memobase API key" show-password />
           </el-form-item>
           
-          <el-form-item label="基础URL" prop="base_url">
-            <el-input v-model="form.base_url" placeholder="请输入Memobase基础URL" />
+          <el-form-item label="Base URL" prop="base_url">
+            <el-input v-model="form.base_url" placeholder="Please enter Memobase base URL" />
           </el-form-item>
           
-          <el-form-item label="启用搜索" prop="enable_search">
+          <el-form-item label="Enable Search" prop="enable_search">
             <el-switch v-model="form.enable_search" />
           </el-form-item>
           
-          <el-form-item label="搜索阈值" prop="search_threshold">
+          <el-form-item label="Search Threshold" prop="search_threshold">
             <el-input-number v-model="form.search_threshold" :min="0" :max="1" :step="0.1" :precision="1" style="width: 100%" />
           </el-form-item>
           
-          <el-form-item label="搜索TopK" prop="search_top_k">
+          <el-form-item label="Search TopK" prop="search_top_k">
             <el-input-number v-model="form.search_top_k" :min="1" :step="1" style="width: 100%" />
           </el-form-item>
         </template>
         
-        <!-- Mem0配置字段 -->
+        <!-- Mem0 configuration fields -->
         <template v-if="form.provider === 'mem0' || form.provider === 'memos'">
-          <el-form-item label="API密钥" prop="api_key">
-            <el-input v-model="form.api_key" type="password" :placeholder="form.provider === 'memos' ? '请输入MemOS兼容API密钥' : '请输入Mem0 API密钥'" show-password />
+          <el-form-item label="API Key" prop="api_key">
+            <el-input v-model="form.api_key" type="password" :placeholder="form.provider === 'memos' ? 'Please enter MemOS compatible API key' : 'Please enter Mem0 API key'" show-password />
           </el-form-item>
           
-          <el-form-item label="基础URL" prop="base_url">
-            <el-input v-model="form.base_url" :placeholder="form.provider === 'memos' ? '请输入MemOS服务基础URL' : '请输入Mem0基础URL'" />
+          <el-form-item label="Base URL" prop="base_url">
+            <el-input v-model="form.base_url" :placeholder="form.provider === 'memos' ? 'Please enter MemOS service base URL' : 'Please enter Mem0 base URL'" />
           </el-form-item>
 
           
 
-          <el-form-item label="启用搜索" prop="enable_search">
+          <el-form-item label="Enable Search" prop="enable_search">
             <el-switch v-model="form.enable_search" />
           </el-form-item>
           
-          <el-form-item label="搜索阈值" prop="search_threshold">
+          <el-form-item label="Search Threshold" prop="search_threshold">
             <el-input-number v-model="form.search_threshold" :min="0" :max="1" :step="0.1" :precision="1" style="width: 100%" />
           </el-form-item>
           
-          <el-form-item label="搜索TopK" prop="search_top_k">
+          <el-form-item label="Search TopK" prop="search_top_k">
             <el-input-number v-model="form.search_top_k" :min="1" :step="1" style="width: 100%" />
           </el-form-item>
         </template>
       </el-form>
       
       <template #footer>
-        <el-button @click="handleDialogClose">取消</el-button>
+        <el-button @click="handleDialogClose">Cancel</el-button>
         <el-button type="primary" @click="handleSave" :loading="saving">
-          保存
+          Save
         </el-button>
       </template>
     </el-dialog>
@@ -174,7 +174,7 @@ const showDialog = ref(false)
 const editingConfig = ref(null)
 const formRef = ref()
 
-// 确保configs始终是一个数组
+// Ensure configs is always an array
 const safeConfigs = computed(() => {
   return Array.isArray(configs.value) ? configs.value : []
 })
@@ -193,7 +193,7 @@ const form = reactive({
   timeout_ms: 10000
 })
 
-// 默认URL配置
+// Default URL configuration
 const defaultUrls = {
   memobase: 'https://api.memobase.dev',
   mem0: 'https://api.mem0.ai',
@@ -208,7 +208,7 @@ const getProviderTagType = (provider) => {
 }
 
 const handleProviderChange = (value) => {
-  // 清空表单字段
+  // Clear form fields
   form.api_key = ''
   form.base_url = defaultUrls[value] || ''
   form.enable_search = true
@@ -217,7 +217,7 @@ const handleProviderChange = (value) => {
   form.timeout_ms = 10000
 }
 
-// 生成配置JSON字符串
+// Generate configuration JSON string
 const generateConfig = () => {
   const config = {
     api_key: form.api_key,
@@ -234,7 +234,7 @@ const generateConfig = () => {
   return JSON.stringify(config)
 }
 
-// 解析配置JSON字符串
+// Parse configuration JSON string
 const parseConfig = (jsonData) => {
   try {
     const config = JSON.parse(jsonData)
@@ -245,30 +245,30 @@ const parseConfig = (jsonData) => {
     form.search_top_k = config.search_top_k !== undefined ? config.search_top_k : 3
     form.timeout_ms = config.timeout_ms !== undefined ? config.timeout_ms : 10000
   } catch (error) {
-    console.error('解析配置失败:', error)
+    console.error('Failed to parse configuration:', error)
   }
 }
 
 const rules = {
   name: [
-    { required: true, message: '请输入配置名称', trigger: 'blur' }
+    { required: true, message: 'Please enter configuration name', trigger: 'blur' }
   ],
   config_id: [
-    { required: true, message: '请输入配置ID', trigger: 'blur' }
+    { required: true, message: 'Please enter configuration ID', trigger: 'blur' }
   ],
   provider: [
-    { required: true, message: '请选择提供商', trigger: 'change' }
+    { required: true, message: 'Please select provider', trigger: 'change' }
   ],
   api_key: [
-    { required: true, message: '请输入API密钥', trigger: 'blur' }
+    { required: true, message: 'Please enter API key', trigger: 'blur' }
   ],
   base_url: [
-    { required: true, message: '请输入基础URL', trigger: 'blur' }
+    { required: true, message: 'Please enter base URL', trigger: 'blur' }
   ]
 }
 
 const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleString('zh-CN')
+  return new Date(dateString).toLocaleString('en-US')
 }
 
 const loadConfigs = async () => {
@@ -277,12 +277,12 @@ const loadConfigs = async () => {
     const response = await api.get('/admin/memory-configs')
     console.log('API response:', response)
     
-    // 使用nextTick确保响应式更新的安全性
+    // Use nextTick to ensure reactive update safety
     await nextTick()
     
     // The backend returns { data: configs }, so we need to access response.data.data
     if (response && response.data && response.data.data && Array.isArray(response.data.data)) {
-      // 使用Object.freeze防止意外修改，然后创建新数组
+      // Use Object.freeze to prevent accidental modification, then create new array
       const newConfigs = [...response.data.data]
       configs.value = newConfigs
     } else if (response && response.data && response.data.data) {
@@ -294,8 +294,8 @@ const loadConfigs = async () => {
     }
     console.log('Loaded configs:', configs.value)
   } catch (error) {
-    console.error('加载配置失败:', error)
-    ElMessage.error('加载配置失败: ' + (error.message || '未知错误'))
+    console.error('Failed to load configuration:', error)
+    ElMessage.error('Failed to load configuration: ' + (error.message || 'Unknown error'))
     // Ensure configs is always an array to prevent render errors
     configs.value = []
   } finally {
@@ -325,16 +325,16 @@ const handleSave = async () => {
     
     if (editingConfig.value) {
       await api.put(`/admin/memory-configs/${editingConfig.value.id}`, configData)
-      ElMessage.success('配置更新成功')
+      ElMessage.success('Configuration updated successfully')
     } else {
       await api.post('/admin/memory-configs', configData)
-      ElMessage.success('配置创建成功')
+      ElMessage.success('Configuration created successfully')
     }
     
     showDialog.value = false
     await loadConfigs()
   } catch (error) {
-    ElMessage.error('保存失败: ' + error.message)
+    ElMessage.error('Save failed: ' + error.message)
   } finally {
     saving.value = false
   }
@@ -357,16 +357,16 @@ const editConfig = (config) => {
 
 const deleteConfig = async (id) => {
   try {
-    await ElMessageBox.confirm('确定要删除这个配置吗？', '确认删除', {
+    await ElMessageBox.confirm('Are you sure you want to delete this configuration?', 'Confirm Delete', {
       type: 'warning'
     })
     
     await api.delete(`/admin/memory-configs/${id}`)
-    ElMessage.success('删除成功')
+    ElMessage.success('Deleted successfully')
     await loadConfigs()
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('删除失败: ' + error.message)
+      ElMessage.error('Delete failed: ' + error.message)
     }
   }
 }
@@ -377,10 +377,10 @@ const toggleEnable = async (config) => {
       ...config,
       enabled: config.enabled
     })
-    ElMessage.success(config.enabled ? '已启用' : '已禁用')
+    ElMessage.success(config.enabled ? 'Enabled' : 'Disabled')
   } catch (error) {
     config.enabled = !config.enabled
-    ElMessage.error('操作失败: ' + error.message)
+    ElMessage.error('Operation failed: ' + error.message)
   }
 }
 
@@ -388,7 +388,7 @@ const toggleDefault = async (config) => {
   try {
     if (config.is_default) {
       await api.post(`/admin/memory-configs/${config.id}/set-default`)
-      ElMessage.success('已设为默认配置')
+      ElMessage.success('Set as default configuration')
       await loadConfigs()
     } else {
       await api.put(`/admin/memory-configs/${config.id}`, {
@@ -399,17 +399,17 @@ const toggleDefault = async (config) => {
         is_default: false,
         json_data: config.json_data || ''
       })
-      ElMessage.success('已取消默认配置（不启用长记忆）')
+      ElMessage.success('Default configuration cancelled (long-term memory disabled)')
       await loadConfigs()
     }
   } catch (error) {
     config.is_default = !config.is_default
-    ElMessage.error('操作失败: ' + error.message)
+    ElMessage.error('Operation failed: ' + error.message)
   }
 }
 
 const handleAddConfig = () => {
-  // 重置表单并设置默认值
+  // Reset form and set default values
   Object.assign(form, {
     name: '',
     config_id: '',
@@ -417,7 +417,7 @@ const handleAddConfig = () => {
     is_default: false,
     enabled: true,
     api_key: '',
-    base_url: defaultUrls['memobase'], // 设置默认URL
+    base_url: defaultUrls['memobase'], // Set default URL
     enable_search: true,
     search_threshold: 0.5,
     search_top_k: 3,
@@ -432,7 +432,7 @@ const handleDialogClose = () => {
   showDialog.value = false
   editingConfig.value = null
   
-  // 重置表单
+  // Reset form
   Object.assign(form, {
     name: '',
     config_id: '',

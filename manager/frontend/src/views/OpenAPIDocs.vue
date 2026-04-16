@@ -1,194 +1,194 @@
 <template>
   <div class="vp-docs">
     <aside class="vp-sidebar">
-      <div class="vp-sidebar-title">OpenAPI 文档</div>
+      <div class="vp-sidebar-title">OpenAPI Documentation</div>
       <a v-for="item in nav" :key="item.id" :href="`#${item.id}`" class="vp-nav-item">{{ item.label }}</a>
     </aside>
 
     <main class="vp-content">
       <header class="vp-hero">
-        <h1>小智 OpenAPI 文档</h1>
-        <p class="lead">公开可访问，按接口提供请求方式、参数、出参与示例。</p>
+        <h1>Xiaozhi OpenAPI Documentation</h1>
+        <p class="lead">Publicly accessible, providing request methods, parameters, responses, and examples for each endpoint.</p>
         <div class="hero-meta">
           <span>Base URL: <code>/api/open/v1</code></span>
           <span>Content-Type: <code>application/json</code></span>
-          <el-button size="small" type="primary" plain @click="$router.push('/login')">返回登录</el-button>
+          <el-button size="small" type="primary" plain @click="$router.push('/login')">Back to Login</el-button>
         </div>
       </header>
 
       <section id="auth" class="vp-section">
-        <h2>认证方式</h2>
+        <h2>Authentication</h2>
         <pre><code>Authorization: Bearer &lt;jwt-or-api-token&gt;
 X-API-Token: &lt;api-token&gt;</code></pre>
       </section>
 
       <section id="common" class="vp-section">
-        <h2>通用响应说明</h2>
+        <h2>Common Response Description</h2>
         <ul>
-          <li>常见错误码：<code>400</code> 参数错误，<code>401</code> 认证失败，<code>404</code> 资源不存在，<code>500</code> 服务端异常。</li>
-          <li>分页接口默认：<code>page=1</code>、<code>page_size=50</code>。</li>
+          <li>Common error codes: <code>400</code> Parameter error, <code>401</code> Authentication failed, <code>404</code> Resource not found, <code>500</code> Server error.</li>
+          <li>Pagination defaults: <code>page=1</code>, <code>page_size=50</code>.</li>
         </ul>
       </section>
 
       <section id="profile" class="vp-section">
-        <h2>1. 获取当前用户信息</h2>
+        <h2>1. Get Current User Info</h2>
         <div class="api-line"><span class="method get">GET</span><code>/api/open/v1/profile</code></div>
-        <h4>入参</h4><p>无（仅需认证头）。</p>
-        <h4>出参示例</h4>
+        <h4>Parameters</h4><p>None (authentication header required only).</p>
+        <h4>Response Example</h4>
         <pre><code>{
   "user": {"id": 1, "username": "demo", "email": "demo@example.com", "role": "user"}
 }</code></pre>
       </section>
 
       <section id="devices" class="vp-section">
-        <h2>2. 设备接口</h2>
+        <h2>2. Device Endpoints</h2>
 
-        <h3>2.1 获取设备列表</h3>
+        <h3>2.1 Get Device List</h3>
         <div class="api-line"><span class="method get">GET</span><code>/api/open/v1/devices</code></div>
-        <h4>入参</h4><p>无（仅需认证头）。</p>
-        <h4>出参示例</h4>
+        <h4>Parameters</h4><p>None (authentication header required only).</p>
+        <h4>Response Example</h4>
         <pre><code>{"data":[{"id":1,"device_name":"bedroom","device_code":"123456","agent_id":2,"activated":true}]}</code></pre>
 
-        <h3>2.2 创建设备</h3>
+        <h3>2.2 Create Device</h3>
         <div class="api-line"><span class="method post">POST</span><code>/api/open/v1/devices</code></div>
-        <h4>Body 参数</h4>
-        <table><thead><tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr></thead><tbody>
-          <tr><td>device_name</td><td>string</td><td>是</td><td>设备名称，2-50 字符</td></tr>
-          <tr><td>agent_id</td><td>number</td><td>是</td><td>绑定智能体 ID</td></tr>
+        <h4>Body Parameters</h4>
+        <table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+          <tr><td>device_name</td><td>string</td><td>Yes</td><td>Device name, 2-50 characters</td></tr>
+          <tr><td>agent_id</td><td>number</td><td>Yes</td><td>Bound agent ID</td></tr>
         </tbody></table>
-        <h4>出参示例</h4>
-        <pre><code>{"success":true,"message":"设备创建成功","data":{"device_code":"654321","device":{"id":8,"device_name":"bedroom"}}}</code></pre>
+        <h4>Response Example</h4>
+        <pre><code>{"success":true,"message":"Device created successfully","data":{"device_code":"654321","device":{"id":8,"device_name":"bedroom"}}}</code></pre>
       </section>
 
       <section id="agents" class="vp-section">
-        <h2>3. 智能体接口</h2>
+        <h2>3. Agent Endpoints</h2>
 
-        <h3>3.1 获取智能体列表</h3>
+        <h3>3.1 Get Agent List</h3>
         <div class="api-line"><span class="method get">GET</span><code>/api/open/v1/agents</code></div>
-        <h4>入参</h4><p>无（仅需认证头）。</p>
-        <h4>出参示例</h4>
-        <pre><code>{"data":[{"id":2,"name":"助手A","status":"active","llm_config_id":"llm_default"}]}</code></pre>
+        <h4>Parameters</h4><p>None (authentication header required only).</p>
+        <h4>Response Example</h4>
+        <pre><code>{"data":[{"id":2,"name":"Assistant A","status":"active","llm_config_id":"llm_default"}]}</code></pre>
 
-        <h3>3.2 创建智能体</h3>
+        <h3>3.2 Create Agent</h3>
         <div class="api-line"><span class="method post">POST</span><code>/api/open/v1/agents</code></div>
-        <h4>Body 参数</h4>
-        <table><thead><tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr></thead><tbody>
-          <tr><td>name</td><td>string</td><td>是</td><td>名称，2-50 字符</td></tr>
-          <tr><td>custom_prompt</td><td>string</td><td>否</td><td>提示词</td></tr>
-          <tr><td>llm_config_id</td><td>string</td><td>否</td><td>LLM 配置 ID</td></tr>
-          <tr><td>tts_config_id</td><td>string</td><td>否</td><td>TTS 配置 ID</td></tr>
-          <tr><td>voice</td><td>string</td><td>否</td><td>音色标识</td></tr>
-          <tr><td>asr_speed</td><td>string</td><td>否</td><td>默认 normal</td></tr>
-          <tr><td>memory_mode</td><td>string</td><td>否</td><td>short/long/none</td></tr>
+        <h4>Body Parameters</h4>
+        <table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+          <tr><td>name</td><td>string</td><td>Yes</td><td>Name, 2-50 characters</td></tr>
+          <tr><td>custom_prompt</td><td>string</td><td>No</td><td>Prompt</td></tr>
+          <tr><td>llm_config_id</td><td>string</td><td>No</td><td>LLM configuration ID</td></tr>
+          <tr><td>tts_config_id</td><td>string</td><td>No</td><td>TTS configuration ID</td></tr>
+          <tr><td>voice</td><td>string</td><td>No</td><td>Voice identifier</td></tr>
+          <tr><td>asr_speed</td><td>string</td><td>No</td><td>Default normal</td></tr>
+          <tr><td>memory_mode</td><td>string</td><td>No</td><td>short/long/none</td></tr>
         </tbody></table>
-        <h4>出参示例</h4>
-        <pre><code>{"success":true,"data":{"id":3,"name":"助手B","status":"active"}}</code></pre>
+        <h4>Response Example</h4>
+        <pre><code>{"success":true,"data":{"id":3,"name":"Assistant B","status":"active"}}</code></pre>
 
-        <h3>3.3 获取智能体详情</h3>
+        <h3>3.3 Get Agent Details</h3>
         <div class="api-line"><span class="method get">GET</span><code>/api/open/v1/agents/:id</code></div>
-        <h4>Path 参数</h4>
-        <table><thead><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr></thead><tbody>
-          <tr><td>id</td><td>number</td><td>是</td><td>智能体 ID</td></tr>
+        <h4>Path Parameters</h4>
+        <table><thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+          <tr><td>id</td><td>number</td><td>Yes</td><td>Agent ID</td></tr>
         </tbody></table>
-        <h4>出参示例</h4>
-        <pre><code>{"data":{"id":2,"name":"助手A","custom_prompt":"..."}}</code></pre>
+        <h4>Response Example</h4>
+        <pre><code>{"data":{"id":2,"name":"Assistant A","custom_prompt":"..."}}</code></pre>
 
-        <h3>3.4 更新智能体</h3>
+        <h3>3.4 Update Agent</h3>
         <div class="api-line"><span class="method put">PUT</span><code>/api/open/v1/agents/:id</code></div>
-        <h4>Path 参数</h4>
-        <table><thead><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr></thead><tbody>
-          <tr><td>id</td><td>number</td><td>是</td><td>智能体 ID</td></tr>
+        <h4>Path Parameters</h4>
+        <table><thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+          <tr><td>id</td><td>number</td><td>Yes</td><td>Agent ID</td></tr>
         </tbody></table>
-        <h4>Body 参数</h4>
-        <table><thead><tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr></thead><tbody>
-          <tr><td>name</td><td>string</td><td>是</td><td>名称，2-50 字符</td></tr>
-          <tr><td>custom_prompt</td><td>string</td><td>否</td><td>提示词</td></tr>
-          <tr><td>llm_config_id</td><td>string</td><td>否</td><td>LLM 配置 ID（可置空）</td></tr>
-          <tr><td>tts_config_id</td><td>string</td><td>否</td><td>TTS 配置 ID（可置空）</td></tr>
-          <tr><td>voice</td><td>string</td><td>否</td><td>音色标识</td></tr>
-          <tr><td>asr_speed</td><td>string</td><td>否</td><td>空则 normal</td></tr>
-          <tr><td>memory_mode</td><td>string</td><td>否</td><td>short/long/none</td></tr>
+        <h4>Body Parameters</h4>
+        <table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+          <tr><td>name</td><td>string</td><td>Yes</td><td>Name, 2-50 characters</td></tr>
+          <tr><td>custom_prompt</td><td>string</td><td>No</td><td>Prompt</td></tr>
+          <tr><td>llm_config_id</td><td>string</td><td>No</td><td>LLM configuration ID (can be empty)</td></tr>
+          <tr><td>tts_config_id</td><td>string</td><td>No</td><td>TTS configuration ID (can be empty)</td></tr>
+          <tr><td>voice</td><td>string</td><td>No</td><td>Voice identifier</td></tr>
+          <tr><td>asr_speed</td><td>string</td><td>No</td><td>Empty for normal</td></tr>
+          <tr><td>memory_mode</td><td>string</td><td>No</td><td>short/long/none</td></tr>
         </tbody></table>
-        <h4>出参示例</h4>
-        <pre><code>{"data":{"id":2,"name":"助手A-更新后"}}</code></pre>
+        <h4>Response Example</h4>
+        <pre><code>{"data":{"id":2,"name":"Assistant A-Updated"}}</code></pre>
 
-        <h3>3.5 删除智能体</h3>
+        <h3>3.5 Delete Agent</h3>
         <div class="api-line"><span class="method delete">DELETE</span><code>/api/open/v1/agents/:id</code></div>
-        <h4>Path 参数</h4>
-        <table><thead><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr></thead><tbody>
-          <tr><td>id</td><td>number</td><td>是</td><td>智能体 ID</td></tr>
+        <h4>Path Parameters</h4>
+        <table><thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+          <tr><td>id</td><td>number</td><td>Yes</td><td>Agent ID</td></tr>
         </tbody></table>
-        <h4>出参示例</h4>
-        <pre><code>{"message":"删除成功"}</code></pre>
+        <h4>Response Example</h4>
+        <pre><code>{"message":"Deleted successfully"}</code></pre>
       </section>
 
       <section id="history" class="vp-section">
-        <h2>4. 聊天记录接口</h2>
+        <h2>4. Chat History Endpoints</h2>
 
-        <h3>4.1 查询消息（分页）</h3>
+        <h3>4.1 Query Messages (Paginated)</h3>
         <div class="api-line"><span class="method get">GET</span><code>/api/open/v1/history/messages</code></div>
-        <h4>Query 参数</h4>
-        <table><thead><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr></thead><tbody>
-          <tr><td>agent_id</td><td>string</td><td>否</td><td>智能体 ID</td></tr>
-          <tr><td>device_id</td><td>string</td><td>否</td><td>设备标识（device_name）</td></tr>
-          <tr><td>session_id</td><td>string</td><td>否</td><td>会话 ID</td></tr>
-          <tr><td>role</td><td>string</td><td>否</td><td>user/assistant</td></tr>
-          <tr><td>page</td><td>number</td><td>否</td><td>默认 1</td></tr>
-          <tr><td>page_size</td><td>number</td><td>否</td><td>默认 50</td></tr>
+        <h4>Query Parameters</h4>
+        <table><thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+          <tr><td>agent_id</td><td>string</td><td>No</td><td>Agent ID</td></tr>
+          <tr><td>device_id</td><td>string</td><td>No</td><td>Device identifier (device_name)</td></tr>
+          <tr><td>session_id</td><td>string</td><td>No</td><td>Session ID</td></tr>
+          <tr><td>role</td><td>string</td><td>No</td><td>user/assistant</td></tr>
+          <tr><td>page</td><td>number</td><td>No</td><td>Default 1</td></tr>
+          <tr><td>page_size</td><td>number</td><td>No</td><td>Default 50</td></tr>
         </tbody></table>
-        <h4>出参示例</h4>
-        <pre><code>{"total":120,"page":1,"page_size":50,"data":[{"id":1,"role":"user","content":"你好"}]}</code></pre>
+        <h4>Response Example</h4>
+        <pre><code>{"total":120,"page":1,"page_size":50,"data":[{"id":1,"role":"user","content":"Hello"}]}</code></pre>
 
-        <h3>4.2 导出消息</h3>
+        <h3>4.2 Export Messages</h3>
         <div class="api-line"><span class="method get">GET</span><code>/api/open/v1/history/export</code></div>
-        <h4>Query 参数</h4>
-        <table><thead><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr></thead><tbody>
-          <tr><td>agent_id</td><td>string</td><td>否</td><td>智能体 ID</td></tr>
-          <tr><td>device_id</td><td>string</td><td>否</td><td>设备标识（device_name）</td></tr>
-          <tr><td>start_date</td><td>string</td><td>否</td><td>YYYY-MM-DD</td></tr>
-          <tr><td>end_date</td><td>string</td><td>否</td><td>YYYY-MM-DD</td></tr>
+        <h4>Query Parameters</h4>
+        <table><thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+          <tr><td>agent_id</td><td>string</td><td>No</td><td>Agent ID</td></tr>
+          <tr><td>device_id</td><td>string</td><td>No</td><td>Device identifier (device_name)</td></tr>
+          <tr><td>start_date</td><td>string</td><td>No</td><td>YYYY-MM-DD</td></tr>
+          <tr><td>end_date</td><td>string</td><td>No</td><td>YYYY-MM-DD</td></tr>
         </tbody></table>
-        <h4>出参示例</h4>
+        <h4>Response Example</h4>
         <pre><code>{"export_time":"2026-03-17 10:00:00","total":20,"messages":[...]}</code></pre>
       </section>
 
       <section id="inject" class="vp-section">
-        <h2>5. 消息注入接口</h2>
+        <h2>5. Message Injection Endpoint</h2>
         <div class="api-line"><span class="method post">POST</span><code>/api/open/v1/devices/inject-message</code></div>
-        <h4>Body 参数</h4>
-        <table><thead><tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr></thead><tbody>
-          <tr><td>device_id</td><td>string</td><td>是</td><td>设备标识（device_name）</td></tr>
-          <tr><td>message</td><td>string</td><td>是</td><td>消息内容</td></tr>
-          <tr><td>skip_llm</td><td>boolean</td><td>否</td><td>是否跳过 LLM，默认 false</td></tr>
+        <h4>Body Parameters</h4>
+        <table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+          <tr><td>device_id</td><td>string</td><td>Yes</td><td>Device identifier (device_name)</td></tr>
+          <tr><td>message</td><td>string</td><td>Yes</td><td>Message content</td></tr>
+          <tr><td>skip_llm</td><td>boolean</td><td>No</td><td>Whether to skip LLM, default false</td></tr>
         </tbody></table>
-        <h4>出参示例</h4>
-        <pre><code>{"success":true,"message":"消息注入请求已发送","data":{"device_id":"bedroom","message":"hello","skip_llm":false}}</code></pre>
+        <h4>Response Example</h4>
+        <pre><code>{"success":true,"message":"Message injection request sent","data":{"device_id":"bedroom","message":"hello","skip_llm":false}}</code></pre>
       </section>
 
       <section id="mcp" class="vp-section">
-        <h2>6. MCP 工具接口</h2>
+        <h2>6. MCP Tool Endpoints</h2>
 
-        <h3>6.1 获取工具列表</h3>
+        <h3>6.1 Get Tool List</h3>
         <div class="api-line"><span class="method get">GET</span><code>/api/open/v1/agents/:id/mcp-tools</code></div>
-        <h4>Path 参数</h4>
-        <table><thead><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr></thead><tbody>
-          <tr><td>id</td><td>number</td><td>是</td><td>智能体 ID</td></tr>
+        <h4>Path Parameters</h4>
+        <table><thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+          <tr><td>id</td><td>number</td><td>Yes</td><td>Agent ID</td></tr>
         </tbody></table>
-        <h4>出参示例</h4>
+        <h4>Response Example</h4>
         <pre><code>{"data":{"tools":[{"name":"tool_a","description":"..."}]}}</code></pre>
 
-        <h3>6.2 调用工具</h3>
+        <h3>6.2 Call Tool</h3>
         <div class="api-line"><span class="method post">POST</span><code>/api/open/v1/agents/:id/mcp-call</code></div>
-        <h4>Path 参数</h4>
-        <table><thead><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr></thead><tbody>
-          <tr><td>id</td><td>number</td><td>是</td><td>智能体 ID</td></tr>
+        <h4>Path Parameters</h4>
+        <table><thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+          <tr><td>id</td><td>number</td><td>Yes</td><td>Agent ID</td></tr>
         </tbody></table>
-        <h4>Body 参数</h4>
-        <table><thead><tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr></thead><tbody>
-          <tr><td>tool_name</td><td>string</td><td>是</td><td>工具名称</td></tr>
-          <tr><td>arguments</td><td>object</td><td>否</td><td>工具参数对象</td></tr>
+        <h4>Body Parameters</h4>
+        <table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+          <tr><td>tool_name</td><td>string</td><td>Yes</td><td>Tool name</td></tr>
+          <tr><td>arguments</td><td>object</td><td>No</td><td>Tool arguments object</td></tr>
         </tbody></table>
-        <h4>出参示例</h4>
+        <h4>Response Example</h4>
         <pre><code>{"data":{"result":"ok"}}</code></pre>
       </section>
     </main>
@@ -197,14 +197,14 @@ X-API-Token: &lt;api-token&gt;</code></pre>
 
 <script setup>
 const nav = [
-  { id: 'auth', label: '认证方式' },
-  { id: 'common', label: '通用说明' },
-  { id: 'profile', label: '1. 用户信息' },
-  { id: 'devices', label: '2. 设备接口' },
-  { id: 'agents', label: '3. 智能体接口' },
-  { id: 'history', label: '4. 聊天记录' },
-  { id: 'inject', label: '5. 消息注入' },
-  { id: 'mcp', label: '6. MCP 工具' }
+  { id: 'auth', label: 'Authentication' },
+  { id: 'common', label: 'Common Info' },
+  { id: 'profile', label: '1. User Info' },
+  { id: 'devices', label: '2. Device Endpoints' },
+  { id: 'agents', label: '3. Agent Endpoints' },
+  { id: 'history', label: '4. Chat History' },
+  { id: 'inject', label: '5. Message Injection' },
+  { id: 'mcp', label: '6. MCP Tools' }
 ]
 </script>
 

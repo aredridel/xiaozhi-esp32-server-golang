@@ -18,7 +18,7 @@ func (s *ChatSession) StopSpeakingAfterAsr(isSendTtsStop bool) {
 	s.stopSpeakingWithLock(false, isSendTtsStop, true)
 }
 
-// stopSpeakingWithLock at stopSpeaking foundationup增加 mutex protected
+// stopSpeakingWithLock at stopSpeaking foundation up increase mutex protected
 func (s *ChatSession) stopSpeakingWithLock(cancelSession bool, isSendTtsStop bool, suspendMedia bool) {
 	s.stopSpeakingMu.Lock()
 	defer s.stopSpeakingMu.Unlock()
@@ -34,7 +34,7 @@ func (s *ChatSession) stopSpeaking(cancelSession bool, isSendTtsStop bool, suspe
 
 	if suspendMedia && s.mediaPlayer != nil {
 		if err := s.mediaPlayer.Suspend(); err != nil && !errors.Is(err, context.Canceled) {
-			log.Warnf("stopSpeaking 挂起mediaplayfailed: %v", err)
+			log.Warnf("stopSpeaking suspend media play failed: %v", err)
 		}
 	}
 

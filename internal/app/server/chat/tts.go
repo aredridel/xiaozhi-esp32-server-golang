@@ -49,13 +49,13 @@ type interruptRequest struct {
 	done chan struct{}
 }
 
-// SessionAudioQueueCap session-levelaudio queue capacity，large enough to absorbprefetch and avoid blocking
+// SessionAudioQueueCap session-level audio queue capacity, large enough to absorb prefetch and avoid blocking
 const SessionAudioQueueCap = 150
 
 type TTSQueueItem struct {
 	ctx         context.Context
-	llmResponse llm_common.LLMResponseStruct        // single patternuse
-	StreamChan  <-chan llm_common.LLMResponseStruct // streaming pattern：non-nil when priority read from this channel
+	llmResponse llm_common.LLMResponseStruct        // single pattern use
+	StreamChan  <-chan llm_common.LLMResponseStruct // streaming pattern: non-nil when priority read from this channel
 	enqueueSeq  uint64
 	generation  uint64
 	metricCycle uint64
@@ -75,8 +75,8 @@ type ttsMetricState struct {
 }
 
 // TTSManager responsible for TTS related processing
-// canextend fields as needed
-// currently no state，but can be extended later
+// can extend fields as needed
+// currently no state, but can be extended later
 
 type TTSManagerOption func(*TTSManager)
 
@@ -85,16 +85,16 @@ type TTSManager struct {
 	session                   *ChatSession
 	serverTransport           *ServerTransport
 	ttsQueue                  *util.Queue[TTSQueueItem]
-	sessionAudioQueue         chan AudioQueueElem // session-levelglobal audioqueue，compatible with frame and control message
+	sessionAudioQueue         chan AudioQueueElem // session-level global audio queue, compatible with frame and control message
 	delayedSentenceQueue      chan delayedSentenceTask
 	delayedSentenceReadyQueue chan AudioQueueElem
-	interruptCh               chan interruptRequest // interrupt signal：after receiving runSenderLoop clear sessionAudioQueue and continue
-	audioGeneration           atomic.Uint64         // session-level audio generation：interrupt when increment，old generation element will be discarded by send goroutine
+	interruptCh               chan interruptRequest // interrupt signal: after receiving runSenderLoop clear sessionAudioQueue and continue
+	audioGeneration           atomic.Uint64         // session-level audio generation: interrupt when increment, old generation element will be discarded by send goroutine
 	audioInterruptMu          sync.RWMutex
 	audioInterruptCh          chan struct{}
 	ttsActive                 atomic.Bool // whether there is a TTS segment that has started but not ended
 	senderLoopActive          atomic.Bool
-	senderLoopDone            chan struct{} // runSenderLoop exitwhenclose，for synchronization interruptquick return in close path
+	senderLoopDone            chan struct{} // runSenderLoop exit when close, for synchronization interrupt quick return in close path
 
 	ttsQueueSeq   atomic.Uint64
 	droppedTTSSeq atomic.Uint64
@@ -108,13 +108,13 @@ type TTSManager struct {
 	interruptStopSendTtsStop bool
 	interruptStopErr         error
 
-	// chat historyaudio cache：continuously accumulate multiple TTS audio segments（Opus frame array）
+	// chat history audio cache: continuously accumulate multiple TTS audio segments (Opus frame array)
 	audioHistoryBuffer [][]byte
 	audioMutex         sync.Mutex
 
-	// dual-stream TTS internal StreamChan：by handleTextResponse create at IsStart，close at IsEnd
+	// dual-stream TTS internal StreamChan: by handleTextResponse create at IsStart, close at IsEnd
 	dualStreamChan  chan llm_common.LLMResponseStruct
-	dualStreamDone  chan struct{} // dual-stream used for isSync wait：StreamChan corresponding onEndFunc signal
+	dualStreamDone  chan struct{} // dual-stream used for isSync wait: StreamChan corresponding onEndFunc signal
 	dualStreamMu    sync.Mutex
 	dualStreamEpoch atomic.Uint64
 
@@ -143,14 +143,14 @@ func NewTTSManager(clientState *ClientState, serverTransport *ServerTransport, s
 	return t
 }
 
-// start TTS queue consumer goroutineand unified send goroutine（session-levelglobal audioqueue）
+// start TTS queue consumer goroutine and unified send goroutine (session-level global audio queue)
 func (t *TTSManager) Start(ctx context.Context) {
 	go t.runDelayedSentenceLoop(ctx)
 	go t.runSenderLoop(ctx)
 	t.processTTSQueue(ctx)
 }
 
-// runSenderLoop onlysend goroutine：take element from sessionAudioQueuedistribute by type，flow control centralizedhere；exit only when ctx cancel；SessionCtx cancelor receive TurnAbort when clear queueand continue
+// runSenderLoop only send goroutine: take element from sessionAudioQueue distribute by type, flow control centralized here; exit only when ctx cancel; SessionCtx cancel or receive TurnAbort when clear queue and continue
 func (t *TTSManager) runSenderLoop(ctx context.Context) {
 	t.senderLoopActive.Store(true)
 	defer func() {
@@ -290,7 +290,7 @@ func (t *TTSManager) runSenderLoop(ctx context.Context) {
 					if elem.Kind == AudioQueueKindMediaFrame {
 						audioType = "media"
 					}
-					log.Errorf("send%saudio failed: len: %d, %v", audioType, len(elem.Data), err)
+					log.Errorf("send %s audio failed: len: %d, %v", audioType, len(elem.Data), err)
 					if elem.OnError != nil {
 						elem.OnError(err)
 					}
@@ -314,18 +314,18 @@ func (t *TTSManager) runSenderLoop(ctx context.Context) {
 				if t.session != nil {
 					hookErr := t.session.hookHub.EmitTTSOutputStart(t.session.hookContext(ctx))
 					if hookErr != nil {
-						log.Warnf("TTS_OUTPUT_START hook executefailed: %v", hookErr)
+						log.Warnf("TTS_OUTPUT_START hook execute failed: %v", hookErr)
 					}
 				}
 				t.ttsActive.Store(true)
 				if err := t.serverTransport.SendTtsStart(); err != nil {
 					log.Errorf("send TtsStart failed: %v", err)
 				}
-				// new voice segment：reset frame countand playback tail pointer
+				// new voice segment: reset frame count and playback tail pointer
 				totalFrames = 0
 				playbackTail = time.Time{}
 			case AudioQueueKindTtsStop:
-				// wait for current playback tail pointerwalk to last frame end then send TtsStop
+				// wait for current playback tail pointer walk to last frame end then send TtsStop
 				if !playbackTail.IsZero() {
 					waitResult, interruptReq := t.waitUntilSenderDeadline(ctx, playbackTail, handleDelayedSentence)
 					switch waitResult {
@@ -342,7 +342,7 @@ func (t *TTSManager) runSenderLoop(ctx context.Context) {
 						continue
 					}
 				}
-				// fixed 150ms wait，ensure client-side playback complete
+				// fixed 150ms wait, ensure client-side playback complete
 				waitResult, interruptReq := t.waitUntilSenderDeadline(ctx, time.Now().Add(150*time.Millisecond), handleDelayedSentence)
 				switch waitResult {
 				case senderWaitContextDone:
@@ -366,7 +366,7 @@ func (t *TTSManager) runSenderLoop(ctx context.Context) {
 	}
 }
 
-// drainSessionAudioQueue ctx cancelwhen clear queue，discard unsent element
+// drainSessionAudioQueue ctx cancel when clear queue, discard unsent element
 func (t *TTSManager) drainSessionAudioQueue() {
 	for {
 		select {
@@ -396,7 +396,7 @@ func (t *TTSManager) drainDelayedSentenceReadyQueue() {
 	}
 }
 
-// ClearSessionAudioQueue clearsession-levelaudio queue（can be called by external when ctx cancel）
+// ClearSessionAudioQueue clear session-level audio queue (can be called by external when ctx cancel)
 func (t *TTSManager) ClearSessionAudioQueue() {
 	t.drainSessionAudioQueue()
 }
@@ -702,8 +702,8 @@ func (t *TTSManager) BeginExclusiveMediaPlayback(ctx context.Context) error {
 	t.mediaPlaybackMu.Unlock()
 
 	t.ClearTTSQueue()
-	// mediatakeoverwhenonlyinterrupt and clearcurrent TTS，do not immediately send tts_stop。
-	// real tts_stop by outer response after media playback completeunified cleanup phase send。
+	// media takeover when only interrupt and clear current TTS, do not immediately send tts_stop.
+	// real tts_stop by outer response after media playback complete unified cleanup phase send.
 	if err := t.InterruptAndClearQueueSync(ctx); err != nil {
 		t.EndExclusiveMediaPlayback()
 		return err
@@ -883,7 +883,7 @@ func (t *TTSManager) enqueueSessionElem(ctx context.Context, generation uint64, 
 	}
 }
 
-// InterruptAndClearQueue trigger interrupt: notify runSenderLoop clear sessionAudioQueue after continue running（non-blocking）
+// InterruptAndClearQueue trigger interrupt: notify runSenderLoop clear sessionAudioQueue after continue running (non-blocking)
 func (t *TTSManager) InterruptAndClearQueue() {
 	t.nextAudioGeneration()
 	t.rotateAudioInterruptCh()
@@ -896,15 +896,15 @@ func (t *TTSManager) InterruptAndClearQueue() {
 	}
 }
 
-// InterruptAndStop used for scenarios requiring immediate end of current TTS。
-// it only registers pending close state，real stop andmetriccloseby runSenderLoop atclear queueafterunifiedsend。
+// InterruptAndStop used for scenarios requiring immediate end of current TTS.
+// it only registers pending close state, real stop and metric close by runSenderLoop at clear queue after unified send.
 func (t *TTSManager) InterruptAndStop(ctx context.Context, sendTtsStop bool, stopErr error) {
 	t.recordPendingInterruptStop(sendTtsStop, stopErr)
 	t.InterruptAndClearQueue()
 	t.finishPendingInterruptStopIfSenderLoopExited(ctx)
 }
 
-// InterruptAndStopSync trigger synchronization interrupt，while keeping TtsStop/trace/hook only go through unified cleanup of runSenderLoop。
+// InterruptAndStopSync trigger synchronization interrupt, while keeping TtsStop/trace/hook only go through unified cleanup of runSenderLoop.
 func (t *TTSManager) InterruptAndStopSync(ctx context.Context, sendTtsStop bool, stopErr error) error {
 	t.recordPendingInterruptStop(sendTtsStop, stopErr)
 	if err := t.InterruptAndClearQueueSync(ctx); err != nil {
@@ -956,7 +956,7 @@ func (t *TTSManager) finishPendingInterruptStopIfSenderLoopExited(ctx context.Co
 	}
 }
 
-// InterruptAndClearQueueSync trigger interrupt and wait return after runSenderLoop completes clearing queue。
+// InterruptAndClearQueueSync trigger interrupt and wait return after runSenderLoop completes clearing queue.
 func (t *TTSManager) InterruptAndClearQueueSync(ctx context.Context) error {
 	if ctx == nil {
 		ctx = context.Background()
@@ -1016,7 +1016,7 @@ func (t *TTSManager) finishTtsStop(ctx context.Context, sendTtsStop bool, stopEr
 	if t.session != nil {
 		hookErr := t.session.hookHub.EmitTTSOutputStop(t.session.hookContext(ctx), chathooks.TTSOutputStopData{Err: stopErr})
 		if hookErr != nil {
-			log.Warnf("TTS_OUTPUT_STOP hook executefailed: %v", hookErr)
+			log.Warnf("TTS_OUTPUT_STOP hook execute failed: %v", hookErr)
 		}
 	}
 
@@ -1029,18 +1029,18 @@ func (t *TTSManager) FinishTtsWithoutProtocolStop(ctx context.Context, stopErr e
 	return t.finishTtsStop(ctx, false, stopErr)
 }
 
-// EnqueueTtsStart deliver to session-level audio queue TtsStart，unifiedly sent by runSenderLoop；when queue is full block until enqueued or ctx.Done
+// EnqueueTtsStart deliver to session-level audio queue TtsStart, unifiedly sent by runSenderLoop; when queue is full block until enqueued or ctx.Done
 func (t *TTSManager) EnqueueTtsStart(ctx context.Context) {
 	t.startTtsMetricCycle()
 	t.enqueueSessionElem(ctx, t.currentAudioGeneration(), AudioQueueElem{Kind: AudioQueueKindTtsStart})
 }
 
-// RequestTurnEnd mark current round logical output end；actual turn_end willatall TTS audioreceivedaftersend。
+// RequestTurnEnd mark current round logical output end; actual turn_end will at all TTS audio received after send.
 func (t *TTSManager) RequestTurnEnd(ctx context.Context, err error) {
 	t.emitTtsMetricCompletion(ctx, t.requestTurnEndLocked(err))
 }
 
-// EnqueueTtsStop deliver to session-level audio queue TtsStop，unifiedly sent by runSenderLoop；when queue is full block until enqueued or ctx.Done
+// EnqueueTtsStop deliver to session-level audio queue TtsStop, unifiedly sent by runSenderLoop; when queue is full block until enqueued or ctx.Done
 func (t *TTSManager) EnqueueTtsStop(ctx context.Context) {
 	t.enqueueSessionElem(ctx, t.currentAudioGeneration(), AudioQueueElem{Kind: AudioQueueKindTtsStop})
 }
@@ -1125,7 +1125,7 @@ func (t *TTSManager) processTTSQueue(ctx context.Context) {
 			continue
 		}
 
-		// nonstreaming：by handleTts generateandpush SentenceStart → Frame… → SentenceEnd
+		// non-streaming: by handleTts generate and push SentenceStart -> Frame... -> SentenceEnd
 		log.Debugf("processTTSQueue start, text: %s", item.llmResponse.Text)
 		itemErr = t.handleTts(item.ctx, item.generation, item.metricCycle, item.llmResponse, item.onStartFunc, item.onEndFunc)
 		t.finishTtsMetricItem(item.ctx, item.metricCycle, itemErr)
@@ -1151,7 +1151,7 @@ func (t *TTSManager) ClearTTSQueue() {
 	}
 }
 
-// handleTts single TTS：generateandto sessionAudioQueue push SentenceStart → Frame… → SentenceEnd
+// handleTts single TTS: generate and to sessionAudioQueue push SentenceStart -> Frame... -> SentenceEnd
 func (t *TTSManager) handleTts(ctx context.Context, generation uint64, metricCycle uint64, llmResponse llm_common.LLMResponseStruct, onStartFunc func(), onEndFunc func(error)) error {
 	if strings.TrimSpace(llmResponse.Text) == "" {
 		if onEndFunc != nil {
@@ -1247,7 +1247,7 @@ func (t *TTSManager) handleTts(ctx context.Context, generation uint64, metricCyc
 
 const ttsSyncWaitTimeout = 30 * time.Second
 
-// signalDone toalreadybufferof done send acompletesignal，only first call takes effect
+// signalDone to already buffer of done send a complete signal, only first call takes effect
 func signalDone(done chan<- struct{}) {
 	select {
 	case done <- struct{}{}:
@@ -1302,7 +1302,7 @@ func chainTTSOnEndFuncs(funcs ...func(error)) func(error) {
 	}
 }
 
-// waitForSync synchronization wait complete signal，support ctx cancelandtimeout
+// waitForSync synchronization wait complete signal, support ctx cancel and timeout
 func (t *TTSManager) waitForSync(ctx context.Context, done <-chan struct{}) error {
 	timer := time.NewTimer(ttsSyncWaitTimeout)
 	defer timer.Stop()
@@ -1316,9 +1316,9 @@ func (t *TTSManager) waitForSync(ctx context.Context, done <-chan struct{}) erro
 	}
 }
 
-// handleTextResponse process textrespond（asynchronization TTS enqueue）。caller calls multiple times by sentence，internalaccording to SupportsDualStream() automaticdecide：
-//   - unsupporteddual-stream：every time Push asingle TTSQueueItem（consistent with original logic）。
-//   - supportdual-stream：IsStart whencreateinternal StreamChan and Push astreaming item，aftercontinuecallwritethis channel，IsEnd when close。
+// handleTextResponse process text respond (asynchronization TTS enqueue). caller calls multiple times by sentence, internal according to SupportsDualStream() automatic decide:
+//   - unsupported dual-stream: every time Push a single TTSQueueItem (consistent with original logic).
+//   - support dual-stream: IsStart when create internal StreamChan and Push a streaming item, after continue call write this channel, IsEnd when close.
 func (t *TTSManager) handleTextResponse(ctx context.Context, llmResponse llm_common.LLMResponseStruct, isSync bool) error {
 	return t.handleTextResponseWithHooks(ctx, llmResponse, isSync, nil)
 }
@@ -1333,7 +1333,7 @@ func (t *TTSManager) handleTextResponseWithHooks(ctx context.Context, llmRespons
 	if t.session != nil {
 		payload, stop, hookErr := t.session.hookHub.EmitTTSInput(t.session.hookContext(ctx), chathooks.TTSInputData{Text: llmResponse.Text, IsStart: llmResponse.IsStart, IsEnd: llmResponse.IsEnd})
 		if hookErr != nil {
-			log.Warnf("TTS_INPUT hook executefailed: %v", hookErr)
+			log.Warnf("TTS_INPUT hook execute failed: %v", hookErr)
 		}
 		llmResponse.Text = payload.Text
 		llmResponse.IsStart = payload.IsStart
@@ -1344,7 +1344,7 @@ func (t *TTSManager) handleTextResponseWithHooks(ctx context.Context, llmRespons
 		}
 	}
 
-	// re-inspect hasText，becauseis hook maymodifytext
+	// re-inspect hasText, because hook may modify text
 	hasText = strings.TrimSpace(llmResponse.Text) != ""
 
 	if !t.SupportsDualStream() {
@@ -1439,7 +1439,7 @@ func (t *TTSManager) handleTextResponseWithHooks(ctx context.Context, llmRespons
 			return err
 		}
 	} else if streamChan == nil && hasText {
-		// degradation：not receivedto IsStart comedata，enqueue as single item
+		// degradation: not received to IsStart come data, enqueue as single item
 		gen := t.currentAudioGeneration()
 		var done chan struct{}
 		var onEndFunc func(error)
@@ -1486,7 +1486,7 @@ func (t *TTSManager) handleTextResponseWithHooks(ctx context.Context, llmRespons
 	return nil
 }
 
-// getEffectiveTTSConfig returncurrenteffectiveof TTS config：use voiceprint config if voiceprint exists，elseusedevicedefault TTS config（and getTTSProviderInstance consistent）
+// getEffectiveTTSConfig return current effective of TTS config: use voiceprint config if voiceprint exists, else use device default TTS config (and getTTSProviderInstance consistent)
 func (t *TTSManager) getEffectiveTTSConfig() map[string]interface{} {
 	if t.clientState.SpeakerTTSConfig != nil && len(t.clientState.SpeakerTTSConfig) > 0 {
 		config := make(map[string]interface{})
@@ -1498,7 +1498,7 @@ func (t *TTSManager) getEffectiveTTSConfig() map[string]interface{} {
 	return t.clientState.DeviceConfig.Tts.Config
 }
 
-// SupportsDualStream determine current TTS whethersupportdual-stream：both TTS input and output are streaming（synthesize output while receiving text），andLLM irrelevant；by config double_stream and TTS provider bind。
+// SupportsDualStream determine current TTS whether support dual-stream: both TTS input and output are streaming (synthesize output while receiving text), and LLM irrelevant; by config double_stream and TTS provider bind.
 func (t *TTSManager) SupportsDualStream() bool {
 	config := t.getEffectiveTTSConfig()
 	if config == nil {
@@ -1517,7 +1517,7 @@ func (t *TTSManager) SupportsDualStream() bool {
 	return false
 }
 
-// getTTSProviderInstance get TTS Provider instance（useprovider+voiceasisresourcepoolonlykey）
+// getTTSProviderInstance get TTS Provider instance (use provider+voice as resource pool only key)
 func (t *TTSManager) getTTSProviderInstance() (*pool.ResourceWrapper[tts.TTSProvider], error) {
 	// get TTS config and provider
 	var ttsConfig map[string]interface{}
@@ -1528,7 +1528,7 @@ func (t *TTSManager) getTTSProviderInstance() (*pool.ResourceWrapper[tts.TTSProv
 		if provider, ok := t.clientState.SpeakerTTSConfig["provider"].(string); ok {
 			ttsProvider = provider
 		} else {
-			log.Warnf("missing provider in voiceprint TTS config，use default config")
+			log.Warnf("missing provider in voiceprint TTS config, use default config")
 			ttsProvider = t.clientState.DeviceConfig.Tts.Provider
 			ttsConfig = t.clientState.DeviceConfig.Tts.Config
 		}
@@ -1543,14 +1543,14 @@ func (t *TTSManager) getTTSProviderInstance() (*pool.ResourceWrapper[tts.TTSProv
 		ttsConfig = t.clientState.DeviceConfig.Tts.Config
 	}
 
-	// logical identifier (used for log and fingerprint calculation)：provider or provider:voiceID
+	// logical identifier (used for log and fingerprint calculation): provider or provider:voiceID
 	voiceID := extractVoiceID(ttsConfig)
 	providerLabel := ttsProvider
 	if voiceID != "" {
 		providerLabel = fmt.Sprintf("%s:%s", ttsProvider, voiceID)
 	}
 
-	// get TTS resource from resource pool（pool key byconfigfingerprintdecide，host/voice etcchangewillautomaticswitchpool）
+	// get TTS resource from resource pool (pool key by config fingerprint decide, host/voice etc change will automatic switch pool)
 	ttsWrapper, err := pool.Acquire[tts.TTSProvider]("tts", providerLabel, ttsConfig)
 	if err != nil {
 		log.Errorf("get TTS resource failed: %v", err)
@@ -1585,14 +1585,14 @@ func extractVoiceID(config map[string]interface{}) string {
 	return ""
 }
 
-// generateTtsOnly scheme C：onlydo TTS generate，do not send；returnaudio channel andsendcompleteafterneedcallof ReleaseFunc
+// generateTtsOnly scheme C: only do TTS generate, do not send; return audio channel and send complete after need call of ReleaseFunc
 func (t *TTSManager) generateTtsOnly(ctx context.Context, metricCycle uint64, llmResponse llm_common.LLMResponseStruct) (outputChan <-chan []byte, releaseFunc func(), err error) {
 	if strings.TrimSpace(llmResponse.Text) == "" {
 		return nil, nil, nil
 	}
 	ttsWrapper, err := t.getTTSProviderInstance()
 	if err != nil {
-		log.Errorf("get TTS Provider instancefailed: %v", err)
+		log.Errorf("get TTS Provider instance failed: %v", err)
 		return nil, nil, err
 	}
 	ttsProviderInstance := ttsWrapper.GetProvider()
@@ -1607,8 +1607,8 @@ func (t *TTSManager) generateTtsOnly(ctx context.Context, metricCycle uint64, ll
 	return ch, func() { pool.Release(ttsWrapper) }, nil
 }
 
-// handleDualStreamTts realdual-stream TTS：will StreamChan inoftext streaminginput给 TTS provider，at the same timewhenstreaming outputaudio。
-// return true indicatealreadyprocess（successful or error），false indicate provider unsupporteddual-streamneeds degradation。
+// handleDualStreamTts real dual-stream TTS: will StreamChan in of text streaming input to TTS provider, at the same time when streaming output audio.
+// return true indicate already process (successful or error), false indicate provider unsupported dual-stream needs degradation.
 func (t *TTSManager) handleDualStreamTts(item TTSQueueItem) (bool, error) {
 	ttsWrapper, err := t.getTTSProviderInstance()
 	if err != nil {
@@ -1648,7 +1648,7 @@ func (t *TTSManager) handleDualStreamTts(item TTSQueueItem) (bool, error) {
 		}
 	}
 
-	// from StreamChan readLLM respondtextandfeed TTS provider。
+	// from StreamChan read LLM respond text and feed TTS provider.
 	go func() {
 		defer close(textChan)
 		for {
@@ -1731,7 +1731,7 @@ func (t *TTSManager) handleDualStreamTts(item TTSQueueItem) (bool, error) {
 	return true, item.ctx.Err()
 }
 
-// handleStreamTts streaming TTS：from item.StreamChan readand one by one generateTtsOnly，to sessionAudioQueue push SentenceStart → Frame… → SentenceEnd
+// handleStreamTts streaming TTS: from item.StreamChan read and one by one generateTtsOnly, to sessionAudioQueue push SentenceStart -> Frame... -> SentenceEnd
 func (t *TTSManager) handleStreamTts(item TTSQueueItem) error {
 	if t.SupportsDualStream() {
 		handled, err := t.handleDualStreamTts(item)
@@ -1848,7 +1848,7 @@ func (t *TTSManager) handleStreamTts(item TTSQueueItem) error {
 	}
 }
 
-// getAlignedDuration calculate currenttimeandstarttimeofdifference，round up to frameDuration
+// getAlignedDuration calculate current time and start time of difference, round up to frameDuration
 func getAlignedDuration(startTime time.Time, frameDuration time.Duration) time.Duration {
 	elapsed := time.Since(startTime)
 	// round up to frameDuration
@@ -1860,30 +1860,30 @@ func (t *TTSManager) sendAudioStream(ctx context.Context, audioChan <-chan []byt
 	totalFrames := 0 // track total sent frames
 
 	isStatistic := true
-	//first send 180ms audio, calculate based on outputAudioFormat.FrameDuration
+	// first send 180ms audio, calculate based on outputAudioFormat.FrameDuration
 	cacheFrameCount := 120 / t.clientState.OutputAudioFormat.FrameDuration
 	/*if cacheFrameCount > 20 || cacheFrameCount < 3 {
 		cacheFrameCount = 5
 	}*/
 
-	// record startsendoftimestamp
+	// record start send of timestamp
 	startTime := time.Now()
 
 	// precise flow control based on absolute time
 	frameDuration := time.Duration(t.clientState.OutputAudioFormat.FrameDuration) * time.Millisecond
 
-	log.Debugf("SendTTSAudio start，cacheframecount: %d, frameduration: %v", cacheFrameCount, frameDuration)
+	log.Debugf("SendTTSAudio start, cache frame count: %d, frame duration: %v", cacheFrameCount, frameDuration)
 
-	// use sliding window mechanism，ensuretoendpointalwayscache cacheFrameCount framedata
+	// use sliding window mechanism, ensure to endpoint always cache cacheFrameCount frame data
 	for {
-		// calculate next frameshouldsendoftimepoint
+		// calculate next frame should send of time point
 		nextFrameTime := startTime.Add(time.Duration(totalFrames-cacheFrameCount) * frameDuration)
 		now := time.Now()
 
 		// if next frame time not yet reached, need to wait
 		if now.Before(nextFrameTime) {
 			sleepDuration := nextFrameTime.Sub(now)
-			//log.Debugf("SendTTSAudio flow control wait: %v", sleepDuration)
+			// log.Debugf("SendTTSAudio flow control wait: %v", sleepDuration)
 			time.Sleep(sleepDuration)
 		}
 
@@ -1894,8 +1894,8 @@ func (t *TTSManager) sendAudioStream(ctx context.Context, audioChan <-chan []byt
 			return nil
 		case frame, ok := <-audioChan:
 			if !ok {
-				// channel closed，all frames processed complete
-				// to ensure terminal playback complete：wait total duration of sent framesdifference with actual time elapsed since start send
+				// channel closed, all frames processed complete
+				// to ensure terminal playback complete: wait total duration of sent frames difference with actual time elapsed since start send
 				elapsed := time.Since(startTime)
 				totalDuration := time.Duration(totalFrames) * frameDuration
 				if totalDuration > elapsed {
@@ -1904,17 +1904,17 @@ func (t *TTSManager) sendAudioStream(ctx context.Context, audioChan <-chan []byt
 					time.Sleep(waitDuration)
 				}
 
-				log.Debugf("SendTTSAudio audioChan closed, exit, 总totalsend %d frame", totalFrames)
+				log.Debugf("SendTTSAudio audioChan closed, exit, total sent %d frame", totalFrames)
 				return nil
 			}
-			// sendcurrentframe
+			// send current frame
 			if err := t.serverTransport.SendAudio(frame); err != nil {
 				log.Errorf("send TTS audio failed: nth %d frame, len: %d, error: %v", totalFrames, len(frame), err)
 				return fmt.Errorf("send TTS audio len: %d failed: %v", len(frame), err)
 			}
 
 			if recordHistory {
-				// accumulateaudio datatohistorycache（everyframeasisindependentof[]byte）
+				// accumulate audio data to history cache (every frame as independent of []byte)
 				t.audioMutex.Lock()
 				frameCopy := make([]byte, len(frame))
 				copy(frameCopy, frame)
@@ -1924,12 +1924,12 @@ func (t *TTSManager) sendAudioStream(ctx context.Context, audioChan <-chan []byt
 
 			totalFrames++
 			if totalFrames%100 == 0 {
-				log.Debugf("SendTTSAudio alreadysend %d frame", totalFrames)
+				log.Debugf("SendTTSAudio already sent %d frame", totalFrames)
 			}
 
-			// countinforecord（onlyatstartwhenrecordatimes）
+			// count info record (only at start when record a times)
 			if isStart && isStatistic && totalFrames == 1 {
-				log.Debugf("fromreceiveaudioend asr->llm->ttsfirstframe bodybody time consumption: %d ms", t.clientState.GetAsrLlmTtsDuration())
+				log.Debugf("from receive audio end asr->llm->tts first frame body body time consumption: %d ms", t.clientState.GetAsrLlmTtsDuration())
 				isStatistic = false
 			}
 		}
@@ -1947,14 +1947,14 @@ func (t *TTSManager) SendMediaAudio(ctx context.Context, audioChan <-chan []byte
 	return t.sendAudioStream(ctx, audioChan, false, false)
 }
 
-// ClearAudioHistory clearTTSaudiohistorycache
+// ClearAudioHistory clear TTS audio history cache
 func (t *TTSManager) ClearAudioHistory() {
 	t.audioMutex.Lock()
 	defer t.audioMutex.Unlock()
 	t.audioHistoryBuffer = nil
 }
 
-// GetAndClearAudioHistory getandclearTTSaudiohistorycache
+// GetAndClearAudioHistory get and clear TTS audio history cache
 func (t *TTSManager) GetAndClearAudioHistory() [][]byte {
 	t.audioMutex.Lock()
 	defer t.audioMutex.Unlock()

@@ -159,7 +159,7 @@ func (p *IndexTTSVLLMProvider) TextToSpeechStream(ctx context.Context, text stri
 
 		decoder, decErr := util.CreateAudioDecoderWithSampleRate(ctx, resp.Body, outputChan, frameDuration, "wav", sampleRate)
 		if decErr != nil {
-			log.Errorf("createIndexTTSaudiodecode器failed: %v", decErr)
+			log.Errorf("createIndexTTSaudio decoderfailed: %v", decErr)
 			return
 		}
 		if runErr := decoder.Run(time.Now().UnixMilli()); runErr != nil {

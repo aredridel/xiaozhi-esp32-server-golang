@@ -1,42 +1,42 @@
-# config管理器use说明
+# Config Manager Usage Guide
 
-## 概述
+## Overview
 
-本包provide两个主要of管理器：
-1. **ConfigManager** - config管理器，provide高层级ofconfig管理功能
-2. **AuthManager** - 认证管理器，专门processdevice激活和认证相关功能
+This package provides two main managers:
+1. **ConfigManager** - Config manager, provides high-level configuration management features
+2. **AuthManager** - Authentication manager, specifically handles device activation and authentication related functions
 
-## 核心特性
+## Core Features
 
-### ConfigManager config管理器
-- ✅ configcache机制，提高访问性能
-- ✅ config验证功能
-- ✅ 单例模式of全局管理
-- ✅ cache清理和失效机制
-- ✅ 线程安全of并发访问
+### ConfigManager - Config Manager
+- ✅ Config cache mechanism, improves access performance
+- ✅ Config validation features
+- ✅ Singleton pattern for global management
+- ✅ Cache cleanup and invalidation mechanism
+- ✅ Thread-safe concurrent access
 
-### AuthManager 认证管理器
-- ✅ device激活状态check（throughHTTP接口）
-- ✅ 实whenget激活信息（无cache）
-- ✅ 挑战码验证和HMAC安全验证
-- ✅ 直接调用after端接口，确保data实when性
-- ✅ **HTTP接口集成** - 调用after端管理系统of激活接口
+### AuthManager - Authentication Manager
+- ✅ Device activation status check (via HTTP interface)
+- ✅ Real-time activation info retrieval (no cache)
+- ✅ Challenge code verification and HMAC security validation
+- ✅ Direct backend API calls, ensures data real-time accuracy
+- ✅ **HTTP Interface Integration** - Calls backend management system activation interfaces
 
-## HTTP接口集成
+## HTTP Interface Integration
 
-AuthManager 现atthroughHTTP接口调用after端管理系统，支持以下接口：
+AuthManager now calls backend management system through HTTP interfaces, supporting the following endpoints:
 
-### 1. checkdevice激活状态
+### 1. Check Device Activation Status
 ```http
 GET /api/internal/device/check-activation?device_id=xxx&client_id=xxx
 ```
 
-### 2. getdevice激活信息
+### 2. Get Device Activation Info
 ```http
 GET /api/internal/device/activation-info?device_id=xxx&client_id=xxx
 ```
 
-### 3. device激活
+### 3. Device Activation
 ```http
 POST /api/internal/device/activate
 Content-Type: application/json
@@ -52,18 +52,18 @@ Content-Type: application/json
 }
 ```
 
-## config说明
+## Configuration
 
-atconfig文件（config.yaml）in添加以下config：
+Add the following configuration to the config file (config.yaml):
 
 ```yaml
 manager:
-  backend_url: "http://localhost:8080"  # after端管理系统of基础URL
+  backend_url: "http://localhost:8080"  # Backend management system base URL
 ```
 
-if未config，defaultuse `http://localhost:8080`。
+If not configured, defaults to `http://localhost:8080`.
 
-## use示例
+## Usage Example
 
 ```go
 package main
@@ -76,7 +76,7 @@ import (
 func main() {
     ctx := context.Background()
     
-    // 初始化管理器
+    // Initialize managers
     err := manager.Init()
     if err != nil {
         panic(err)
@@ -87,28 +87,28 @@ func main() {
         panic(err)
     }
     
-    // get管理器实例
+    // Get manager instances
     configManager := manager.GetInstance()
     authManager := manager.GetAuthInstance()
     
-    // useconfig管理器
+    // Use config manager
     config, err := configManager.GetUserConfig(ctx, "device_001")
     if err != nil {
-        // processerror
+        // Handle error
     }
     
-    // use认证管理器（throughHTTP接口）
+    // Use authentication manager (via HTTP interface)
     activated, err := authManager.IsDeviceActivated(ctx, "device_001", "client_001")
     if err != nil {
-        // processerror
+        // Handle error
     }
     
     if !activated {
-        // get激活信息
+        // Get activation info
         code, challenge, message, timeout := authManager.GetActivationInfo(ctx, "device_001", "client_001")
-        // 显示激活码给user...
+        // Display activation code to user...
         
-        // userinput激活码afterperform验证
+        // Verify after user inputs activation code
         activationPayload := types.ActivationPayload{
             Algorithm:    "hmac-sha256",
             SerialNumber: "ABC123",
@@ -117,37 +117,37 @@ func main() {
         }
         
         success, err := authManager.VerifyChallenge(ctx, "device_001", "client_001", fmt.Sprintf("%d", code), activationPayload)
-        // process激活result...
+        // Process activation result...
     }
 }
 ```
 
-## 架构优势
+## Architecture Advantages
 
-### before端系统集成
-- ESP32device或其他before端系统直接调用 AuthManager
-- AuthManager 内部throughHTTP调用after端管理系统
-- 实现before端系统andafter端管理系统of解耦
+### Frontend System Integration
+- ESP32 devices or other frontend systems directly call AuthManager
+- AuthManager internally calls backend management system via HTTP
+- Decouples frontend systems from backend management systems
 
-### 实whendata
-- 直接调用HTTP接口，get最新状态
-- 无cache设计，确保data实when性
-- 简化架构，减少复杂性
+### Real-time Data
+- Direct HTTP API calls, gets latest status
+- No cache design, ensures data real-time accuracy
+- Simplified architecture, reduces complexity
 
-### errorprocess
-- 完善oferrorprocess和日志record
-- HTTP请求failedwhenof降级process
-- 详细oferror信息和调试日志
+### Error Handling
+- Comprehensive error handling and logging
+- Degradation handling for HTTP request failures
+- Detailed error information and debug logs
 
-### 安全性
-- 支持HMAC验证
-- 安全of激活流程
-- 实when状态验证
+### Security
+- Supports HMAC verification
+- Secure activation process
+- Real-time status validation
 
-## 注意事项
+## Notes
 
-1. 确保after端管理系统is运行and可访问
-2. 正确config `manager.backend_url`
-3. HTTP客户端default超whenis10秒
-4. 无cache模式，每次调用都会请求after端接口
-5. 确保网络连接稳定，避免频繁of接口调用failed
+1. Ensure backend management system is running and accessible
+2. Configure `manager.backend_url` correctly
+3. HTTP client default timeout is 10 seconds
+4. No cache mode, each call will request backend interface
+5. Ensure stable network connection to avoid frequent interface call failures

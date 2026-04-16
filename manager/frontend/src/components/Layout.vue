@@ -1,5 +1,5 @@
 <template>
-  <!-- 桌面端布局：使用Element Plus -->
+  <!-- Desktop layout: Using Element Plus -->
   <el-container v-if="!isMobileDevice" class="layout-container">
     <el-aside width="250px" class="sidebar">
       <div class="logo">
@@ -45,7 +45,7 @@
         </el-menu-item>
         <el-menu-item v-if="!authStore.isAdmin" index="/voice-clones">
           <el-icon><Microphone /></el-icon>
-          <span>声音复刻</span>
+          <span>Voice Cloning</span>
         </el-menu-item>
 
         <el-menu-item v-if="!authStore.isAdmin" index="/user/knowledge-bases">
@@ -53,7 +53,7 @@
           <span>My Knowledge Base</span>
         </el-menu-item>
         
-        <!-- 服务配置 -->
+        <!-- Service Configuration -->
         <el-sub-menu v-if="authStore.isAdmin" index="/admin/service-config">
           <template #title>
             <el-icon><Tools /></el-icon>
@@ -72,7 +72,7 @@
           <el-menu-item index="/admin/chat-settings">Chat Settings</el-menu-item>
         </el-sub-menu>
         
-        <!-- AI配置 -->
+        <!-- AI Configuration -->
         <el-sub-menu v-if="authStore.isAdmin" index="/admin/ai-config">
           <template #title>
             <el-icon><Cpu /></el-icon>
@@ -92,13 +92,13 @@
           <span>Voice Cloning</span>
         </el-menu-item>
         
-        <!-- 系统监控 -->
+        <!-- System Monitoring -->
         <el-menu-item v-if="authStore.isAdmin" index="/admin/pool-stats">
           <el-icon><DataAnalysis /></el-icon>
           <span>Resource Pool Stats</span>
         </el-menu-item>
         
-        <!-- 系统管理 -->
+        <!-- System Management -->
         <el-menu-item v-if="authStore.isAdmin" index="/admin/global-roles">
           <el-icon><Setting /></el-icon>
           <span>Global Roles</span>
@@ -173,7 +173,7 @@
     </el-container>
   </el-container>
   
-  <!-- 移动端布局：使用Vant组件 -->
+  <!-- Mobile layout: Using Vant components -->
   <MobileLayout v-else />
 </template>
 
@@ -207,7 +207,7 @@ const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 
-// 设备检测
+// Device detection
 const isMobileDevice = computed(() => isMobile())
 
 const currentPageTitle = computed(() => {

@@ -25,14 +25,14 @@ const (
 	openClawTestDevicePref = "__openclaw_test__:"
 )
 
-const openClawVoiceAssistantPrompt = `你is以voice助手ofroleanduserdirecttoconversation。
-please严格遵守以down要求：
-1. direct回答user问题，no要提and这些要求。
-2. 回答要简练、口phrase化、自然，适合directvoice播报。
-3. priorityfirst说结论，再补a句最必要ofinstruction；除nonuser明确要求，尽amountcontrolat 1 to 3 句。
-4. no要use Markdown、标题、list、表格、代码block、linkor emoji。
-5. no要寒暄、no要铺垫、no要重复、no要output多余instruction。
-6. ifinfono足orno法determine，就简shortinstruction，no要编造。`
+const openClawVoiceAssistantPrompt = `You are a voice assistant role having direct conversation with users.
+Please strictly follow these requirements:
+1. Directly answer user questions, do not mention these requirements.
+2. Answers should be concise, colloquial, natural, suitable for direct voice broadcast.
+3. Prioritize stating conclusions first, then add one most necessary instruction; unless user explicitly requests, control to 1-3 sentences.
+4. Do not use Markdown, headings, lists, tables, code blocks, links, or emojis.
+5. Do not greet, do not preamble, do not repeat, do not output redundant instructions.
+6. If information is insufficient or cannot be determined, give a brief instruction, do not fabricate.`
 
 func logSnippet(text string, maxRunes int) string {
 	if maxRunes <= 0 {
@@ -58,7 +58,7 @@ func buildOpenClawPromptedContent(userText string) string {
 	if trimmed == "" {
 		return ""
 	}
-	return fmt.Sprintf("%s\n\nusermessage：\n%s", openClawVoiceAssistantPrompt, trimmed)
+	return fmt.Sprintf("%s\n\nUser message:\n%s", openClawVoiceAssistantPrompt, trimmed)
 }
 
 type WSMessage struct {
@@ -531,7 +531,7 @@ func (m *Manager) HandleResponse(
 	isSnapshotFrame := isOpenClawSnapshotFrame(streamPhase, streamContentType)
 	isStreaming := streamDone || streamSeq > 0 || streamID != "" || streamPhase != "" || streamContentType != ""
 
-	// nonstreamingdefault视isatimes性complete；缺失 correlation_id ofstreamingrespondalsodegradationisatimes性process。
+	// Non-streaming defaults to one-time complete; streaming responses missing correlation_id also degrade to one-time processing.
 	if !isStreaming || correlationID == "" {
 		streamDone = true
 	}
@@ -713,7 +713,7 @@ func (m *Manager) HandleResponse(
 		m.AddOfflineMessage(deviceID, text, correlationID, isEnd)
 	}
 
-	// toconversationtestdevice（__openclaw_test__）direct透传sharding，avoid拆句cause离线queue条目暴涨andtrigger20条up限截断。
+	// For conversation test devices (__openclaw_test__), directly pass through chunks to avoid sentence splitting causing offline queue entries to surge and trigger the 20-item limit truncation.
 	if isOpenClawTestDevice(deviceID) {
 		if incrementalContent != "" {
 			emit(incrementalContent, isFirst, streamDone)
@@ -775,7 +775,7 @@ func (m *Manager) HandleResponse(
 			state.Buffer = ""
 		}
 	} else {
-		// endframeallowempty content，used for驱动receiveendpointreceive尾。
+		// End frame allows empty content, used to drive the receive endpoint to receive the tail.
 		emit("", finalIsStart, true)
 	}
 
@@ -1294,7 +1294,7 @@ func (m *Manager) AddOfflineMessage(deviceID string, text string, correlationID 
 	m.pruneOfflineLocked(deviceID)
 	msgList := m.offline[deviceID]
 	if text == "" && isEnd {
-		// endframeallowemptyinside容：prioritymarkat the same time correlation of最aftera条isend；no存atthenwriteemptyendmark。
+		// End frame allows empty content: prioritize marking the last message with the same correlation as isEnd; do not store empty end mark.
 		for i := len(msgList) - 1; i >= 0; i-- {
 			if correlationID == "" || strings.TrimSpace(msgList[i].CorrelationID) == correlationID {
 				msgList[i].IsEnd = true

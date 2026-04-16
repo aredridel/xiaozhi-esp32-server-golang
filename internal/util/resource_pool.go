@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// Resource resourceinterface，allbepoolmanageofresourceareneedimplementthisinterface
+// Resource resource interface, all resources managed by pool need to implement this interface
 type Resource interface {
 	// Close closeresource
 	Close() error
@@ -16,35 +16,35 @@ type Resource interface {
 	IsValid() bool
 }
 
-// ResourceFactory resourcefactoryinterface，used forcreateandvalidateresource
+// ResourceFactory resource factory interface, used for creating and validating resources
 type ResourceFactory interface {
-	// Create create newresourceinstance
+	// Create create new resource instance
 	Create() (Resource, error)
-	// Validate validateresourcewhethervalid（optional，ifreturnfalse，resourcewillbedestroy）
+	// Validate validate resource whether valid (optional, if return false, resource will be destroyed)
 	Validate(resource Resource) bool
-	// Reset resetresourcestate（optional，used forresource复usebeforeofcleanup）
+	// Reset reset resource state (optional, used for cleanup before resource reuse)
 	Reset(resource Resource) error
 }
 
-// PoolConfig resourcepoolconfig
+// PoolConfig resource pool config
 type PoolConfig struct {
-	// MaxSize maximumresourcecount
+	// MaxSize maximum resource count
 	MaxSize int
-	// MinSize minimumresourcecount（预create）
+	// MinSize minimum resource count (pre-create)
 	MinSize int
-	// MaxIdle maximumempty闲resourcecount
+	// MaxIdle maximum idle resource count
 	MaxIdle int
-	// AcquireTimeout getresourcetimeouttime
+	// AcquireTimeout get resource timeout time
 	AcquireTimeout time.Duration
-	// IdleTimeout resourceempty闲timeouttime
+	// IdleTimeout resource idle timeout time
 	IdleTimeout time.Duration
-	// ValidateOnBorrow getwhenwhethervalidateresource
+	// ValidateOnBorrow get when whether validate resource
 	ValidateOnBorrow bool
-	// ValidateOnReturn 归orwhenwhethervalidateresource
+	// ValidateOnReturn return when whether validate resource
 	ValidateOnReturn bool
 }
 
-// DefaultConfig returndefaultconfig
+// DefaultConfig return default config
 func DefaultConfig() *PoolConfig {
 	return &PoolConfig{
 		MaxSize:          1000,
@@ -57,7 +57,7 @@ func DefaultConfig() *PoolConfig {
 	}
 }
 
-// pooledResource pool化resourcepackage装器
+// pooledResource pooled resource wrapper
 type pooledResource struct {
 	resource   Resource
 	createTime time.Time
@@ -65,27 +65,27 @@ type pooledResource struct {
 	inUse      bool
 }
 
-// ResourcePool 通useresourcepool
+// ResourcePool general resource pool
 type ResourcePool struct {
 	config  *PoolConfig
 	factory ResourceFactory
 
-	// availableresourcequeue
+	// available resource queue
 	available chan *pooledResource
-	// allresourcemap（package括atuseandavailableof）
+	// all resource map (including in use and available)
 	resources map[Resource]*pooledResource
-	// readwritelock
+	// read write lock
 	mu sync.RWMutex
-	// closeflag
+	// close flag
 	closed bool
-	// cancelcontext
+	// cancel context
 	ctx    context.Context
 	cancel context.CancelFunc
-	// cleanupgoroutinewaitgroup
+	// cleanup goroutine waitgroup
 	cleanupWg sync.WaitGroup
 }
 
-// NewResourcePool create newresourcepool
+// NewResourcePool create new resource pool
 func NewResourcePool(config *PoolConfig, factory ResourceFactory) (*ResourcePool, error) {
 	if config == nil {
 		config = DefaultConfig()
@@ -114,19 +114,19 @@ func NewResourcePool(config *PoolConfig, factory ResourceFactory) (*ResourcePool
 		cancel:    cancel,
 	}
 
-	// 预createminimumcountofresource
+	// pre-create minimum count of resources
 	if err := pool.preCreateResources(); err != nil {
 		pool.Close()
 		return nil, fmt.Errorf("failed to pre-create resources: %w", err)
 	}
 
-	// startcleanupgoroutine
+	// start cleanup goroutine
 	pool.startCleanupRoutine()
 
 	return pool, nil
 }
 
-// preCreateResources 预createresource
+// preCreateResources pre-create resources
 func (p *ResourcePool) preCreateResources() error {
 	for i := 0; i < p.config.MinSize; i++ {
 		resource, err := p.factory.Create()
@@ -147,12 +147,12 @@ func (p *ResourcePool) preCreateResources() error {
 	return nil
 }
 
-// Acquire getresource
+// Acquire get resource
 func (p *ResourcePool) Acquire() (Resource, error) {
 	return p.AcquireWithTimeout(p.config.AcquireTimeout)
 }
 
-// AcquireWithTimeout atspecifytimeouttimeinsidegetresource
+// AcquireWithTimeout get resource within specified timeout time
 func (p *ResourcePool) AcquireWithTimeout(timeout time.Duration) (Resource, error) {
 	p.mu.RLock()
 	if p.closed {
@@ -169,10 +169,10 @@ func (p *ResourcePool) AcquireWithTimeout(timeout time.Duration) (Resource, erro
 		case <-ctx.Done():
 			return nil, fmt.Errorf("acquire timeout after %v", timeout)
 		case pooled := <-p.available:
-			// validateresourcevalid性
+			// validate resource validity
 			if p.config.ValidateOnBorrow && pooled.resource != nil {
 				if !pooled.resource.IsValid() || !p.factory.Validate(pooled.resource) {
-					// resourceinvalid，destroyandtrycreate new
+					// resource invalid, destroy and try create new
 					p.destroyResource(pooled)
 					if newResource, err := p.tryCreateResource(); err == nil {
 						return newResource, nil
@@ -181,13 +181,13 @@ func (p *ResourcePool) AcquireWithTimeout(timeout time.Duration) (Resource, erro
 				}
 			}
 
-			// resetresourcestate
+			// reset resource state
 			if err := p.factory.Reset(pooled.resource); err != nil {
 				p.destroyResource(pooled)
 				continue
 			}
 
-			// markisusein
+			// mark is in use
 			p.mu.Lock()
 			pooled.inUse = true
 			pooled.lastUsed = time.Now()
@@ -195,17 +195,17 @@ func (p *ResourcePool) AcquireWithTimeout(timeout time.Duration) (Resource, erro
 
 			return pooled.resource, nil
 		default:
-			// noavailableresource，trycreate new
+			// no available resource, try create new
 			if resource, err := p.tryCreateResource(); err == nil {
 				return resource, nil
 			}
-			// createfailed，waitresourcerelease
+			// create failed, wait resource release
 			time.Sleep(10 * time.Millisecond)
 		}
 	}
 }
 
-// tryCreateResource trycreate新resource
+// tryCreateResource try create new resource
 func (p *ResourcePool) tryCreateResource() (Resource, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -230,7 +230,7 @@ func (p *ResourcePool) tryCreateResource() (Resource, error) {
 	return resource, nil
 }
 
-// Release releaseresource回pool
+// Release release resource back to pool
 func (p *ResourcePool) Release(resource Resource) error {
 	if resource == nil {
 		return errors.New("resource cannot be nil")
@@ -252,7 +252,7 @@ func (p *ResourcePool) Release(resource Resource) error {
 		return errors.New("resource is not in use")
 	}
 
-	// validateresourcevalid性
+	// validate resource validity
 	if p.config.ValidateOnReturn {
 		if !resource.IsValid() || !p.factory.Validate(resource) {
 			p.destroyResourceUnsafe(pooled)
@@ -260,35 +260,35 @@ func (p *ResourcePool) Release(resource Resource) error {
 		}
 	}
 
-	// check if超pastmaximumempty闲count
+	// check if exceed maximum idle count
 	if len(p.available) >= p.config.MaxIdle {
 		p.destroyResourceUnsafe(pooled)
 		return nil
 	}
 
-	// markisavailable
+	// mark is available
 	pooled.inUse = false
 	pooled.lastUsed = time.Now()
 
-	// tryplay回availablequeue
+	// try put back to available queue
 	select {
 	case p.available <- pooled:
 		return nil
 	default:
-		// queuealreadyfull，destroyresource
+		// queue already full, destroy resource
 		p.destroyResourceUnsafe(pooled)
 		return nil
 	}
 }
 
-// destroyResource destroyresource（带lock）
+// destroyResource destroy resource (with lock)
 func (p *ResourcePool) destroyResource(pooled *pooledResource) {
 	p.mu.Lock()
 	p.destroyResourceUnsafe(pooled)
 	p.mu.Unlock()
 }
 
-// destroyResourceUnsafe destroyresource（no带lock）
+// destroyResourceUnsafe destroy resource (without lock)
 func (p *ResourcePool) destroyResourceUnsafe(pooled *pooledResource) {
 	if pooled.resource != nil {
 		pooled.resource.Close()
@@ -296,7 +296,7 @@ func (p *ResourcePool) destroyResourceUnsafe(pooled *pooledResource) {
 	}
 }
 
-// Stats getresourcepoolcountinfo
+// Stats get resource pool count info
 func (p *ResourcePool) Stats() map[string]interface{} {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
@@ -319,7 +319,7 @@ func (p *ResourcePool) Stats() map[string]interface{} {
 	}
 }
 
-// Resize 调bodypoolsize
+// Resize adjust pool size
 func (p *ResourcePool) Resize(newMaxSize int) error {
 	if newMaxSize <= 0 {
 		return errors.New("new max size must be positive")
@@ -335,7 +335,7 @@ func (p *ResourcePool) Resize(newMaxSize int) error {
 	oldMaxSize := p.config.MaxSize
 	p.config.MaxSize = newMaxSize
 
-	// ifshortensmallpoolsize，needremove多余ofresource
+	// if shorten pool size, need remove excess resources
 	if newMaxSize < oldMaxSize {
 		excess := len(p.resources) - newMaxSize
 		for excess > 0 {
@@ -344,7 +344,7 @@ func (p *ResourcePool) Resize(newMaxSize int) error {
 				p.destroyResourceUnsafe(pooled)
 				excess--
 			default:
-				// no更多availableresourcecanremove
+				// no more available resource can remove
 				break
 			}
 		}
@@ -353,7 +353,7 @@ func (p *ResourcePool) Resize(newMaxSize int) error {
 	return nil
 }
 
-// startCleanupRoutine startcleanupgoroutine
+// startCleanupRoutine start cleanup goroutine
 func (p *ResourcePool) startCleanupRoutine() {
 	if p.config.IdleTimeout <= 0 {
 		return
@@ -376,7 +376,7 @@ func (p *ResourcePool) startCleanupRoutine() {
 	}()
 }
 
-// cleanupIdleResources cleanupempty闲timeoutofresource
+// cleanupIdleResources cleanup idle timeout resources
 func (p *ResourcePool) cleanupIdleResources() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -388,14 +388,14 @@ func (p *ResourcePool) cleanupIdleResources() {
 	now := time.Now()
 	var toRemove []*pooledResource
 
-	// inspectavailablequeueinofempty闲resource
+	// inspect available queue of idle resources
 	for {
 		select {
 		case pooled := <-p.available:
 			if now.Sub(pooled.lastUsed) > p.config.IdleTimeout {
 				toRemove = append(toRemove, pooled)
 			} else {
-				// play回queue
+				// put back to queue
 				p.available <- pooled
 				goto cleanup
 			}
@@ -405,13 +405,13 @@ func (p *ResourcePool) cleanupIdleResources() {
 	}
 
 cleanup:
-	// destroytimeoutofresource
+	// destroy timeout resources
 	for _, pooled := range toRemove {
 		p.destroyResourceUnsafe(pooled)
 	}
 }
 
-// Close closeresourcepool
+// Close close resource pool
 func (p *ResourcePool) Close() error {
 	p.mu.Lock()
 	if p.closed {
@@ -421,23 +421,23 @@ func (p *ResourcePool) Close() error {
 	p.closed = true
 	p.mu.Unlock()
 
-	// cancelcontext
+	// cancel context
 	p.cancel()
 
-	// waitcleanupgoroutineend
+	// wait cleanup goroutine end
 	p.cleanupWg.Wait()
 
-	// closeallresource
+	// close all resources
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	// clearavailablequeue
+	// clear available queue
 	close(p.available)
 	for pooled := range p.available {
 		p.destroyResourceUnsafe(pooled)
 	}
 
-	// closeallresource
+	// close all resources
 	for _, pooled := range p.resources {
 		p.destroyResourceUnsafe(pooled)
 	}

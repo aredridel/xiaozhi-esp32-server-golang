@@ -20,7 +20,7 @@
     
     <MobileTabBar v-if="showTabBar" class="mobile-tabbar" />
     
-    <!-- 用户菜单弹出层 -->
+    <!-- User menu popup -->
     <van-popup
       v-model:show="showUserMenu"
       position="bottom"
@@ -59,19 +59,19 @@ const authStore = useAuthStore()
 
 const showUserMenu = ref(false)
 
-// 页面标题
+// Page title
 const pageTitle = computed(() => {
   return route.meta?.title || 'XiaoZhi Management System'
 })
 
-// 是否显示返回按钮（非首页且不在标签栏页面时显示）
+// Whether to show back button (shown when not on home page and not on tab bar pages)
 const showBack = computed(() => {
   const hideBackPages = ['/dashboard', '/console', '/agents', '/user/speakers', '/more', '/login']
   const currentPath = route.path
   return !hideBackPages.some(path => currentPath === path || currentPath.startsWith(path + '/'))
 })
 
-// 是否显示底部标签栏
+// Whether to show bottom tab bar
 const showTabBar = computed(() => {
   const hideTabBarPages = [
     '/login',
@@ -81,7 +81,7 @@ const showTabBar = computed(() => {
   ]
   const currentPath = route.path
   
-  // 详情页面不显示标签栏
+  // Detail pages don't show tab bar
   if (currentPath.includes('/edit') || currentPath.includes('/detail') || currentPath.includes('/history')) {
     return false
   }
@@ -94,7 +94,7 @@ const roleText = computed(() => {
   return authStore.isAdmin ? 'Administrator' : 'Regular User'
 })
 
-// 用户图标点击
+// User icon click
 const handleUserClick = () => {
   showUserMenu.value = true
 }
@@ -127,7 +127,7 @@ const handleLogout = async () => {
   }
 }
 
-// 监听路由变化，关闭用户菜单
+// Watch route changes, close user menu
 watch(
   () => route.path,
   () => {
@@ -154,10 +154,10 @@ watch(
 }
 
 .mobile-content.with-tabbar {
-  padding-bottom: calc(50px + env(safe-area-inset-bottom)); /* 为底部标签栏留出空间 */
+  padding-bottom: calc(50px + env(safe-area-inset-bottom));   /* Reserve space for bottom tab bar */
 }
 
-/* 页面切换动画 */
+/* Page transition animation */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.3s;
@@ -177,7 +177,7 @@ watch(
   line-height: 1;
 }
 
-/* 用户菜单样式 */
+/* User menu styles */
 .user-menu {
   padding: 10px 0;
 }

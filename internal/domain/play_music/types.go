@@ -4,25 +4,25 @@ import (
 	"context"
 )
 
-// MusicPlayerInterface 音乐play器interface
+// MusicPlayerInterface music playerinterface
 type MusicPlayerInterface interface {
 	// PlayMusicStream fromURLplay music，returnaudio streamchannel
 	PlayMusicStream(ctx context.Context, url string) (chan []byte, error)
 
-	// GetPlayerInfo getplay器info
+	// GetPlayerInfo getplayerinfo
 	GetPlayerInfo() map[string]interface{}
 
-	// Stop stopplay器
+	// Stop stopplayer
 	Stop() error
 }
 
-// MusicPlayerConfig 音乐play器config
+// MusicPlayerConfig music playerconfig
 type MusicPlayerConfig struct {
 	FrameDuration int    `json:"frame_duration"` // frameduration(ms)，default20ms
 	AudioFormat   string `json:"audio_format"`   // audioformat，default"mp3"
 }
 
-// DefaultMusicPlayerConfig default音乐play器config
+// DefaultMusicPlayerConfig defaultmusic playerconfig
 func DefaultMusicPlayerConfig() *MusicPlayerConfig {
 	return &MusicPlayerConfig{
 		FrameDuration: 20,    // 20ms

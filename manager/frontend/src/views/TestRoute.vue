@@ -1,8 +1,8 @@
 <template>
   <div class="test-route">
-    <h1>测试路由页面</h1>
-    <p>如果您能看到这个页面，说明路由系统正常工作。</p>
-    <el-button @click="testFunction">测试按钮</el-button>
+    <h1>Test Route Page</h1>
+    <p>If you can see this page, the routing system is working properly.</p>
+    <el-button @click="testFunction">Test Button</el-button>
   </div>
 </template>
 
@@ -12,8 +12,8 @@ import { ref } from 'vue'
 const message = ref('Hello World')
 
 const testFunction = () => {
-  console.log('测试函数被调用')
-  message.value = '按钮被点击了'
+  console.log('Test function called')
+  message.value = 'Button was clicked'
 }
 </script>
 

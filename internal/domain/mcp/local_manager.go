@@ -14,7 +14,7 @@ import (
 	mcp_protocol "github.com/ThinkInAIXYZ/go-mcp/protocol"
 )
 
-// LocalMCPManager localMCPtoolmanage器
+// LocalMCPManager local MCP tool manager
 type LocalMCPManager struct {
 	tools map[string]*McpTool // toolname -> tool定义
 	mu    sync.RWMutex        // readwritelockprotectedconcurrentaccess
@@ -25,7 +25,7 @@ var (
 	localOnce    sync.Once
 )
 
-// GetLocalMCPManager getlocalMCPmanage器singleton
+// GetLocalMCPManager getlocal MCP managersingleton
 func GetLocalMCPManager() *LocalMCPManager {
 	localOnce.Do(func() {
 		localManager = &LocalMCPManager{
@@ -40,7 +40,7 @@ func GetLocalMCPManager() *LocalMCPManager {
 // initDefaultTools initializedefaultoflocaltool
 func (l *LocalMCPManager) initDefaultTools() {
 
-	log.Info("localMCPmanage器defaulttoolinitializecomplete")
+	log.Info("local MCP managerdefaulttoolinitializecomplete")
 }
 
 // RegisterTool registerlocaltool
@@ -167,16 +167,16 @@ func (l *LocalMCPManager) GetToolCount() int {
 	return len(l.tools)
 }
 
-// Start startlocalmanage器（预留interface）
+// Start startlocal manager（reserved interface）
 func (l *LocalMCPManager) Start() error {
-	log.Info("localMCPmanage器alreadystart")
+	log.Info("local MCP manageralreadystart")
 	return nil
 }
 
-// Stop stoplocalmanage器（预留interface）
+// Stop stoplocal manager（reserved interface）
 func (l *LocalMCPManager) Stop() error {
-	// 注意：我们nocleartool，becauseislocalmanage器oftoolshouldatbody个applicationprogram生命periodinsidekeepavailable
+	// 注意：我们nocleartool，becauseislocal manageroftoolshouldatthe entire applicationlifecycleinsidekeepavailable
 	// ifneedcleartool，should显式callUnregisterToolmethod
-	log.Info("localMCPmanage器alreadystop")
+	log.Info("local MCP manageralreadystop")
 	return nil
 }

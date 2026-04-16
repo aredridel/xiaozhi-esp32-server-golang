@@ -6,7 +6,7 @@
         <p>Welcome to XiaoZhi Management System, please complete the initial setup</p>
       </div>
 
-      <!-- 检查状态 -->
+      <!-- Check status -->
       <div v-if="!initialized" class="setup-status">
         <div class="loading-spinner" v-if="checking">
           <div class="spinner"></div>
@@ -85,7 +85,7 @@
         </div>
       </div>
       
-      <!-- 初始化成功 -->
+      <!-- Initialization successful -->
       <div v-else class="setup-success">
         <div class="success-icon">🎉</div>
         <h2>Initialization Successful!</h2>
@@ -159,7 +159,7 @@ export default {
         adminInfo.value = response.data.admin
         initialized.value = true
       } catch (error) {
-        console.error('系统初始化失败:', error)
+        console.error('System initialization failed:', error)
         if (error.response?.data?.error) {
           errorMessage.value = error.response.data.error
         } else {

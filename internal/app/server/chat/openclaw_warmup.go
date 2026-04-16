@@ -444,7 +444,7 @@ func (s *ChatSession) speakOpenClawWarmupLine(task *openClawWarmupTask, text str
 		IsStart: task.takeWarmupSegmentStartFlag(),
 		IsEnd:   true,
 	}
-	// 暖场句needensurealreadyentersendchain路，avoidbeaftercontinuepositive式回复“看起来像没effective”。
+	// Warmup sentences need to ensure already entered send chain, avoid being after continue positive reply "looks like not effective".
 	return s.ttsManager.handleTextResponse(task.sessionCtx, resp, true)
 }
 
@@ -618,16 +618,16 @@ func sanitizeOpenClawWarmupText(text string) string {
 
 func isInvalidOpenClawWarmupText(text string) bool {
 	for _, bad := range []string{
-		"帮我",
-		"给我",
-		"告诉我",
-		"please帮",
-		"麻烦帮",
-		"能帮我",
-		"can帮我",
-		"帮忙查",
-		"帮忙看",
-		"帮忙问",
+		"help me",
+		"give me",
+		"tell me",
+		"please help",
+		"please help",
+		"can help me",
+		"can help me",
+		"help check",
+		"help look",
+		"help ask",
 	} {
 		if strings.Contains(text, bad) {
 			return true
@@ -652,7 +652,7 @@ func buildOpenClawWarmupHint(userText string) string {
 		return ""
 	}
 
-	for _, keyword := range []string{"天气", "气温", "温degree", "预报"} {
+	for _, keyword := range []string{"weather", "temperature", "temperature", "forecast"} {
 		if idx := strings.Index(normalized, keyword); idx >= 0 {
 			limit := idx + len([]rune(keyword))
 			runes := []rune(normalized)
@@ -684,43 +684,43 @@ func trimOpenClawWarmupCommandPrefix(text string) string {
 	for {
 		changed := false
 		for _, prefix := range []string{
-			"麻烦帮我queryadown",
-			"麻烦帮我查adown",
-			"麻烦帮我看adown",
-			"please帮我queryadown",
-			"please帮我查adown",
-			"please帮我看adown",
-			"帮我queryadown",
-			"帮我查adown",
-			"帮我看adown",
-			"帮我问adown",
-			"给我queryadown",
-			"给我查adown",
-			"给我看adown",
-			"can帮我查adown",
-			"can帮我看adown",
-			"能帮我查adown",
-			"能帮我看adown",
-			"我want知道",
-			"我want问adown",
-			"我want问",
-			"please问adown",
-			"please问",
-			"queryadown",
-			"查adown",
-			"看adown",
-			"问adown",
-			"帮我query",
-			"帮我查",
-			"帮我看",
-			"帮我问",
-			"给我query",
-			"给我查",
-			"给我看",
+			"please help me query",
+			"please help me check",
+			"please help me look",
+			"please help me query",
+			"please help me check",
+			"please help me look",
+			"help me query",
+			"help me check",
+			"help me look",
+			"help me ask",
+			"give me query",
+			"give me check",
+			"give me look",
+			"can help me check",
+			"can help me look",
+			"can help me check",
+			"can help me look",
+			"I want to know",
+			"I want to ask",
+			"I want to ask",
+			"please ask",
+			"please ask",
 			"query",
-			"查",
-			"看",
-			"问",
+			"check",
+			"look",
+			"ask",
+			"help me query",
+			"help me check",
+			"help me look",
+			"help me ask",
+			"give me query",
+			"give me check",
+			"give me look",
+			"query",
+			"check",
+			"look",
+			"ask",
 		} {
 			if strings.HasPrefix(trimmed, prefix) {
 				trimmed = strings.TrimSpace(strings.TrimPrefix(trimmed, prefix))
@@ -738,15 +738,14 @@ func trimOpenClawWarmupCommandPrefix(text string) string {
 func trimOpenClawWarmupQuestionSuffix(text string) string {
 	trimmed := strings.TrimSpace(text)
 	for _, suffix := range []string{
-		"怎么样",
-		"如何",
-		"多少",
-		"yes什么",
-		"yes啥",
-		"吗",
-		"呢",
-		"呀",
-		"吧",
+		"how about",
+		"how",
+		"how much",
+		"what",
+		"what",
+		"question",
+		"particle",
+		"particle",
 	} {
 		trimmed = strings.TrimSpace(strings.TrimSuffix(trimmed, suffix))
 	}
@@ -758,7 +757,7 @@ func formatOpenClawWarmupTopic(hint string) string {
 	if hint == "" {
 		return ""
 	}
-	for _, keyword := range []string{"天气", "气温", "温degree", "预报"} {
+	for _, keyword := range []string{"weather", "temperature", "temperature", "forecast"} {
 		if idx := strings.Index(hint, keyword); idx > 0 {
 			prefix := strings.TrimSpace(hint[:idx])
 			if prefix == "" || strings.HasSuffix(prefix, "of") {

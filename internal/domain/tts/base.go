@@ -21,7 +21,7 @@ import (
 	"xiaozhi-esp32-server-golang/internal/domain/tts/zhipu"
 )
 
-// foundationTTSprovide者interface（no含Contextmethod）
+// foundationTTS providerinterface（no含Contextmethod）
 type BaseTTSProvider interface {
 	TextToSpeech(ctx context.Context, text string, sampleRate int, channels int, frameDuration int) ([][]byte, error)
 	TextToSpeechStream(ctx context.Context, text string, sampleRate int, channels int, frameDuration int) (outputChan chan []byte, err error)
@@ -32,7 +32,7 @@ type DualStreamProvider interface {
 	StreamingSynthesize(ctx context.Context, textChan <-chan string, sampleRate int, channels int, frameDuration int) (outputChan chan streaming.SynthesisEvent, err error)
 }
 
-// 完bodyTTSprovide者interface（includeContextmethod）
+// 完bodyTTS providerinterface（includeContextmethod）
 type TTSProvider interface {
 	BaseTTSProvider
 	// SetVoice dynamicsetvoiceparameter
@@ -44,7 +44,7 @@ type TTSProvider interface {
 	IsValid() bool
 }
 
-// GetTTSProvider geta完bodyofTTSprovide者（supportContext）
+// GetTTSProvider geta完bodyofTTS provider（supportContext）
 // providerName: mayyes config_id/provider orresourcepool key（如 "edge_tts:zh-CN-XiaoxiaoNeural"）
 // config: fromdatalibraryconfigs表ofjson_datafieldparseofconfigmap
 // priorityuse config inof provider field，elsefrom providerName parse（取 ":" beforepart）
@@ -53,7 +53,7 @@ func GetTTSProvider(providerName string, config map[string]interface{}) (TTSProv
 	if configProvider, ok := config["provider"].(string); ok && configProvider != "" {
 		effectiveName = configProvider
 	}
-	// resourcepool key formatis "provider:voiceID"，取before半partasisprovide者type
+	// resourcepool key formatis "provider:voiceID"，取before半partasisprovidertype
 	if idx := strings.Index(effectiveName, ":"); idx > 0 {
 		effectiveName = effectiveName[:idx]
 	}
@@ -87,14 +87,14 @@ func GetTTSProvider(providerName string, config map[string]interface{}) (TTSProv
 	case constants.TtsTypeIndexTTSVLLM:
 		baseProvider = openai.NewOpenAITTSProvider(buildIndexTTSOpenAIConfig(config))
 	default:
-		return nil, fmt.Errorf("unsupportedofTTSprovide者: %s", effectiveName)
+		return nil, fmt.Errorf("unsupportedofTTS provider: %s", effectiveName)
 	}
 
 	if baseProvider == nil {
-		return nil, fmt.Errorf("no法createTTSprovide者: %s", effectiveName)
+		return nil, fmt.Errorf("no法createTTS provider: %s", effectiveName)
 	}
 
-	// useadapterpackage装foundationprovide者，convertis完bodyofTTSProvider
+	// useadapterpackage装foundationprovider，convertis完bodyofTTSProvider
 	provider := &ContextTTSAdapter{baseProvider}
 
 	return provider, nil
@@ -149,12 +149,12 @@ func buildIndexTTSOpenAIConfig(config map[string]interface{}) map[string]interfa
 	return normalized
 }
 
-// ContextTTSAdapter yesaadapter，isfoundationTTSprovide者addContextsupport
+// ContextTTSAdapter yesaadapter，isfoundationTTS provideraddContextsupport
 type ContextTTSAdapter struct {
 	Provider BaseTTSProvider
 }
 
-// StreamingSynthesize proxytooriginalprovide者ofdual-stream合成interface
+// StreamingSynthesize proxytooriginalproviderofdual-stream合成interface
 func (a *ContextTTSAdapter) StreamingSynthesize(ctx context.Context, textChan <-chan string, sampleRate int, channels int, frameDuration int) (outputChan chan streaming.SynthesisEvent, err error) {
 	// inspectunderlying Provider whethersupportdual-stream
 	if dsProvider, ok := a.Provider.(DualStreamProvider); ok {
@@ -163,12 +163,12 @@ func (a *ContextTTSAdapter) StreamingSynthesize(ctx context.Context, textChan <-
 	return nil, fmt.Errorf("underlying Provider unsupporteddual-stream合成")
 }
 
-// TextToSpeech proxytooriginalprovide者
+// TextToSpeech proxytooriginalprovider
 func (a *ContextTTSAdapter) TextToSpeech(ctx context.Context, text string, sampleRate int, channels int, frameDuration int) ([][]byte, error) {
 	return a.Provider.TextToSpeech(ctx, text, sampleRate, channels, frameDuration)
 }
 
-// TextToSpeechStream proxytooriginalprovide者
+// TextToSpeechStream proxytooriginalprovider
 func (a *ContextTTSAdapter) TextToSpeechStream(ctx context.Context, text string, sampleRate int, channels int, frameDuration int) (outputChan chan []byte, err error) {
 	return a.Provider.TextToSpeechStream(ctx, text, sampleRate, channels, frameDuration)
 }
@@ -187,11 +187,11 @@ func (a *ContextTTSAdapter) SetVoice(voiceConfig map[string]interface{}) error {
 
 // TextToSpeechWithContext useContextversionoftext转voice
 func (a *ContextTTSAdapter) TextToSpeechWithContext(ctx context.Context, text string, sampleRate int, channels int, frameDuration int) ([][]byte, error) {
-	// inspectprovide者whetherdirectsupportContextversion
+	// inspectproviderwhetherdirectsupportContextversion
 	if provider, ok := a.Provider.(interface {
 		TextToSpeechWithContext(ctx context.Context, text string, sampleRate int, channels int, frameDuration int) ([][]byte, error)
 	}); ok {
-		// provide者directsupportContextversion
+		// providerdirectsupportContextversion
 		return provider.TextToSpeechWithContext(ctx, text, sampleRate, channels, frameDuration)
 	}
 
@@ -225,15 +225,15 @@ func (a *ContextTTSAdapter) TextToSpeechWithContext(ctx context.Context, text st
 
 // TextToSpeechStreamWithContext useContextversionofstreamingtext转voice
 func (a *ContextTTSAdapter) TextToSpeechStreamWithContext(ctx context.Context, text string, sampleRate int, channels int, frameDuration int) (outputChan chan []byte, cancelFunc func(), err error) {
-	// inspectprovide者whetherdirectsupportContextversion
+	// inspectproviderwhetherdirectsupportContextversion
 	if provider, ok := a.Provider.(interface {
 		TextToSpeechStreamWithContext(ctx context.Context, text string, sampleRate int, channels int, frameDuration int) (chan []byte, func(), error)
 	}); ok {
-		// provide者directsupportContextversion
+		// providerdirectsupportContextversion
 		return provider.TextToSpeechStreamWithContext(ctx, text, sampleRate, channels, frameDuration)
 	}
 
-	// elseusestandardversion，butcreate apackage装器来processcontextcancel
+	// elseusestandardversion，butcreate awrapper来processcontextcancel
 	streamChan, err := a.Provider.TextToSpeechStream(ctx, text, sampleRate, channels, frameDuration)
 	if err != nil {
 		return nil, nil, err

@@ -347,7 +347,7 @@ func (p *XunfeiSuperTTSProvider) streamSynthesis(ctx context.Context, text strin
 
 		decoder, err := util.CreateAudioDecoderWithSampleRate(ctx, pipeReader, outputChan, frameDuration, audioFormat, targetSampleRate)
 		if err != nil {
-			return fmt.Errorf("create xunfei_super_tts audiodecode器failed: %v", err)
+			return fmt.Errorf("create xunfei_super_tts audio decoderfailed: %v", err)
 		}
 		if audioFormat != "mp3" {
 			decoder.WithFormat(beep.Format{
@@ -392,7 +392,7 @@ func (p *XunfeiSuperTTSProvider) streamSynthesis(ctx context.Context, text strin
 	finishDecoder(streamErr)
 
 	if streamErr == nil && ctx.Err() == nil {
-		log.Infof("xunfei_super_tts time consumption: frominput至getaudio dataendtime consumption: %d ms", time.Now().UnixMilli()-startTs)
+		log.Infof("xunfei_super_tts time consumption: from input togetaudio dataendtime consumption: %d ms", time.Now().UnixMilli()-startTs)
 	}
 
 	return streamErr
@@ -928,7 +928,7 @@ func (p *XunfeiSuperTTSProvider) streamingSynthesisLoop(ctx context.Context, tex
 		}
 		decoder, err := util.CreateAudioDecoderWithSampleRate(ctx, pipeReader, audioFrameChan, frameDuration, audioFormat, targetSampleRate)
 		if err != nil {
-			return fmt.Errorf("create xunfei_super_tts audiodecode器failed: %v", err)
+			return fmt.Errorf("create xunfei_super_tts audio decoderfailed: %v", err)
 		}
 		if audioFormat != "mp3" {
 			decoder.WithFormat(beep.Format{

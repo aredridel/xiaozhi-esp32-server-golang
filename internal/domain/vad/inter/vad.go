@@ -1,15 +1,15 @@
 package inter
 
-// VAD voice活动detectinterface
+// VAD voice activity detection interface
 type VAD interface {
-	// IsVAD detectaudio datainofvoice活动
+	// IsVAD detect audio data voice activity
 	IsVAD(pcmData []float32) (bool, error)
 
 	IsVADExt(pcmData []float32, sampleRate int, frameSize int) (bool, error)
-	// Reset resetdetect器state
+	// Reset reset detector state
 	Reset() error
-	// Close closeandreleaseresource
+	// Close close and release resource
 	Close() error
-	// IsValid inspectresourcewhethervalid
+	// IsValid inspect resource whether valid
 	IsValid() bool
 }

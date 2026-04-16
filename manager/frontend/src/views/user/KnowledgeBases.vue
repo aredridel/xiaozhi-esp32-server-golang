@@ -1,31 +1,31 @@
 <template>
   <div class="config-page">
     <div class="page-header">
-      <h2>我的知识库</h2>
-      <el-button type="primary" @click="openDialog()">新增知识库</el-button>
+      <h2>My Knowledge Bases</h2>
+      <el-button type="primary" @click="openDialog()">Add Knowledge Base</el-button>
     </div>
 
     <el-table :data="items" v-loading="loading" stripe table-layout="fixed" style="width: 100%">
       <el-table-column prop="id" label="ID" width="56" />
-      <el-table-column prop="name" label="名称" width="124" show-overflow-tooltip />
-      <el-table-column label="描述" min-width="180" show-overflow-tooltip>
+      <el-table-column prop="name" label="Name" width="124" show-overflow-tooltip />
+      <el-table-column label="Description" min-width="180" show-overflow-tooltip>
         <template #default="scope">
           <span class="kb-desc-text" :class="{ 'is-empty': !(scope.row.description || '').trim() }">
             {{ (scope.row.description || '').trim() || '-' }}
           </span>
         </template>
       </el-table-column>
-      <el-table-column label="提供商" width="88" show-overflow-tooltip>
+      <el-table-column label="Provider" width="88" show-overflow-tooltip>
         <template #default="scope">
           <el-tag size="small" effect="plain">{{ formatProviderText(scope.row.sync_provider) }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="文档数" width="72" align="center">
+      <el-table-column label="Documents" width="72" align="center">
         <template #default="scope">
           <el-tag size="small" type="info">{{ formatDocCount(scope.row.doc_count) }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="同步状态" width="132">
+      <el-table-column label="Sync Status" width="132">
         <template #default="scope">
           <div class="kb-sync-status-cell">
             <el-tag :type="getSyncStatusTagType(scope.row.sync_status)" size="small">{{ getSyncStatusText(scope.row.sync_status) }}</el-tag>
@@ -38,35 +38,35 @@
           </div>
         </template>
       </el-table-column>
-      <el-table-column label="最近同步" width="168" show-overflow-tooltip>
+      <el-table-column label="Last Sync" width="168" show-overflow-tooltip>
         <template #default="scope">
           <span>{{ formatDateTimeCell(scope.row.last_synced_at) }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="状态" width="92" align="center">
+      <el-table-column label="Status" width="92" align="center">
         <template #default="scope">
           <el-switch
             :model-value="String(scope.row.status || '').trim() === 'active'"
             inline-prompt
-            active-text="开"
-            inactive-text="关"
+            active-text="On"
+            inactive-text="Off"
             :loading="isStatusSwitchLoading(scope.row.id)"
             @change="(checked) => toggleKnowledgeBaseStatus(scope.row, checked)"
           />
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="176">
+      <el-table-column label="Actions" width="176">
         <template #default="scope">
           <div class="action-buttons">
-            <el-button size="small" type="primary" plain @click="openDocuments(scope.row)">文档</el-button>
-            <el-button size="small" type="success" plain @click="openSearchTestDialog(scope.row)">测试</el-button>
+            <el-button size="small" type="primary" plain @click="openDocuments(scope.row)">Documents</el-button>
+            <el-button size="small" type="success" plain @click="openSearchTestDialog(scope.row)">Test</el-button>
             <el-dropdown trigger="click" @command="(cmd) => handleKnowledgeBaseAction(cmd, scope.row)">
-              <el-button size="small">更多</el-button>
+              <el-button size="small">More</el-button>
               <template #dropdown>
                 <el-dropdown-menu>
-                  <el-dropdown-item command="edit">编辑</el-dropdown-item>
-                  <el-dropdown-item command="sync">重试同步</el-dropdown-item>
-                  <el-dropdown-item command="delete" divided>删除</el-dropdown-item>
+                  <el-dropdown-item command="edit">Edit</el-dropdown-item>
+                  <el-dropdown-item command="sync">Retry Sync</el-dropdown-item>
+                  <el-dropdown-item command="delete" divided>Delete</el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
@@ -75,28 +75,28 @@
       </el-table-column>
     </el-table>
 
-    <el-dialog v-model="dialogVisible" :title="editing ? '编辑知识库' : '新增知识库'" width="680px">
+    <el-dialog v-model="dialogVisible" :title="editing ? 'Edit Knowledge Base' : 'Add Knowledge Base'" width="680px">
       <el-form :model="form" label-width="90px">
-        <el-form-item label="名称">
+        <el-form-item label="Name">
           <el-input v-model="form.name" maxlength="100" show-word-limit />
         </el-form-item>
-        <el-form-item label="描述">
+        <el-form-item label="Description">
           <el-input v-model="form.description" />
         </el-form-item>
-        <el-form-item label="同步说明">
-          <div style="color: #909399;">保存后会自动异步同步到管理员配置的知识库提供商（如 Dify / RAGFlow / WeKnora）。文档请在“文档管理”中新增。</div>
+        <el-form-item label="Sync Note">
+          <div style="color: #909399;">After saving, it will automatically sync asynchronously to the administrator-configured knowledge base provider (such as Dify / RAGFlow / WeKnora). Documents should be added in "Document Management".</div>
         </el-form-item>
-        <el-form-item label="检索阈值">
+        <el-form-item label="Retrieval Threshold">
           <el-input
             v-model="form.retrieval_threshold_text"
-            placeholder="请输入 0~1 之间的小数，如 0.2"
+            placeholder="Enter a decimal between 0~1, e.g., 0.2"
             clearable
           />
           <div style="color:#909399; font-size:12px; margin-top:6px;">
-            默认填充提供商全局阈值。当前提供商：{{ form.threshold_provider || '-' }}，全局阈值：{{ formatKnowledgeThreshold(form.global_threshold) }}。
+            Defaults to provider global threshold. Current provider: {{ form.threshold_provider || '-' }}, Global threshold: {{ formatKnowledgeThreshold(form.global_threshold) }}.
           </div>
         </el-form-item>
-        <el-form-item label="状态">
+        <el-form-item label="Status">
           <el-select v-model="form.status" style="width: 100%">
             <el-option value="active" label="active" />
             <el-option value="inactive" label="inactive" />
@@ -104,15 +104,15 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submit">保存</el-button>
+        <el-button @click="dialogVisible = false">Cancel</el-button>
+        <el-button type="primary" @click="submit">Save</el-button>
       </template>
     </el-dialog>
 
-    <el-dialog v-model="documentsVisible" title="文档管理" width="900px">
+    <el-dialog v-model="documentsVisible" title="Document Management" width="900px">
       <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
         <div>
-          当前知识库: <strong>{{ currentKb?.name || '-' }}</strong>
+          Current Knowledge Base: <strong>{{ currentKb?.name || '-' }}</strong>
         </div>
         <div style="display: flex; gap: 8px;">
           <el-upload
@@ -121,9 +121,9 @@
             :accept="uploadAcceptByProvider"
             :disabled="!isUploadProviderSupported"
           >
-            <el-button type="success" plain>上传文件</el-button>
+            <el-button type="success" plain>Upload File</el-button>
           </el-upload>
-          <el-button type="primary" @click="openDocumentDialog()">新增文档</el-button>
+          <el-button type="primary" @click="openDocumentDialog()">Add Document</el-button>
         </div>
       </div>
       <div style="color:#909399; font-size:12px; margin-bottom: 8px;">
@@ -131,92 +131,92 @@
       </div>
       <el-table :data="documentItems" v-loading="documentsLoading" style="width: 100%">
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="name" label="文档名" width="180" />
+        <el-table-column prop="name" label="Document Name" width="180" />
         <el-table-column prop="external_doc_id" label="Document ID" width="220" />
-        <el-table-column label="内容预览">
+        <el-table-column label="Content Preview">
           <template #default="scope">
             {{ getDocumentPreview(scope.row) }}
           </template>
         </el-table-column>
-        <el-table-column label="同步状态" width="110">
+        <el-table-column label="Sync Status" width="110">
           <template #default="scope">
             <el-tag :type="getSyncStatusTagType(scope.row.sync_status)">{{ getSyncStatusText(scope.row.sync_status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="last_synced_at" label="最近同步时间" width="170" />
-        <el-table-column label="操作" width="250">
+        <el-table-column prop="last_synced_at" label="Last Sync Time" width="170" />
+        <el-table-column label="Actions" width="250">
           <template #default="scope">
             <div class="action-buttons">
-              <el-button size="small" :disabled="isUploadedFileDocument(scope.row)" @click="openDocumentDialog(scope.row)">编辑</el-button>
-              <el-button size="small" type="primary" plain @click="syncDocument(scope.row.id)">重试同步</el-button>
-              <el-button size="small" type="danger" @click="removeDocument(scope.row.id)">删除</el-button>
+              <el-button size="small" :disabled="isUploadedFileDocument(scope.row)" @click="openDocumentDialog(scope.row)">Edit</el-button>
+              <el-button size="small" type="primary" plain @click="syncDocument(scope.row.id)">Retry Sync</el-button>
+              <el-button size="small" type="danger" @click="removeDocument(scope.row.id)">Delete</el-button>
             </div>
           </template>
         </el-table-column>
       </el-table>
     </el-dialog>
 
-    <el-dialog v-model="documentDialogVisible" :title="documentEditing ? '编辑文档' : '新增文档'" width="700px">
+    <el-dialog v-model="documentDialogVisible" :title="documentEditing ? 'Edit Document' : 'Add Document'" width="700px">
       <el-form :model="documentForm" label-width="90px">
-        <el-form-item label="文档名">
+        <el-form-item label="Document Name">
           <el-input v-model="documentForm.name" maxlength="200" show-word-limit />
         </el-form-item>
-        <el-form-item label="内容">
-          <el-input v-model="documentForm.content" type="textarea" :rows="12" placeholder="请输入文档内容" />
+        <el-form-item label="Content">
+          <el-input v-model="documentForm.content" type="textarea" :rows="12" placeholder="Please enter document content" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="documentDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitDocument">保存</el-button>
+        <el-button @click="documentDialogVisible = false">Cancel</el-button>
+        <el-button type="primary" @click="submitDocument">Save</el-button>
       </template>
     </el-dialog>
 
-    <el-dialog v-model="searchTestVisible" title="召回测试" width="960px">
+    <el-dialog v-model="searchTestVisible" title="Retrieval Test" width="960px">
       <div style="display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;">
         <div>
-          当前知识库: <strong>{{ searchTestKb?.name || '-' }}</strong>
+          Current Knowledge Base: <strong>{{ searchTestKb?.name || '-' }}</strong>
           <el-tag size="small" style="margin-left: 8px;">{{ searchTestKb?.sync_provider || '-' }}</el-tag>
         </div>
         <div style="display: flex; gap: 8px; flex: 1; min-width: 420px; justify-content: flex-end;">
           <el-input
             v-model="searchTestForm.query"
-            placeholder="输入测试关键词或问题，如：退款流程/接口鉴权"
+            placeholder="Enter test keyword or question, e.g., refund process/interface authentication"
             clearable
             @keyup.enter="runSearchTest"
           />
-          <el-tooltip content="TopK：返回前 K 条召回结果" placement="top">
+          <el-tooltip content="TopK: Return top K retrieval results" placement="top">
             <span style="display:inline-flex;align-items:center;color:#909399;font-size:12px;white-space:nowrap;">TopK</span>
           </el-tooltip>
           <el-select v-model="searchTestForm.top_k" style="width: 110px;">
             <el-option v-for="k in topKOptions" :key="k" :value="k" :label="String(k)" />
           </el-select>
-          <el-tooltip content="仅本次召回测试生效；为空则使用知识库当前阈值（或全局阈值）" placement="top">
-            <span style="display:inline-flex;align-items:center;color:#909399;font-size:12px;white-space:nowrap;">阈值</span>
+          <el-tooltip content="Only effective for this retrieval test; empty uses current knowledge base threshold (or global threshold)" placement="top">
+            <span style="display:inline-flex;align-items:center;color:#909399;font-size:12px;white-space:nowrap;">Threshold</span>
           </el-tooltip>
           <el-input
             v-model="searchTestForm.threshold_text"
-            placeholder="如 0.2"
+            placeholder="e.g., 0.2"
             clearable
             style="width: 120px;"
           />
-          <el-button type="primary" :loading="searchTestLoading" @click="runSearchTest">开始测试</el-button>
+          <el-button type="primary" :loading="searchTestLoading" @click="runSearchTest">Start Test</el-button>
         </div>
       </div>
       <div style="color:#909399; font-size:12px; margin-bottom: 8px;">
-        召回测试会直接调用当前知识库对应 provider 的检索接口（Dify / RAGFlow / WeKnora），用于验证关键词召回效果。
+        Retrieval test will directly call the current knowledge base provider's search interface (Dify / RAGFlow / WeKnora) to verify keyword retrieval effectiveness.
       </div>
       <div v-if="searchTestElapsedMs !== null" style="color:#606266; font-size:12px; margin-bottom: 8px;">
-        响应耗时：{{ searchTestElapsedMs }} ms
+        Response time: {{ searchTestElapsedMs }} ms
       </div>
       <el-table :data="searchTestResult.hits" v-loading="searchTestLoading" style="width: 100%" max-height="420">
         <el-table-column type="index" label="#" width="60" />
-        <el-table-column prop="title" label="来源" width="200" />
-        <el-table-column label="分数" width="110">
+        <el-table-column prop="title" label="Source" width="200" />
+        <el-table-column label="Score" width="110">
           <template #default="scope">
             {{ formatHitScore(scope.row.score) }}
           </template>
         </el-table-column>
-        <el-table-column prop="content" label="命中内容" min-width="480">
+        <el-table-column prop="content" label="Hit Content" min-width="480">
           <template #default="scope">
             <div style="white-space: pre-wrap; line-height: 1.4;">
               {{ scope.row.content }}
@@ -225,7 +225,7 @@
         </el-table-column>
       </el-table>
       <div v-if="!searchTestLoading && hasRunSearchTest && searchTestResult.hits.length === 0" style="color:#909399; margin-top: 10px;">
-        未命中内容，可尝试更换关键词或检查该知识库是否已同步完成。
+        No content hit, try changing keywords or check if the knowledge base sync is complete.
       </div>
     </el-dialog>
   </div>
@@ -307,15 +307,15 @@ const uploadAcceptByProvider = computed(() => {
 const isUploadProviderSupported = computed(() => currentKBProvider.value === 'dify' || currentKBProvider.value === 'ragflow' || currentKBProvider.value === 'weknora')
 const uploadTipText = computed(() => {
   if (currentKBProvider.value === 'dify') {
-    return '按 Dify 支持格式限制上传（txt/md/pdf/html/xlsx/docx/csv/eml/msg/pptx/xml/epub），上传后自动创建文档并异步同步。'
+    return 'Upload according to Dify supported format limits (txt/md/pdf/html/xlsx/docx/csv/eml/msg/pptx/xml/epub). After upload, documents are automatically created and synced asynchronously.'
   }
   if (currentKBProvider.value === 'ragflow') {
-    return '按 RAGFlow 支持格式限制上传（如 txt/md/pdf/docx/xlsx/pptx/jpg/png/eml 等），上传后自动创建文档并异步同步。'
+    return 'Upload according to RAGFlow supported format limits (such as txt/md/pdf/docx/xlsx/pptx/jpg/png/eml, etc.). After upload, documents are automatically created and synced asynchronously.'
   }
   if (currentKBProvider.value === 'weknora') {
-    return '按 WeKnora 支持格式限制上传（如 txt/md/pdf/docx/xlsx/pptx/jpg/png/eml 等），上传后自动创建文档并异步同步。'
+    return 'Upload according to WeKnora supported format limits (such as txt/md/pdf/docx/xlsx/pptx/jpg/png/eml, etc.). After upload, documents are automatically created and synced asynchronously.'
   }
-  return `当前提供商 ${currentKBProvider.value} 暂不支持上传建文档。`
+  return `Current provider ${currentKBProvider.value} does not support file upload for document creation.`
 })
 
 const loadData = async () => {
@@ -389,13 +389,13 @@ const openDialog = (row = null) => {
 
 const submit = async () => {
   if (!form.name.trim()) {
-    ElMessage.error('名称不能为空')
+    ElMessage.error('Name cannot be empty')
     return
   }
   const rawThreshold = String(form.retrieval_threshold_text || '').trim()
   const threshold = Number(rawThreshold)
   if (!rawThreshold || Number.isNaN(threshold) || threshold < 0 || threshold > 1) {
-    ElMessage.error('检索阈值必须在 0~1 之间')
+    ElMessage.error('Retrieval threshold must be between 0~1')
     return
   }
   const globalThreshold = Number(form.global_threshold)
@@ -418,22 +418,22 @@ const submit = async () => {
     } else {
       res = await api.post('/user/knowledge-bases', payload)
     }
-    ElMessage.success('保存成功')
+    ElMessage.success('Saved successfully')
     if (res?.data?.warning) {
       ElMessage.warning(res.data.warning)
     }
     dialogVisible.value = false
     await loadData()
   } catch (e) {
-    ElMessage.error('保存失败')
+    ElMessage.error('Save failed')
   }
 }
 
 const removeItem = async (id) => {
   try {
-    await ElMessageBox.confirm('确认删除该知识库及其全部文档吗？', '提示', { type: 'warning' })
+    await ElMessageBox.confirm('Confirm delete this knowledge base and all its documents?', 'Tip', { type: 'warning' })
     const res = await api.delete(`/user/knowledge-bases/${id}`)
-    ElMessage.success('删除成功')
+    ElMessage.success('Deleted successfully')
     if (res?.data?.warning) {
       ElMessage.warning(res.data.warning)
     }
@@ -467,12 +467,12 @@ const toggleKnowledgeBaseStatus = async (row, checked) => {
     if (res?.data?.warning) {
       ElMessage.warning(res.data.warning)
     } else {
-      ElMessage.success(`已${nextStatus === 'active' ? '启用' : '停用'}`)
+      ElMessage.success(`${nextStatus === 'active' ? 'Enabled' : 'Disabled'}`)
     }
     await loadData()
   } catch (e) {
     row.status = prevStatus
-    const msg = e?.response?.data?.error || '状态更新失败'
+    const msg = e?.response?.data?.error || 'Status update failed'
     ElMessage.error(msg)
   } finally {
     statusSwitchLoadingMap.value = {
@@ -500,10 +500,10 @@ const handleKnowledgeBaseAction = async (command, row) => {
 const syncItem = async (id) => {
   try {
     const res = await api.post(`/user/knowledge-bases/${id}/sync`)
-    ElMessage.success(res?.data?.message || '同步任务已提交')
+    ElMessage.success(res?.data?.message || 'Sync task submitted')
     await loadData()
   } catch (e) {
-    const msg = e?.response?.data?.error || '同步失败'
+    const msg = e?.response?.data?.error || 'Sync failed'
     ElMessage.error(msg)
     await loadData()
   }
@@ -528,12 +528,12 @@ const openSearchTestDialog = (row) => {
 
 const runSearchTest = async () => {
   if (!searchTestKb.value?.id) {
-    ElMessage.error('请先选择知识库')
+    ElMessage.error('Please select a knowledge base first')
     return
   }
   const query = (searchTestForm.query || '').trim()
   if (!query) {
-    ElMessage.error('请输入测试关键词')
+    ElMessage.error('Please enter test keyword')
     return
   }
   searchTestLoading.value = true
@@ -544,7 +544,7 @@ const runSearchTest = async () => {
     if (rawThreshold !== '') {
       const parsed = Number(rawThreshold)
       if (Number.isNaN(parsed) || parsed < 0 || parsed > 1) {
-        ElMessage.error('阈值必须在 0~1 之间')
+        ElMessage.error('Threshold must be between 0~1')
         return
       }
       threshold = parsed
@@ -562,9 +562,9 @@ const runSearchTest = async () => {
     const elapsed = Number(data.elapsed_ms)
     searchTestElapsedMs.value = Number.isNaN(elapsed) ? Date.now() - startedAt : elapsed
     hasRunSearchTest.value = true
-    ElMessage.success(`召回完成，共返回 ${searchTestResult.count} 条`)
+    ElMessage.success(`Retrieval completed, returned ${searchTestResult.count} results`)
   } catch (e) {
-    const msg = e?.response?.data?.error || '测试失败'
+    const msg = e?.response?.data?.error || 'Test failed'
     ElMessage.error(msg)
   } finally {
     searchTestLoading.value = false
@@ -590,7 +590,7 @@ const loadDocuments = async () => {
 
 const openDocumentDialog = (row = null) => {
   if (row && isUploadedFileDocument(row)) {
-    ElMessage.warning('文件型文档不支持在线编辑，请删除后重新上传')
+    ElMessage.warning('File-type documents do not support online editing, please delete and re-upload')
     return
   }
   documentEditing.value = !!row
@@ -603,11 +603,11 @@ const openDocumentDialog = (row = null) => {
 const submitDocument = async () => {
   if (!currentKb.value?.id) return
   if (!documentForm.name.trim()) {
-    ElMessage.error('文档名不能为空')
+    ElMessage.error('Document name cannot be empty')
     return
   }
   if (!documentForm.content.trim()) {
-    ElMessage.error('文档内容不能为空')
+    ElMessage.error('Document content cannot be empty')
     return
   }
   try {
@@ -617,7 +617,7 @@ const submitDocument = async () => {
     } else {
       res = await api.post(`/user/knowledge-bases/${currentKb.value.id}/documents`, documentForm)
     }
-    ElMessage.success('文档保存成功')
+    ElMessage.success('Document saved successfully')
     if (res?.data?.warning) {
       ElMessage.warning(res.data.warning)
     }
@@ -625,7 +625,7 @@ const submitDocument = async () => {
     await loadDocuments()
     await loadData()
   } catch (e) {
-    const msg = e?.response?.data?.error || '文档保存失败'
+    const msg = e?.response?.data?.error || 'Document save failed'
     ElMessage.error(msg)
   }
 }
@@ -633,9 +633,9 @@ const submitDocument = async () => {
 const removeDocument = async (docId) => {
   if (!currentKb.value?.id) return
   try {
-    await ElMessageBox.confirm('确认删除该文档吗？', '提示', { type: 'warning' })
+    await ElMessageBox.confirm('Confirm delete this document?', 'Tip', { type: 'warning' })
     const res = await api.delete(`/user/knowledge-bases/${currentKb.value.id}/documents/${docId}`)
-    ElMessage.success('删除成功')
+    ElMessage.success('Deleted successfully')
     if (res?.data?.warning) {
       ElMessage.warning(res.data.warning)
     }
@@ -648,29 +648,29 @@ const syncDocument = async (docId) => {
   if (!currentKb.value?.id) return
   try {
     const res = await api.post(`/user/knowledge-bases/${currentKb.value.id}/documents/${docId}/sync`)
-    ElMessage.success(res?.data?.message || '同步任务已提交')
+    ElMessage.success(res?.data?.message || 'Sync task submitted')
     await loadDocuments()
     await loadData()
   } catch (e) {
-    const msg = e?.response?.data?.error || '同步失败'
+    const msg = e?.response?.data?.error || 'Sync failed'
     ElMessage.error(msg)
   }
 }
 
 const uploadDocumentFile = async (options) => {
   if (!currentKb.value?.id) {
-    ElMessage.error('请先选择知识库')
+    ElMessage.error('Please select a knowledge base first')
     options?.onError?.(new Error('missing knowledge base'))
     return
   }
   if (!isUploadProviderSupported.value) {
-    ElMessage.error(`当前知识库提供商为 ${currentKBProvider.value}，暂不支持文件上传创建文档`)
+    ElMessage.error(`Current knowledge base provider is ${currentKBProvider.value}, file upload for document creation is not supported`)
     options?.onError?.(new Error('provider not supported'))
     return
   }
   const file = options?.file
   if (!file) {
-    ElMessage.error('请选择上传文件')
+    ElMessage.error('Please select a file to upload')
     options?.onError?.(new Error('missing file'))
     return
   }
@@ -684,7 +684,7 @@ const uploadDocumentFile = async (options) => {
 
   try {
     const res = await api.post(`/user/knowledge-bases/${currentKb.value.id}/documents/upload`, formData)
-    ElMessage.success(res?.data?.message || '文件上传成功')
+    ElMessage.success(res?.data?.message || 'File uploaded successfully')
     if (res?.data?.warning) {
       ElMessage.warning(res.data.warning)
     }
@@ -692,7 +692,7 @@ const uploadDocumentFile = async (options) => {
     await loadData()
     options?.onSuccess?.(res?.data)
   } catch (e) {
-    const msg = e?.response?.data?.error || '文件上传失败'
+    const msg = e?.response?.data?.error || 'File upload failed'
     ElMessage.error(msg)
     options?.onError?.(e)
   }
@@ -708,10 +708,10 @@ const getDocumentPreview = (doc) => {
   if (isUploadedFileDocument(doc)) {
     try {
       const payload = JSON.parse(content.slice(FILE_UPLOAD_CONTENT_PREFIX.length))
-      const fileName = payload?.file_name || doc?.name || '上传文件'
-      return `[文件] ${fileName}`
+      const fileName = payload?.file_name || doc?.name || 'Uploaded File'
+      return `[File] ${fileName}`
     } catch {
-      return `[文件] ${doc?.name || '上传文件'}`
+      return `[File] ${doc?.name || 'Uploaded File'}`
     }
   }
   const text = String(content)
@@ -719,14 +719,14 @@ const getDocumentPreview = (doc) => {
 }
 
 const getSyncStatusText = (status) => {
-  if (status === 'uploading') return '上传中'
-  if (status === 'uploaded') return '已上传'
-  if (status === 'parsing') return '解析中'
-  if (status === 'upload_failed') return '上传失败'
-  if (status === 'parse_failed') return '解析失败'
-  if (status === 'synced') return '已同步'
-  if (status === 'failed') return '失败'
-  return '待同步'
+  if (status === 'uploading') return 'Uploading'
+  if (status === 'uploaded') return 'Uploaded'
+  if (status === 'parsing') return 'Parsing'
+  if (status === 'upload_failed') return 'Upload Failed'
+  if (status === 'parse_failed') return 'Parse Failed'
+  if (status === 'synced') return 'Synced'
+  if (status === 'failed') return 'Failed'
+  return 'Pending Sync'
 }
 
 const getSyncStatusTagType = (status) => {
@@ -739,7 +739,7 @@ const getSyncStatusTagType = (status) => {
 }
 
 const getKnowledgeStatusText = (status) => {
-  return String(status || '').trim() === 'active' ? '启用' : '停用'
+  return String(status || '').trim() === 'active' ? 'Enabled' : 'Disabled'
 }
 
 const formatProviderText = (provider) => {
@@ -777,9 +777,9 @@ const formatDateTimeCell = (value) => {
 }
 
 const formatKnowledgeThreshold = (value) => {
-  if (value === null || value === undefined || value === '') return '全局'
+  if (value === null || value === undefined || value === '') return 'Global'
   const n = Number(value)
-  if (Number.isNaN(n)) return '全局'
+  if (Number.isNaN(n)) return 'Global'
   return n.toFixed(2)
 }
 

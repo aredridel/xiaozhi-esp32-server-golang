@@ -2,7 +2,7 @@
   <div class="config-page">
     <div class="page-header">
       <div class="header-left">
-        <h2>VAD配置管理</h2>
+        <h2>VAD Configuration Management</h2>
       </div>
       <div class="header-right">
         <el-button
@@ -12,21 +12,21 @@
           @click="testAllConfigs"
           :disabled="!getEnabledConfigs().length"
         >
-          测试全部
+          Test All
         </el-button>
         <el-button type="primary" @click="showDialog = true">
           <el-icon><Plus /></el-icon>
-          添加配置
+          Add Configuration
         </el-button>
       </div>
     </div>
 
     <el-table :data="configs" style="width: 100%" v-loading="loading">
       <el-table-column prop="id" label="ID" width="80" />
-      <el-table-column prop="name" label="配置名称" />
-      <el-table-column prop="config_id" label="配置ID" width="150" />
-      <el-table-column prop="provider" label="提供商" />
-      <el-table-column prop="enabled" label="启用状态" width="80" align="center">
+      <el-table-column prop="name" label="Configuration Name" />
+      <el-table-column prop="config_id" label="Config ID" width="150" />
+      <el-table-column prop="provider" label="Provider" />
+      <el-table-column prop="enabled" label="Enabled" width="80" align="center">
         <template #default="scope">
           <el-switch 
             v-model="scope.row.enabled" 
@@ -34,7 +34,7 @@
           />
         </template>
       </el-table-column>
-      <el-table-column prop="is_default" label="默认配置" width="80" align="center">
+      <el-table-column prop="is_default" label="Default" width="80" align="center">
         <template #default="scope">
           <el-switch 
             v-model="scope.row.is_default" 
@@ -43,62 +43,62 @@
           />
         </template>
       </el-table-column>
-      <el-table-column label="测试结果" width="120" align="center">
+      <el-table-column label="Test Result" width="120" align="center">
         <template #default="scope">
           <template v-if="testResults[scope.row.config_id]">
             <el-tooltip v-if="testResults[scope.row.config_id].ok" :content="formatTestResultTip(testResults[scope.row.config_id])" placement="top">
               <span class="test-result test-ok">{{ formatTestResultLabel(testResults[scope.row.config_id]) }}</span>
             </el-tooltip>
             <el-tooltip v-else :content="testResults[scope.row.config_id].message" placement="top" :show-after="200">
-              <span class="test-result test-err">错误</span>
+              <span class="test-result test-err">Error</span>
             </el-tooltip>
           </template>
           <span v-else class="test-result test-none">-</span>
         </template>
       </el-table-column>
-      <el-table-column prop="created_at" label="创建时间" width="180">
+      <el-table-column prop="created_at" label="Created At" width="180">
         <template #default="scope">
           {{ formatDate(scope.row.created_at) }}
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="260">
+      <el-table-column label="Actions" width="260">
         <template #default="scope">
-          <el-button size="small" @click="editConfig(scope.row)">编辑</el-button>
+          <el-button size="small" @click="editConfig(scope.row)">Edit</el-button>
           <el-button
             size="small"
             type="warning"
             :loading="testingId === scope.row.config_id"
             @click="testConfig(scope.row, 'vad')"
           >
-            测试
+            Test
           </el-button>
           <el-button
             size="small"
             type="danger"
             @click="deleteConfig(scope.row.id)"
           >
-            删除
+            Delete
           </el-button>
         </template>
       </el-table-column>
     </el-table>
 
-    <!-- 添加/编辑配置弹窗 -->
+    <!-- Add/Edit Configuration Dialog -->
     <el-dialog
       v-model="showDialog"
-      :title="editingConfig ? '编辑VAD配置' : '添加VAD配置'"
+      :title="editingConfig ? 'Edit VAD Configuration' : 'Add VAD Configuration'"
       width="600px"
       @close="handleDialogClose"
     >
       <VADConfigForm ref="formRef" :model="form" :rules="rules" />
       
       <template #footer>
-        <el-button @click="handleDialogClose">取消</el-button>
+        <el-button @click="handleDialogClose">Cancel</el-button>
         <el-button type="warning" plain @click="testCurrentConfig" :loading="testingCurrent">
-          测试
+          Test
         </el-button>
         <el-button type="primary" @click="handleSave" :loading="saving">
-          保存
+          Save
         </el-button>
       </template>
     </el-dialog>
@@ -155,25 +155,25 @@ const form = reactive({
 })
 
 const rules = {
-  name: [{ required: true, message: '请输入配置名称', trigger: 'blur' }],
-  config_id: [{ required: true, message: '请输入配置ID', trigger: 'blur' }],
-  provider: [{ required: true, message: '请选择提供商', trigger: 'change' }],
-  'webrtc_vad.pool_min_size': [{ required: true, message: '请输入最小连接池大小', trigger: 'blur' }],
-  'webrtc_vad.pool_max_size': [{ required: true, message: '请输入最大连接池大小', trigger: 'blur' }],
-  'webrtc_vad.pool_max_idle': [{ required: true, message: '请输入最大空闲连接数', trigger: 'blur' }],
-  'webrtc_vad.vad_sample_rate': [{ required: true, message: '请选择VAD采样率', trigger: 'change' }],
-  'webrtc_vad.vad_mode': [{ required: true, message: '请选择VAD模式', trigger: 'change' }],
-  'silero_vad.model_path': [{ required: true, message: '请输入模型路径', trigger: 'blur' }],
-  'silero_vad.threshold': [{ required: true, message: '请输入阈值', trigger: 'blur' }],
-  'silero_vad.min_silence_duration_ms': [{ required: true, message: '请输入最小静音持续时间', trigger: 'blur' }],
-  'silero_vad.sample_rate': [{ required: true, message: '请选择采样率', trigger: 'change' }],
-  'silero_vad.channels': [{ required: true, message: '请选择声道数', trigger: 'change' }],
-  'silero_vad.pool_size': [{ required: true, message: '请输入连接池大小', trigger: 'blur' }],
-  'silero_vad.acquire_timeout_ms': [{ required: true, message: '请输入获取超时时间', trigger: 'blur' }],
-  'ten_vad.hop_size': [{ required: true, message: '请输入帧移大小', trigger: 'blur' }],
-  'ten_vad.threshold': [{ required: true, message: '请输入VAD检测阈值', trigger: 'blur' }],
-  'ten_vad.pool_size': [{ required: true, message: '请输入连接池大小', trigger: 'blur' }],
-  'ten_vad.acquire_timeout_ms': [{ required: true, message: '请输入获取超时时间', trigger: 'blur' }]
+  name: [{ required: true, message: 'Please enter configuration name', trigger: 'blur' }],
+  config_id: [{ required: true, message: 'Please enter config ID', trigger: 'blur' }],
+  provider: [{ required: true, message: 'Please select provider', trigger: 'change' }],
+  'webrtc_vad.pool_min_size': [{ required: true, message: 'Please enter minimum pool size', trigger: 'blur' }],
+  'webrtc_vad.pool_max_size': [{ required: true, message: 'Please enter maximum pool size', trigger: 'blur' }],
+  'webrtc_vad.pool_max_idle': [{ required: true, message: 'Please enter maximum idle connections', trigger: 'blur' }],
+  'webrtc_vad.vad_sample_rate': [{ required: true, message: 'Please select VAD sample rate', trigger: 'change' }],
+  'webrtc_vad.vad_mode': [{ required: true, message: 'Please select VAD mode', trigger: 'change' }],
+  'silero_vad.model_path': [{ required: true, message: 'Please enter model path', trigger: 'blur' }],
+  'silero_vad.threshold': [{ required: true, message: 'Please enter threshold', trigger: 'blur' }],
+  'silero_vad.min_silence_duration_ms': [{ required: true, message: 'Please enter minimum silence duration', trigger: 'blur' }],
+  'silero_vad.sample_rate': [{ required: true, message: 'Please select sample rate', trigger: 'change' }],
+  'silero_vad.channels': [{ required: true, message: 'Please select channels', trigger: 'change' }],
+  'silero_vad.pool_size': [{ required: true, message: 'Please enter pool size', trigger: 'blur' }],
+  'silero_vad.acquire_timeout_ms': [{ required: true, message: 'Please enter acquire timeout', trigger: 'blur' }],
+  'ten_vad.hop_size': [{ required: true, message: 'Please enter hop size', trigger: 'blur' }],
+  'ten_vad.threshold': [{ required: true, message: 'Please enter VAD detection threshold', trigger: 'blur' }],
+  'ten_vad.pool_size': [{ required: true, message: 'Please enter pool size', trigger: 'blur' }],
+  'ten_vad.acquire_timeout_ms': [{ required: true, message: 'Please enter acquire timeout', trigger: 'blur' }]
 }
 
 const loadConfigs = async () => {
@@ -182,7 +182,7 @@ const loadConfigs = async () => {
     const response = await api.get('/admin/vad-configs')
     configs.value = response.data.data || []
   } catch (error) {
-    ElMessage.error('加载配置失败')
+    ElMessage.error('Failed to load configurations')
   } finally {
     loading.value = false
   }
@@ -196,7 +196,7 @@ const editConfig = (config) => {
   form.is_default = config.is_default
   form.enabled = config.enabled
   
-  // 解析配置JSON并填充到对应字段
+  // Parse configuration JSON and fill in corresponding fields
   try {
     const configObj = JSON.parse(config.json_data || '{}')
     if (configObj.webrtc_vad) {
@@ -215,7 +215,7 @@ const editConfig = (config) => {
       }
     }
   } catch (error) {
-    console.error('解析配置JSON失败:', error)
+    console.error('Failed to parse configuration JSON:', error)
   }
   
   showDialog.value = true
@@ -228,30 +228,30 @@ const handleSave = async () => {
     if (valid) {
       saving.value = true
       try {
-        // 如果是新增配置且当前没有任何配置，则自动设为默认配置
+        // If adding new config and no configs exist, auto-set as default
         const isFirstConfig = !editingConfig.value && configs.value.length === 0
         
         const configData = {
           name: form.name,
           config_id: form.config_id,
           provider: form.provider,
-          is_default: isFirstConfig || form.is_default, // 首次添加时自动设为默认
+          is_default: isFirstConfig || form.is_default, // Auto-set as default on first add
           enabled: form.enabled !== undefined ? form.enabled : true,
           json_data: formRef.value.getJsonData()
         }
 
         if (editingConfig.value) {
           await api.put(`/admin/vad-configs/${editingConfig.value.id}`, configData)
-          ElMessage.success('配置更新成功')
+          ElMessage.success('Configuration updated successfully')
         } else {
           await api.post('/admin/vad-configs', configData)
-          ElMessage.success('配置创建成功')
+          ElMessage.success('Configuration created successfully')
         }
         
         showDialog.value = false
         loadConfigs()
       } catch (error) {
-        ElMessage.error('保存失败: ' + (error.response?.data?.message || error.message))
+        ElMessage.error('Save failed: ' + (error.response?.data?.message || error.message))
       } finally {
         saving.value = false
       }
@@ -262,18 +262,18 @@ const handleSave = async () => {
 const toggleEnable = async (config) => {
   try {
     await api.post(`/admin/configs/${config.id}/toggle`)
-    ElMessage.success(`${config.enabled ? '启用' : '禁用'}成功`)
+    ElMessage.success(`${config.enabled ? 'Enabled' : 'Disabled'} successfully`)
   } catch (error) {
-    // 恢复开关状态
+    // Restore switch state
     config.enabled = !config.enabled
-    ElMessage.error('操作失败')
+    ElMessage.error('Operation failed')
   }
 }
 
 const toggleDefault = async (config) => {
   try {
     if (!config.enabled) {
-      ElMessage.warning('请先启用该配置才能设为默认')
+      ElMessage.warning('Please enable this configuration first before setting it as default')
       config.is_default = false
       return
     }
@@ -288,14 +288,14 @@ const toggleDefault = async (config) => {
     }
     
     await api.put(`/admin/vad-configs/${config.id}`, configData)
-    ElMessage.success(config.is_default ? '设为默认成功' : '取消默认成功')
+    ElMessage.success(config.is_default ? 'Set as default successfully' : 'Removed default successfully')
     
-    // 刷新列表以更新其他配置的默认状态
+    // Refresh list to update default status of other configurations
     loadConfigs()
   } catch (error) {
-    // 恢复开关状态
+    // Restore switch state
     config.is_default = !config.is_default
-    ElMessage.error('操作失败')
+    ElMessage.error('Operation failed')
   }
 }
 
@@ -304,12 +304,12 @@ const getEnabledConfigs = () => {
 }
 
 function formatTestResultLabel(r) {
-  if (!r?.ok) return '错误'
-  return r.first_packet_ms != null ? `正确 ${r.first_packet_ms}ms` : '正确'
+  if (!r?.ok) return 'Error'
+  return r.first_packet_ms != null ? `OK ${r.first_packet_ms}ms` : 'OK'
 }
 function formatTestResultTip(r) {
   if (!r?.ok) return ''
-  return r.first_packet_ms != null ? `通过，耗时 ${r.first_packet_ms}ms` : '通过'
+  return r.first_packet_ms != null ? `Passed, took ${r.first_packet_ms}ms` : 'Passed'
 }
 function formatTestMessage(result) {
   const base = result.message || ''
@@ -322,12 +322,12 @@ const testConfig = async (row, type) => {
     const result = await testSingleConfig(type, row.config_id)
     testResults.value = { ...testResults.value, [row.config_id]: result }
     if (result.ok) {
-      ElMessage.success(`${row.name || row.config_id}：${formatTestMessage(result)}`)
+      ElMessage.success(`${row.name || row.config_id}: ${formatTestMessage(result)}`)
     } else {
-      ElMessage.warning(`${row.name || row.config_id}：${result.message}`)
+      ElMessage.warning(`${row.name || row.config_id}: ${result.message}`)
     }
   } catch (err) {
-    ElMessage.error(err.response?.data?.error || '测试请求失败')
+    ElMessage.error(err.response?.data?.error || 'Test request failed')
   } finally {
     testingId.value = null
   }
@@ -336,7 +336,7 @@ const testConfig = async (row, type) => {
 const testAllConfigs = async () => {
   const list = getEnabledConfigs()
   if (!list.length) {
-    ElMessage.warning('没有已启用的配置')
+    ElMessage.warning('No enabled configurations')
     return
   }
   testingAll.value = true
@@ -349,12 +349,12 @@ const testAllConfigs = async () => {
         testResults.value = { ...testResults.value, [row.config_id]: result }
         if (result.ok) okCount++
       } catch (_) {
-        testResults.value = { ...testResults.value, [row.config_id]: { ok: false, message: '请求失败' } }
+        testResults.value = { ...testResults.value, [row.config_id]: { ok: false, message: 'Request failed' } }
       }
     }
-    ElMessage.success(`全部测试完成：${okCount}/${list.length} 通过`)
+    ElMessage.success(`All tests completed: ${okCount}/${list.length} passed`)
   } catch (err) {
-    ElMessage.error(err.response?.data?.error || '测试请求失败')
+    ElMessage.error(err.response?.data?.error || 'Test request failed')
   } finally {
     testingAll.value = false
   }
@@ -369,7 +369,7 @@ const testCurrentConfig = async () => {
   }
   const configId = form.config_id?.trim()
   if (!configId) {
-    ElMessage.warning('请填写配置ID')
+    ElMessage.warning('Please enter config ID')
     return
   }
   const payload = {
@@ -383,12 +383,12 @@ const testCurrentConfig = async () => {
   try {
     const result = await testWithData('vad', { [configId]: payload })
     if (result.ok) {
-      ElMessage.success(formatTestMessage(result) || '测试通过')
+      ElMessage.success(formatTestMessage(result) || 'Test passed')
     } else {
-      ElMessage.warning(result.message || '测试未通过')
+      ElMessage.warning(result.message || 'Test failed')
     }
   } catch (err) {
-    ElMessage.error(err.response?.data?.error || '测试请求失败')
+    ElMessage.error(err.response?.data?.error || 'Test request failed')
   } finally {
     testingCurrent.value = false
   }
@@ -396,18 +396,18 @@ const testCurrentConfig = async () => {
 
 const deleteConfig = async (id) => {
   try {
-    await ElMessageBox.confirm('确定要删除这个配置吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
+    await ElMessageBox.confirm('Are you sure you want to delete this configuration?', 'Confirm', {
+      confirmButtonText: 'Confirm',
+      cancelButtonText: 'Cancel',
       type: 'warning'
     })
     
     await api.delete(`/admin/vad-configs/${id}`)
-    ElMessage.success('删除成功')
+    ElMessage.success('Deleted successfully')
     loadConfigs()
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('删除失败')
+      ElMessage.error('Delete failed')
     }
   }
 }
@@ -454,7 +454,7 @@ const handleDialogClose = () => {
 }
 
 const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleString('zh-CN')
+  return new Date(dateString).toLocaleString('en-US')
 }
 
 onMounted(() => {

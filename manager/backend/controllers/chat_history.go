@@ -446,10 +446,15 @@ func (c *ChatHistoryController) GetAudioFile(ctx *gin.Context) {
 	}
 
 	if message.AudioPath == "" {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": "Audio file does not exist"})
-		} else {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read audio file"})
-		}
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Audio file does not exist"})
+		return
+	}
+
+	// Read audio file
+	fullPath := filepath.Join(c.AudioBasePath, message.AudioPath)
+	audioData, err := os.ReadFile(fullPath)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read audio file"})
 		return
 	}
 

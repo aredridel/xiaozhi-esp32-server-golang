@@ -2,7 +2,7 @@
   <div class="config-page">
     <div class="page-header">
       <div class="header-left">
-        <h2>TTS配置管理</h2>
+        <h2>TTS Configuration Management</h2>
       </div>
       <div class="header-right">
         <el-button
@@ -12,21 +12,21 @@
           @click="testAllConfigs"
           :disabled="!getEnabledConfigs().length"
         >
-          测试全部
+          Test All
         </el-button>
         <el-button type="primary" @click="showDialog = true">
           <el-icon><Plus /></el-icon>
-          添加配置
+          Add Configuration
         </el-button>
       </div>
     </div>
 
     <el-table :data="configs" style="width: 100%" v-loading="loading">
       <el-table-column prop="id" label="ID" width="80" />
-      <el-table-column prop="name" label="配置名称" />
-      <el-table-column prop="config_id" label="配置ID" width="150" />
-      <el-table-column prop="provider" label="提供商" />
-      <el-table-column prop="enabled" label="启用状态" width="80" align="center">
+      <el-table-column prop="name" label="Configuration Name" />
+      <el-table-column prop="config_id" label="Config ID" width="150" />
+      <el-table-column prop="provider" label="Provider" />
+      <el-table-column prop="enabled" label="Enabled" width="80" align="center">
         <template #default="scope">
           <el-switch 
             v-model="scope.row.enabled" 
@@ -34,7 +34,7 @@
           />
         </template>
       </el-table-column>
-      <el-table-column prop="is_default" label="默认配置" width="80" align="center">
+      <el-table-column prop="is_default" label="Default" width="80" align="center">
         <template #default="scope">
           <el-switch 
             v-model="scope.row.is_default" 
@@ -43,50 +43,50 @@
           />
         </template>
       </el-table-column>
-      <el-table-column label="测试结果" width="120" align="center">
+      <el-table-column label="Test Result" width="120" align="center">
         <template #default="scope">
           <template v-if="testResults[scope.row.config_id]">
             <el-tooltip v-if="testResults[scope.row.config_id].ok" :content="formatTestResultTip(testResults[scope.row.config_id])" placement="top">
               <span class="test-result test-ok">{{ formatTestResultLabel(testResults[scope.row.config_id]) }}</span>
             </el-tooltip>
             <el-tooltip v-else :content="testResults[scope.row.config_id].message" placement="top" :show-after="200">
-              <span class="test-result test-err">错误</span>
+              <span class="test-result test-err">Error</span>
             </el-tooltip>
           </template>
           <span v-else class="test-result test-none">-</span>
         </template>
       </el-table-column>
-      <el-table-column prop="created_at" label="创建时间" width="180">
+      <el-table-column prop="created_at" label="Created At" width="180">
         <template #default="scope">
           {{ formatDate(scope.row.created_at) }}
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="260">
+      <el-table-column label="Actions" width="260">
         <template #default="scope">
-          <el-button size="small" @click="editConfig(scope.row)">编辑</el-button>
+          <el-button size="small" @click="editConfig(scope.row)">Edit</el-button>
           <el-button
             size="small"
             type="warning"
             :loading="testingId === scope.row.config_id"
             @click="testConfig(scope.row, 'tts')"
           >
-            测试
+            Test
           </el-button>
           <el-button
             size="small"
             type="danger"
             @click="deleteConfig(scope.row.id)"
           >
-            删除
+            Delete
           </el-button>
         </template>
       </el-table-column>
     </el-table>
 
-    <!-- 添加/编辑配置弹窗 -->
+    <!-- Add/Edit Configuration Dialog -->
     <el-dialog
       v-model="showDialog"
-      :title="editingConfig ? '编辑TTS配置' : '添加TTS配置'"
+      :title="editingConfig ? 'Edit TTS Configuration' : 'Add TTS Configuration'"
       width="600px"
       @close="handleDialogClose"
     >
@@ -100,12 +100,12 @@
       />
       
       <template #footer>
-        <el-button @click="handleDialogClose">取消</el-button>
+        <el-button @click="handleDialogClose">Cancel</el-button>
         <el-button type="warning" plain @click="testCurrentConfig" :loading="testingCurrent">
-          测试
+          Test
         </el-button>
         <el-button type="primary" @click="handleSave" :loading="saving">
-          保存
+          Save
         </el-button>
       </template>
     </el-dialog>
@@ -132,7 +132,7 @@ const showDialog = ref(false)
 const editingConfig = ref(null)
 const formRef = ref()
 
-// 音色列表相关
+// Voice options related
 const voiceOptions = ref([])
 const voiceLoading = ref(false)
 
@@ -149,7 +149,7 @@ const form = reactive({
     frame_duration: 60,
     target_sr: 24000,
     audio_format: 'mp3',
-    instruct_text: '你好'
+    instruct_text: 'Hello'
   },
   qwen_tts: {
     api_key: '',
@@ -276,50 +276,50 @@ const form = reactive({
 })
 
 const rules = {
-  name: [{ required: true, message: '请输入配置名称', trigger: 'blur' }],
-  config_id: [{ required: true, message: '请输入配置ID', trigger: 'blur' }],
-  provider: [{ required: true, message: '请选择提供商', trigger: 'change' }],
-  // CosyVoice 验证规则
-  'cosyvoice.api_url': [{ required: true, message: '请输入API URL', trigger: 'blur' }],
-  'cosyvoice.spk_id': [{ required: true, message: '请输入说话人ID', trigger: 'blur' }],
-  // 豆包 TTS 验证规则
-  'doubao.appid': [{ required: true, message: '请输入应用ID', trigger: 'blur' }],
-  'doubao.access_token': [{ required: true, message: '请输入访问令牌', trigger: 'blur' }],
-  'doubao.model': [{ required: true, message: '请选择模型', trigger: 'change' }],
-  'doubao.voice': [{ required: true, message: '请输入音色', trigger: 'blur' }],
-  'doubao.api_url': [{ required: true, message: '请输入API URL', trigger: 'blur' }],
-  // 豆包 WebSocket 验证规则
-  'doubao_ws.appid': [{ required: true, message: '请输入应用ID', trigger: 'blur' }],
-  'doubao_ws.access_token': [{ required: true, message: '请输入访问令牌', trigger: 'blur' }],
-  'doubao_ws.model': [{ required: true, message: '请选择模型', trigger: 'change' }],
-  'doubao_ws.voice': [{ required: true, message: '请输入音色', trigger: 'blur' }],
-  'doubao_ws.ws_url': [{ required: true, message: '请输入WebSocket URL', trigger: 'blur' }],
-  // Edge TTS 验证规则
-  'edge.voice': [{ required: true, message: '请输入音色', trigger: 'blur' }],
-  'edge.rate': [{ required: true, message: '请输入语速', trigger: 'blur' }],
-  'edge.volume': [{ required: true, message: '请输入音量', trigger: 'blur' }],
-  // Edge 离线验证规则
-  'edge_offline.server_url': [{ required: true, message: '请输入服务器URL', trigger: 'blur' }],
-  // OpenAI TTS 验证规则
-  'openai.api_key': [{ required: true, message: '请输入API Key', trigger: 'blur' }],
-  // 讯飞 TTS 验证规则
-  'xunfei.app_id': [{ required: true, message: '请输入应用ID', trigger: 'blur' }],
-  'xunfei.api_key': [{ required: true, message: '请输入API Key', trigger: 'blur' }],
-  'xunfei.api_secret': [{ required: true, message: '请输入API Secret', trigger: 'blur' }],
-  'xunfei.ws_url': [{ required: true, message: '请输入WebSocket URL', trigger: 'blur' }],
-  'xunfei.voice': [{ required: true, message: '请输入音色', trigger: 'blur' }],
-  'xunfei_super_tts.app_id': [{ required: true, message: '请输入应用ID', trigger: 'blur' }],
-  'xunfei_super_tts.api_key': [{ required: true, message: '请输入API Key', trigger: 'blur' }],
-  'xunfei_super_tts.api_secret': [{ required: true, message: '请输入API Secret', trigger: 'blur' }],
-  'xunfei_super_tts.ws_url': [{ required: true, message: '请输入WebSocket URL', trigger: 'blur' }],
-  'xunfei_super_tts.voice': [{ required: true, message: '请输入音色', trigger: 'blur' }],
-  // 智谱 TTS 验证规则
-  'zhipu.api_key': [{ required: true, message: '请输入API Key', trigger: 'blur' }],
-  // Minimax TTS 验证规则
-  'minimax.api_key': [{ required: true, message: '请输入API Key', trigger: 'blur' }],
-  // 千问 TTS 验证规则
-  'qwen_tts.api_key': [{ required: true, message: '请输入API Key', trigger: 'blur' }],
-  'indextts_vllm.api_url': [{ required: true, message: '请输入API URL', trigger: 'blur' }]
+  name: [{ required: true, message: 'Please enter configuration name', trigger: 'blur' }],
+  config_id: [{ required: true, message: 'Please enter config ID', trigger: 'blur' }],
+  provider: [{ required: true, message: 'Please select provider', trigger: 'change' }],
+  // CosyVoice validation rules
+  'cosyvoice.api_url': [{ required: true, message: 'Please enter API URL', trigger: 'blur' }],
+  'cosyvoice.spk_id': [{ required: true, message: 'Please enter speaker ID', trigger: 'blur' }],
+  // Doubao TTS validation rules
+  'doubao.appid': [{ required: true, message: 'Please enter app ID', trigger: 'blur' }],
+  'doubao.access_token': [{ required: true, message: 'Please enter access token', trigger: 'blur' }],
+  'doubao.model': [{ required: true, message: 'Please select model', trigger: 'change' }],
+  'doubao.voice': [{ required: true, message: 'Please enter voice', trigger: 'blur' }],
+  'doubao.api_url': [{ required: true, message: 'Please enter API URL', trigger: 'blur' }],
+  // Doubao WebSocket validation rules
+  'doubao_ws.appid': [{ required: true, message: 'Please enter app ID', trigger: 'blur' }],
+  'doubao_ws.access_token': [{ required: true, message: 'Please enter access token', trigger: 'blur' }],
+  'doubao_ws.model': [{ required: true, message: 'Please select model', trigger: 'change' }],
+  'doubao_ws.voice': [{ required: true, message: 'Please enter voice', trigger: 'blur' }],
+  'doubao_ws.ws_url': [{ required: true, message: 'Please enter WebSocket URL', trigger: 'blur' }],
+  // Edge TTS validation rules
+  'edge.voice': [{ required: true, message: 'Please enter voice', trigger: 'blur' }],
+  'edge.rate': [{ required: true, message: 'Please enter rate', trigger: 'blur' }],
+  'edge.volume': [{ required: true, message: 'Please enter volume', trigger: 'blur' }],
+  // Edge Offline validation rules
+  'edge_offline.server_url': [{ required: true, message: 'Please enter server URL', trigger: 'blur' }],
+  // OpenAI TTS validation rules
+  'openai.api_key': [{ required: true, message: 'Please enter API Key', trigger: 'blur' }],
+  // Xunfei TTS validation rules
+  'xunfei.app_id': [{ required: true, message: 'Please enter app ID', trigger: 'blur' }],
+  'xunfei.api_key': [{ required: true, message: 'Please enter API Key', trigger: 'blur' }],
+  'xunfei.api_secret': [{ required: true, message: 'Please enter API Secret', trigger: 'blur' }],
+  'xunfei.ws_url': [{ required: true, message: 'Please enter WebSocket URL', trigger: 'blur' }],
+  'xunfei.voice': [{ required: true, message: 'Please enter voice', trigger: 'blur' }],
+  'xunfei_super_tts.app_id': [{ required: true, message: 'Please enter app ID', trigger: 'blur' }],
+  'xunfei_super_tts.api_key': [{ required: true, message: 'Please enter API Key', trigger: 'blur' }],
+  'xunfei_super_tts.api_secret': [{ required: true, message: 'Please enter API Secret', trigger: 'blur' }],
+  'xunfei_super_tts.ws_url': [{ required: true, message: 'Please enter WebSocket URL', trigger: 'blur' }],
+  'xunfei_super_tts.voice': [{ required: true, message: 'Please enter voice', trigger: 'blur' }],
+  // Zhipu TTS validation rules
+  'zhipu.api_key': [{ required: true, message: 'Please enter API Key', trigger: 'blur' }],
+  // Minimax TTS validation rules
+  'minimax.api_key': [{ required: true, message: 'Please enter API Key', trigger: 'blur' }],
+  // Qwen TTS validation rules
+  'qwen_tts.api_key': [{ required: true, message: 'Please enter API Key', trigger: 'blur' }],
+  'indextts_vllm.api_url': [{ required: true, message: 'Please enter API URL', trigger: 'blur' }]
 }
 
 const loadConfigs = async () => {
@@ -328,7 +328,7 @@ const loadConfigs = async () => {
     const response = await api.get('/admin/tts-configs')
     configs.value = response.data.data || []
   } catch (error) {
-    ElMessage.error('加载配置失败')
+    ElMessage.error('Failed to load configurations')
   } finally {
     loading.value = false
   }
@@ -343,10 +343,10 @@ const editConfig = (config) => {
   form.enabled = config.enabled
   form.double_stream = false
 
-  // IndexTTS 改为点击音色下拉时再请求
+  // IndexTTS: request voice options when clicking voice dropdown
   loadVoiceOptions(config.provider)
 
-  // 解析配置JSON并填充到对应的表单字段
+  // Parse configuration JSON and fill in corresponding form fields
   try {
     const configData = JSON.parse(config.json_data || '{}')
     form.double_stream = configData.double_stream === true
@@ -459,7 +459,7 @@ const editConfig = (config) => {
         form.indextts_vllm.frame_duration = configData.frame_duration || 60
         break
       case 'zhipu':
-        // 智谱配置从 json_data 中读取
+        // Zhipu configuration read from json_data
         form.zhipu.api_key = configData.api_key || ''
         form.zhipu.api_url = configData.api_url || 'https://open.bigmodel.cn/api/paas/v4/audio/speech'
         form.zhipu.model = configData.model || 'glm-tts'
@@ -485,7 +485,7 @@ const editConfig = (config) => {
         break
     }
   } catch (error) {
-    console.error('解析配置JSON失败:', error)
+    console.error('Failed to parse configuration JSON:', error)
   }
   
   showDialog.value = true
@@ -498,30 +498,30 @@ const handleSave = async () => {
     if (valid) {
       saving.value = true
       try {
-        // 如果是新增配置且当前没有任何配置，则自动设为默认配置
+        // If adding new config and no configs exist, auto-set as default
         const isFirstConfig = !editingConfig.value && configs.value.length === 0
         
         const configData = {
           name: form.name,
           config_id: form.config_id,
           provider: form.provider,
-          is_default: isFirstConfig || form.is_default, // 首次添加时自动设为默认
+          is_default: isFirstConfig || form.is_default, // Auto-set as default on first add
           enabled: form.enabled !== undefined ? form.enabled : true,
           json_data: formRef.value.getJsonData()
         }
         
         if (editingConfig.value) {
           await api.put(`/admin/tts-configs/${editingConfig.value.id}`, configData)
-          ElMessage.success('配置更新成功')
+          ElMessage.success('Configuration updated successfully')
         } else {
           await api.post('/admin/tts-configs', configData)
-          ElMessage.success('配置创建成功')
+          ElMessage.success('Configuration created successfully')
         }
         
         showDialog.value = false
         loadConfigs()
       } catch (error) {
-        ElMessage.error('保存失败: ' + (error.response?.data?.message || error.message))
+        ElMessage.error('Save failed: ' + (error.response?.data?.message || error.message))
       } finally {
         saving.value = false
       }
@@ -532,18 +532,18 @@ const handleSave = async () => {
 const toggleEnable = async (config) => {
   try {
     await api.post(`/admin/configs/${config.id}/toggle`)
-    ElMessage.success(`${config.enabled ? '启用' : '禁用'}成功`)
+    ElMessage.success(`${config.enabled ? 'Enabled' : 'Disabled'} successfully`)
   } catch (error) {
-    // 恢复开关状态
+    // Restore switch state
     config.enabled = !config.enabled
-    ElMessage.error('操作失败')
+    ElMessage.error('Operation failed')
   }
 }
 
 const toggleDefault = async (config) => {
   try {
     if (!config.enabled) {
-      ElMessage.warning('请先启用该配置才能设为默认')
+      ElMessage.warning('Please enable this configuration first before setting it as default')
       config.is_default = false
       return
     }
@@ -558,14 +558,14 @@ const toggleDefault = async (config) => {
     }
     
     await api.put(`/admin/tts-configs/${config.id}`, configData)
-    ElMessage.success(config.is_default ? '设为默认成功' : '取消默认成功')
+    ElMessage.success(config.is_default ? 'Set as default successfully' : 'Removed default successfully')
     
-    // 刷新列表以更新其他配置的默认状态
+    // Refresh list to update default status of other configurations
     loadConfigs()
   } catch (error) {
-    // 恢复开关状态
+    // Restore switch state
     config.is_default = !config.is_default
-    ElMessage.error('操作失败')
+    ElMessage.error('Operation failed')
   }
 }
 
@@ -574,12 +574,12 @@ const getEnabledConfigs = () => {
 }
 
 function formatTestResultLabel(r) {
-  if (!r?.ok) return '错误'
-  return r.first_packet_ms != null ? `正确 ${r.first_packet_ms}ms` : '正确'
+  if (!r?.ok) return 'Error'
+  return r.first_packet_ms != null ? `OK ${r.first_packet_ms}ms` : 'OK'
 }
 function formatTestResultTip(r) {
   if (!r?.ok) return ''
-  return r.first_packet_ms != null ? `通过，耗时 ${r.first_packet_ms}ms` : '通过'
+  return r.first_packet_ms != null ? `Passed, took ${r.first_packet_ms}ms` : 'Passed'
 }
 function formatTestMessage(result) {
   const base = result.message || ''
@@ -592,12 +592,12 @@ const testConfig = async (row, type) => {
     const result = await testSingleConfig(type, row.config_id)
     testResults.value = { ...testResults.value, [row.config_id]: result }
     if (result.ok) {
-      ElMessage.success(`${row.name || row.config_id}：${formatTestMessage(result)}`)
+      ElMessage.success(`${row.name || row.config_id}: ${formatTestMessage(result)}`)
     } else {
-      ElMessage.warning(`${row.name || row.config_id}：${result.message}`)
+      ElMessage.warning(`${row.name || row.config_id}: ${result.message}`)
     }
   } catch (err) {
-    ElMessage.error(err.response?.data?.error || '测试请求失败')
+    ElMessage.error(err.response?.data?.error || 'Test request failed')
   } finally {
     testingId.value = null
   }
@@ -606,7 +606,7 @@ const testConfig = async (row, type) => {
 const testAllConfigs = async () => {
   const list = getEnabledConfigs()
   if (!list.length) {
-    ElMessage.warning('没有已启用的配置')
+    ElMessage.warning('No enabled configurations')
     return
   }
   testingAll.value = true
@@ -619,12 +619,12 @@ const testAllConfigs = async () => {
         testResults.value = { ...testResults.value, [row.config_id]: result }
         if (result.ok) okCount++
       } catch (_) {
-        testResults.value = { ...testResults.value, [row.config_id]: { ok: false, message: '请求失败' } }
+        testResults.value = { ...testResults.value, [row.config_id]: { ok: false, message: 'Request failed' } }
       }
     }
-    ElMessage.success(`全部测试完成：${okCount}/${list.length} 通过`)
+    ElMessage.success(`All tests completed: ${okCount}/${list.length} passed`)
   } catch (err) {
-    ElMessage.error(err.response?.data?.error || '测试请求失败')
+    ElMessage.error(err.response?.data?.error || 'Test request failed')
   } finally {
     testingAll.value = false
   }
@@ -639,7 +639,7 @@ const testCurrentConfig = async () => {
   }
   const configId = form.config_id?.trim()
   if (!configId) {
-    ElMessage.warning('请填写配置ID')
+    ElMessage.warning('Please enter config ID')
     return
   }
   const payload = {
@@ -653,12 +653,12 @@ const testCurrentConfig = async () => {
   try {
     const result = await testWithData('tts', { [configId]: payload })
     if (result.ok) {
-      ElMessage.success(formatTestMessage(result) || '测试通过')
+      ElMessage.success(formatTestMessage(result) || 'Test passed')
     } else {
-      ElMessage.warning(result.message || '测试未通过')
+      ElMessage.warning(result.message || 'Test failed')
     }
   } catch (err) {
-    ElMessage.error(err.response?.data?.error || '测试请求失败')
+    ElMessage.error(err.response?.data?.error || 'Test request failed')
   } finally {
     testingCurrent.value = false
   }
@@ -666,18 +666,18 @@ const testCurrentConfig = async () => {
 
 const deleteConfig = async (id) => {
   try {
-    await ElMessageBox.confirm('确定要删除这个配置吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
+    await ElMessageBox.confirm('Are you sure you want to delete this configuration?', 'Confirm', {
+      confirmButtonText: 'Confirm',
+      cancelButtonText: 'Cancel',
       type: 'warning'
     })
     
     await api.delete(`/admin/tts-configs/${id}`)
-    ElMessage.success('删除成功')
+    ElMessage.success('Deleted successfully')
     loadConfigs()
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('删除失败')
+      ElMessage.error('Delete failed')
     }
   }
 }
@@ -696,7 +696,7 @@ const resetForm = () => {
       frame_duration: 60,
       target_sr: 24000,
       audio_format: 'mp3',
-      instruct_text: '你好'
+      instruct_text: 'Hello'
     },
     qwen_tts: {
       api_key: '',
@@ -831,10 +831,10 @@ const handleDialogClose = () => {
 }
 
 const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleString('zh-CN')
+  return new Date(dateString).toLocaleString('en-US')
 }
 
-// 加载音色列表
+// Load voice options list
 const loadVoiceOptions = async (provider, options = {}) => {
   const trigger = options?.trigger || 'auto'
   if (!provider) {
@@ -842,13 +842,13 @@ const loadVoiceOptions = async (provider, options = {}) => {
     return
   }
 
-  // IndexTTS 仅在下拉展开时请求
+  // IndexTTS: only request when dropdown expands
   if (provider === 'indextts_vllm' && trigger !== 'dropdown') {
     voiceOptions.value = []
     return
   }
   
-  // 只有这些 provider 需要从后端获取音色列表
+  // Only these providers need to fetch voice options from backend
   if (!TTS_PROVIDERS_WITH_VOICES.includes(provider)) {
     voiceOptions.value = []
     return
@@ -872,7 +872,7 @@ const loadVoiceOptions = async (provider, options = {}) => {
     })
     voiceOptions.value = response.data.data || []
   } catch (error) {
-    console.error('加载音色列表失败:', error)
+    console.error('Failed to load voice options:', error)
     voiceOptions.value = []
   } finally {
     voiceLoading.value = false
@@ -884,14 +884,14 @@ const handleVoiceOptionsRequest = (provider) => {
   loadVoiceOptions(provider || form.provider, { trigger: 'dropdown' })
 }
 
-// 监听 provider 变化，自动加载对应的音色列表
+// Watch provider changes, auto-load corresponding voice options
 watch(() => form.provider, (newProvider) => {
   if (showDialog.value) {
     loadVoiceOptions(newProvider)
   }
 }, { immediate: false })
 
-// 监听对话框打开，加载当前 provider 的音色列表（nextTick 确保弹窗已渲染后再请求）
+// Watch dialog open, load current provider's voice options (nextTick ensures dialog is rendered before request)
 watch(showDialog, (isOpen) => {
   if (isOpen && form.provider) {
     nextTick(() => loadVoiceOptions(form.provider))

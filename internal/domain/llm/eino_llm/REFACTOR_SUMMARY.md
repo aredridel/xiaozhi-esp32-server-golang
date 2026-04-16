@@ -1,43 +1,43 @@
-# ResponseWithFunctions 重构总结
+# ResponseWithFunctions Refactoring Summary
 
-## 重构目标
+## Refactoring Goals
 
-will `ResponseWithFunctions` 函数重构is直接调用 `EinoResponseWithTools`，消除重复代码并提高代码复用性。
+Refactor the `ResponseWithFunctions` function to directly call `EinoResponseWithTools`, eliminating duplicate code and improving code reusability.
 
-## 重构beforeafterto比
+## Before and After Comparison
 
-### 重构before (冗余实现)
+### Before Refactoring (Redundant Implementation)
 ```go
 func (p *EinoLLMProvider) ResponseWithFunctions(...) chan interface{} {
-    // 1. 绑定工具
+    // 1. Bind tools
     if len(functions) > 0 {
         err := p.chatModel.BindTools(functions)
         // ...
     }
     
-    // 2. streamingprocess逻辑 (重复实现)
+    // 2. Streaming processing logic (duplicate implementation)
     if p.streamable {
         streamReader, err := p.chatModel.Stream(ctx, dialogue, ...)
-        // 大量重复ofstreamingprocess代码
+        // Large amount of duplicate streaming processing code
         for {
             message, err := streamReader.Recv()
-            // 格式转换逻辑
+            // Format conversion logic
         }
     } else {
-        // 3. 非streamingprocess逻辑 (重复实现)
+        // 3. Non-streaming processing logic (duplicate implementation)
         message, err := p.chatModel.Generate(ctx, dialogue, ...)
-        // 格式转换逻辑
+        // Format conversion logic
     }
 }
 ```
 
-### 重构after (复用设计)
+### After Refactoring (Reusable Design)
 ```go
 func (p *EinoLLMProvider) ResponseWithFunctions(...) chan interface{} {
-    // 1. 直接调用EinoResponseWithToolsgetEino原生响应
+    // 1. Directly call EinoResponseWithTools to get Eino native response
     einoResponseChan := p.EinoResponseWithTools(ctx, sessionID, dialogue, functions)
     
-    // 2. 简单of格式转换
+    // 2. Simple format conversion
     for message := range einoResponseChan {
         if message.Content != "" {
             responseChan <- map[string]string{"type": "content", "content": message.Content}
@@ -49,59 +49,59 @@ func (p *EinoLLMProvider) ResponseWithFunctions(...) chan interface{} {
 }
 ```
 
-## 重构效果
+## Refactoring Results
 
-### 1. 代码行数减少
-- **重构before**: ~110 行复杂逻辑
-- **重构after**: ~35 行简洁代码
-- **减少**: 约 **68%** of代码量
+### 1. Reduced Code Lines
+- **Before Refactoring**: ~110 lines of complex logic
+- **After Refactoring**: ~35 lines of concise code
+- **Reduction**: Approximately **68%** of code volume
 
-### 2. 复用提升
-- 消除and `EinoResponseWithTools` 之间of重复代码
-- 工具绑定、streamingprocess、errorprocessetc逻辑完全复用
-- 单一职责原则：`ResponseWithFunctions` 专注于格式转换
+### 2. Improved Reusability
+- Eliminated duplicate code between `ResponseWithFunctions` and `EinoResponseWithTools`
+- Tool binding, streaming processing, error handling, and other logic are fully reused
+- Single Responsibility Principle: `ResponseWithFunctions` focuses on format conversion
 
-### 3. 维护性提升
-- 核心逻辑集inat `EinoResponseWithTools` in
-- bug 修复和功能增强只需at一处perform
-- 降低代码维护成本
+### 3. Improved Maintainability
+- Core logic is centralized in `EinoResponseWithTools`
+- Bug fixes and feature enhancements only need to be performed in one place
+- Reduced code maintenance costs
 
-### 4. 架构更清晰
+### 4. Clearer Architecture
 
 ```
-ResponseWithFunctions (接口适配)
+ResponseWithFunctions (Interface Adapter)
     ↓
-EinoResponseWithTools (核心实现)
+EinoResponseWithTools (Core Implementation)
     ↓
-chatModel.Stream() / chatModel.Generate() (Eino原生调用)
+chatModel.Stream() / chatModel.Generate() (Eino Native Calls)
 ```
 
-## 职责分离
+## Separation of Responsibilities
 
-### EinoResponseWithTools (核心实现)
-- 工具绑定
-- streaming/非streamingprocess
-- errorprocess和回退逻辑
-- return Eino 原生 `*schema.Message`
+### EinoResponseWithTools (Core Implementation)
+- Tool binding
+- Streaming/non-streaming processing
+- Error handling and fallback logic
+- Returns Eino native `*schema.Message`
 
-### ResponseWithFunctions (接口适配)
-- 调用核心实现
-- 格式转换is接口类型
-- 保持to外 API 兼容性
+### ResponseWithFunctions (Interface Adapter)
+- Calls core implementation
+- Converts format to interface type
+- Maintains external API compatibility
 
-## 测试验证
+## Testing Verification
 
-✅ 所有现有测试继续through
-✅ 功能行is保持一致
-✅ 性能无劣化
-✅ 代码覆盖率保持
+✅ All existing tests continue to pass
+✅ Functional behavior remains consistent
+✅ No performance degradation
+✅ Code coverage maintained
 
-## 总结
+## Summary
 
-这次重构实现：
-- 🎯 **消除重复**: 移除大量重复of工具process逻辑
-- 🚀 **提高复用**: 充分利用现有of `EinoResponseWithTools` 实现
-- 🧹 **简化代码**: 大幅减少代码复杂度
-- ✨ **清晰架构**: 明确各函数of职责边界
+This refactoring achieves:
+- 🎯 **Eliminate Duplication**: Remove large amounts of duplicate tool processing logic
+- 🚀 **Improve Reusability**: Fully utilize existing `EinoResponseWithTools` implementation
+- 🧹 **Simplify Code**: Greatly reduce code complexity
+- ✨ **Clear Architecture**: Clarify the responsibility boundaries of each function
 
-这种设计模式体现良好of软件工程实践：**组合优于继承，复用优于重复**。 
+This design pattern demonstrates good software engineering practices: **Composition over inheritance, reuse over repetition**.

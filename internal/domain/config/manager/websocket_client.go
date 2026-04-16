@@ -32,9 +32,9 @@ type WebSocketClient struct {
 	requestTimeout time.Duration
 	responseChans  map[string]chan *WebSocketResponse
 	callbacks      map[string]func(*WebSocketResponse)
-	requestHandler func(*WebSocketRequest) // processreceiveofrequest
+	requestHandler func(*WebSocketRequest) // Process received request
 	mu             sync.RWMutex
-	writeMu        sync.Mutex // protectedWebSocketwrite操as，preventconcurrentwrite
+	writeMu        sync.Mutex // Protect WebSocket write operations, prevent concurrent writes
 	isConnected    bool
 	connectMu      sync.Mutex
 	messageQueue   chan *WebSocketRequest
@@ -43,12 +43,12 @@ type WebSocketClient struct {
 	messageHandle cmap.ConcurrentMap[string, MessageHandleFunc]
 	uuid          string
 
-	// reconnectrelevantfield
-	retryStopChan  chan struct{}  // reconnectgoroutinestopsignal
-	retryWg        sync.WaitGroup // reconnectgoroutinewaitgroup
-	retryMu        sync.Mutex     // protectedreconnectrelevant操as
-	isRetrying     bool           // whetherisreconnect
-	isShuttingDown bool           // whetherisclose（main动disconnect，noreconnect）
+	// Reconnect related fields
+	retryStopChan  chan struct{}  // Reconnect goroutine stop signal
+	retryWg        sync.WaitGroup // Reconnect goroutine wait group
+	retryMu        sync.Mutex     // Protect reconnect related operations
+	isRetrying     bool           // Whether is reconnecting
+	isShuttingDown bool           // Whether is closing (manual disconnect, no reconnect)
 }
 
 type WebSocketRequest struct {
@@ -79,7 +79,7 @@ var (
 	systemConfigPushHandler func(map[string]interface{})
 )
 
-// SetSystemConfigPushHandler setreceive system_config pushwhenofcallback（mainprogramused formergeto viper etc），by user_config at Init when注入
+// SetSystemConfigPushHandler sets the callback for receiving system_config push (used by main program to merge into viper, etc.), injected by user_config during Init
 func SetSystemConfigPushHandler(fn func(map[string]interface{})) {
 	systemConfigPushHandler = fn
 }
@@ -92,7 +92,7 @@ func GetDefaultClient() *WebSocketClient {
 }
 
 func NewWebSocketClient() *WebSocketClient {
-	// priorityfromenvironmentvariableget，ifenvironmentvariableno存atthenfromconfigget
+	// Priority from environment variable, if not exists then from config
 	baseURL := util.GetBackendURL()
 	if baseURL == "" {
 		baseURL = "http://localhost:8080"
@@ -125,14 +125,14 @@ func (c *WebSocketClient) Connect(ctx context.Context) error {
 		return nil
 	}
 
-	// willHTTP URLconvertisWebSocket URL
-	wsURL := "ws://" + c.baseURL[7:] + "/ws" // 去掉 "http://" andadd "/ws"
+	// Convert HTTP URL to WebSocket URL
+	wsURL := "ws://" + c.baseURL[7:] + "/ws" // Remove "http://" and add "/ws"
 	wsToken, err := c.generateWSToken()
 	if err != nil {
-		return fmt.Errorf("generateWebSocketauthenticatetokenfailed: %v", err)
+		return fmt.Errorf("failed to generate WebSocket authentication token: %v", err)
 	}
 
-	// 建立WebSocketjoin
+	// Establish WebSocket connection
 	conn, _, err := websocket.DefaultDialer.Dial(wsURL, http.Header{
 		"Origin": []string{c.baseURL},
 		"UUID":   []string{c.uuid},
@@ -141,28 +141,28 @@ func (c *WebSocketClient) Connect(ctx context.Context) error {
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("WebSocketjoinfailed: %v", err)
+		return fmt.Errorf("WebSocket connection failed: %v", err)
 	}
 
 	c.conn = conn
 	c.isConnected = true
 
-	// setpingprocess器
+	// Set ping handler
 	conn.SetPongHandler(func(appData string) error {
-		log.Debugf("receivepongmessage")
+		log.Debugf("Received pong message")
 		return nil
 	})
 
-	// startmessageprocessloop
+	// Start message processing loop
 	go c.handleMessages()
 
-	// startmessagesend工asthread
+	// Start message sending worker threads
 	c.startWorkers()
 
-	// start心跳detect
+	// Start heartbeat detection
 	go c.startHeartbeat()
 
-	log.Debugf("WebSocketclient-sidealreadyjointo: %s", wsURL)
+	log.Debugf("WebSocket client already connected to: %s", wsURL)
 	return nil
 }
 
@@ -184,8 +184,8 @@ func (c *WebSocketClient) Disconnect() error {
 	return c.disconnect(false)
 }
 
-// disconnect internaldisconnect joinmethod
-// manualDisconnect: trueindicatemain动disconnect（notriggerreconnect），falseindicateerrordisconnect（triggerreconnect）
+// disconnect internal disconnect method
+// manualDisconnect: true indicates manual disconnect (no trigger reconnect), false indicates error disconnect (trigger reconnect)
 func (c *WebSocketClient) disconnect(manualDisconnect bool) error {
 	c.connectMu.Lock()
 	defer c.connectMu.Unlock()
@@ -200,14 +200,14 @@ func (c *WebSocketClient) disconnect(manualDisconnect bool) error {
 
 	if c.conn != nil {
 		if err := c.conn.Close(); err != nil {
-			log.Debugf("closeWebSocketjoinwhenout错: %v", err)
+			log.Debugf("Error closing WebSocket connection: %v", err)
 		}
 		c.conn = nil
 	}
 
 	c.isConnected = false
 	c.mu.Lock()
-	// closeallrespondchannel
+	// Close all response channels
 	for _, ch := range c.responseChans {
 		close(ch)
 	}
@@ -215,13 +215,13 @@ func (c *WebSocketClient) disconnect(manualDisconnect bool) error {
 	c.callbacks = make(map[string]func(*WebSocketResponse))
 	c.mu.Unlock()
 
-	// stop工asthread
+	// Stop worker threads
 	close(c.messageQueue)
 	c.workers.Wait()
-	// recreatemessagequeue
+	// Recreate message queue
 	c.messageQueue = make(chan *WebSocketRequest, 100)
 
-	log.Debugf("WebSocketjoinalreadydisconnect")
+	log.Debugf("WebSocket connection already disconnected")
 	return nil
 }
 
@@ -683,7 +683,7 @@ func (c *WebSocketClient) handleMessages() {
 				// 这yesreceiveofrespond
 				c.handleIncomingResponse(rawMessage)
 			} else {
-				log.Warnf("receiveno法recognizeofWebSocketmessage: %+v", rawMessage)
+				log.Warnf("receive unrecognized WebSocket message: %+v", rawMessage)
 			}
 
 		case websocket.PingMessage:
@@ -724,11 +724,11 @@ func (c *WebSocketClient) handleIncomingRequest(rawMessage map[string]interface{
 
 	log.Debugf("receiverequest: ID=%s, Method=%s, Path=%s", request.ID, request.Method, request.Path)
 
-	// ifhaveregisterofrequestprocess器，callit
+	// ifhaveregisterofrequest handler，callit
 	if c.requestHandler != nil {
 		go c.requestHandler(&request)
 	} else {
-		// ifnoregisterprocess器，usedefaultprocess器processalready知path
+		// ifnoregisterhandler，usedefaulthandlerprocess known paths
 		c.handleDefaultRequest(&request)
 	}
 }
@@ -740,7 +740,7 @@ func (c *WebSocketClient) RegisterMessageHandler(ctx context.Context, path strin
 	c.messageHandle.Set(path, f)
 }
 
-// handleDefaultRequest defaultrequestprocess器
+// handleDefaultRequest defaultrequest handler
 func (c *WebSocketClient) handleDefaultRequest(request *WebSocketRequest) {
 	switch request.Path {
 	case "/api/config/test":
@@ -787,7 +787,7 @@ func (c *WebSocketClient) handleDefaultRequest(request *WebSocketRequest) {
 	default:
 		handler, exists := c.messageHandle.Get(request.Path)
 		if exists {
-			// callprocess器andprocessreturnvalue
+			// callhandlerandprocessreturnvalue
 			result, err := handler(request)
 			if err != nil {
 				log.Errorf("processrequest %s failed: %v", request.Path, err)
@@ -805,7 +805,7 @@ func (c *WebSocketClient) handleDefaultRequest(request *WebSocketRequest) {
 				}
 			}
 		} else {
-			log.Warnf("receivenot知ofWebSocketrequestpath: %s, ID: %s", request.Path, request.ID)
+			log.Warnf("receiveunknown WebSocket request path: %s, ID: %s", request.Path, request.ID)
 
 			// send404respond
 			if err := c.SendResponse(request.ID, 404, nil, "Unknown endpoint"); err != nil {
@@ -928,7 +928,7 @@ func (c *WebSocketClient) handleIncomingResponse(rawMessage map[string]interface
 	}
 
 	if !exists && !callbackExists {
-		log.Debugf("receivenot知ofrespondID: %s", response.ID)
+		log.Debugf("receive unknown response ID: %s", response.ID)
 	}
 }
 
@@ -957,7 +957,7 @@ func (c *WebSocketClient) SendResponse(requestID string, status int, body map[st
 	return nil
 }
 
-// SetRequestHandler setrequestprocess器
+// SetRequestHandler setrequest handler
 func (c *WebSocketClient) SetRequestHandler(handler func(*WebSocketRequest)) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -1153,7 +1153,7 @@ func SendManagerResponse(requestID string, status int, body map[string]interface
 	return GetDefaultClient().SendResponse(requestID, status, body, errorMsg)
 }
 
-// create带haverequestprocess器ofclient-side
+// create带haverequest handlerofclient-side
 func NewManagerClientWithHandler(handler func(*WebSocketRequest)) *WebSocketClient {
 	return NewWebSocketClientWithHandler(handler)
 }
@@ -1182,7 +1182,7 @@ func SendMcpToolListRequestWithCallback(ctx context.Context, agentID string, cal
 	return SendManagerRequestWithCallback(ctx, "GET", "/api/mcp/tools", body, callback)
 }
 
-// Init initializeManagerconfigprovide者
+// Init initializeManagerconfigprovider
 // package括WebSocketjoinofinitializeandreconnectmechanism
 func Init(ctx context.Context) error {
 	log.Infof("Initializing Manager config provider with WebSocket client")
@@ -1202,7 +1202,7 @@ func Init(ctx context.Context) error {
 	return nil
 }
 
-// Close closeManagerconfigprovide者，cleanupresource
+// Close closeManagerconfigprovider，cleanupresource
 func Close() error {
 	log.Infof("Closing Manager config provider")
 
@@ -1216,7 +1216,7 @@ func Close() error {
 	return nil
 }
 
-// IsConnected inspectManagerconfigprovide者whetheralreadyjoin
+// IsConnected inspectManagerconfigproviderwhetheralreadyjoin
 func IsConnected() bool {
 	return IsManagerWebSocketConnected()
 }

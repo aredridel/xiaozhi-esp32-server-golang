@@ -20,9 +20,9 @@ import (
 	"github.com/spf13/viper"
 )
 
-//thisfileprocess local mcp tool and sessionbind oftoolcall
+//this file processes local mcp tool and session binding of toolcall
 
-// 音乐searchAPIrespondstructure
+// Music search API response structure
 type MusicSearchResponse struct {
 	Data  []MusicItem `json:"data"`
 	Code  int         `json:"code"`
@@ -40,13 +40,13 @@ type MusicItem struct {
 	Pic    string `json:"pic"`
 }
 
-// globalHTTPclient-side
+// global HTTP client
 var (
 	httpClient     *http.Client
 	httpClientOnce sync.Once
 )
 
-// getconfigjoinpoolofHTTPclient-side
+// get config to join pool of HTTP client
 func getHTTPClient() *http.Client {
 	httpClientOnce.Do(func() {
 		transport := &http.Transport{
@@ -69,25 +69,25 @@ func getHTTPClient() *http.Client {
 	return httpClient
 }
 
-// closesession
+// close session
 func (c *ChatManager) LocalMcpCloseChat() error {
 	//c.Close()
 	return nil
 }
 
-// clear historytoconversation
+// clear history to conversation
 func (c *ChatManager) LocalMcpClearHistory() error {
 	llm_memory.Get().ResetMemory(c.ctx, c.DeviceID)
 	return nil
 }
 
 type PlayMusicParams struct {
-	Name string `json:"name,omitempty" description:"音乐ofname"`
-	//Welcome string `json:"welcome" description:"searching for musicwilltime consumptionpastlong，used for安抚userofhintphrase" required:"true"`
+	Name string `json:"name,omitempty" description:"name of music"`
+	//Welcome string `json:"welcome" description:"searching for music will take long time, used for soothing user's hint phrase" required:"true"`
 }
 
 type MusicPlaybackControlParams struct {
-	Action string `json:"action" description:"control动as：resume(continueplay/recoveryplay/continuelisten/接着play)、pause、stop、prev、next、play_playlist(playplaylist/playplaylistinofsong/playplaylist)、enqueue_current；play and continue alsowillnormalizationis resume" required:"true"`
+	Action string `json:"action" description:"control action: resume(continue play/recovery play/continue listen/play next)、pause、stop、prev、next、play_playlist(play playlist/songs in playlist/play playlist)、enqueue_current；play and continue will normalize to resume" required:"true"`
 }
 
 type MusicPlaybackControlResult struct {
@@ -115,7 +115,7 @@ func (c *ChatManager) LocalMcpPlayMusic(ctx context.Context, musicParams *PlayMu
 	go func() {
 		defer wg.Done()
 		// here can get music URL based on music name
-		// currently simplified implement，assume musicName is URLor get from config
+		// currently simplified implementation, assume musicName is URL or get from config
 		musicURL, realMusicName, ierr = getMusicURL(musicName)
 		if ierr != nil {
 			log.Errorf("failed to get music URL: %v", ierr)
@@ -132,16 +132,16 @@ func (c *ChatManager) LocalMcpPlayMusic(ctx context.Context, musicParams *PlayMu
 	wg.Wait()
 
 	if musicURL == "" {
-		log.Errorf("not找to音乐: %s", musicName)
-		return fmt.Errorf("not找to音乐: %s", musicName)
+		log.Errorf("music not found: %s", musicName)
+		return fmt.Errorf("music not found: %s", musicName)
 	}
 
-	log.Infof("找to音乐: %s, URL: %s", realMusicName, musicURL)
+	log.Infof("found music: %s, URL: %s", realMusicName, musicURL)
 
 	return nil
 }
 
-// LocalMcpSwitchDeviceRole 按rolenameswitchdevicerole（supportfuzzymatching）
+// LocalMcpSwitchDeviceRole switch device role by role name (supports fuzzy matching)
 func (c *ChatManager) LocalMcpSwitchDeviceRole(ctx context.Context, roleName string) (string, error) {
 	roleName = strings.TrimSpace(roleName)
 	if roleName == "" {
@@ -150,7 +150,7 @@ func (c *ChatManager) LocalMcpSwitchDeviceRole(ctx context.Context, roleName str
 
 	configProvider, err := user_config.GetProvider(viper.GetString("config_provider.type"))
 	if err != nil {
-		return "", fmt.Errorf("getconfigprovide者failed: %w", err)
+		return "", fmt.Errorf("get config provider failed: %w", err)
 	}
 
 	matchedRoleName, err := configProvider.SwitchDeviceRoleByName(ctx, c.DeviceID, roleName)
@@ -159,14 +159,14 @@ func (c *ChatManager) LocalMcpSwitchDeviceRole(ctx context.Context, roleName str
 	}
 
 	if err := c.ReloadDeviceConfig(ctx); err != nil {
-		return "", fmt.Errorf("rolealreadyswitch，butrefreshsessionconfigfailed: %w", err)
+		return "", fmt.Errorf("role already switched, but refresh session config failed: %w", err)
 	}
 
-	log.Infof("device %s switchrolesuccessful, request=%s, matching=%s", c.DeviceID, roleName, matchedRoleName)
+	log.Infof("device %s switch role successful, request=%s, matching=%s", c.DeviceID, roleName, matchedRoleName)
 	return matchedRoleName, nil
 }
 
-// LocalMcpRestoreDeviceDefaultRole recoverydevicedefaultrole
+// LocalMcpRestoreDeviceDefaultRole restore device default role
 func (c *ChatManager) LocalMcpRestoreDeviceDefaultRole(ctx context.Context) error {
 	configProvider, err := user_config.GetProvider(viper.GetString("config_provider.type"))
 	if err != nil {
@@ -178,39 +178,39 @@ func (c *ChatManager) LocalMcpRestoreDeviceDefaultRole(ctx context.Context) erro
 	}
 
 	if err := c.ReloadDeviceConfig(ctx); err != nil {
-		return fmt.Errorf("defaultrolealreadyrecovery，butrefreshsessionconfigfailed: %w", err)
+		return fmt.Errorf("default role already restored, but refresh session config failed: %w", err)
 	}
 
-	log.Infof("device %s recoverydefaultrolesuccessful", c.DeviceID)
+	log.Infof("device %s restore default role successful", c.DeviceID)
 	return nil
 }
 
-// LocalMcpSearchKnowledge retrievecurrentagentbindofknowledgelibrary
+// LocalMcpSearchKnowledge retrieve current agent bound knowledge library
 func (c *ChatManager) LocalMcpSearchKnowledge(ctx context.Context, query string, topK int, knowledgeBaseIDs []uint) ([]config_types.KnowledgeSearchHit, error) {
 	if c == nil || c.clientState == nil {
-		return nil, fmt.Errorf("sessionstatenoavailable")
+		return nil, fmt.Errorf("session state not available")
 	}
 	return rag.Search(ctx, query, topK, c.clientState.DeviceConfig.KnowledgeBases, knowledgeBaseIDs)
 }
 
 func (c *ChatManager) LocalMcpControlMusicPlayback(ctx context.Context, params *MusicPlaybackControlParams) (*MusicPlaybackControlResult, error) {
 	if c == nil {
-		return nil, fmt.Errorf("chat manager noavailable")
+		return nil, fmt.Errorf("chat manager not available")
 	}
 	return controlMusicPlayback(ctx, c.session, params)
 }
 
 func controlMusicPlayback(ctx context.Context, session *ChatSession, params *MusicPlaybackControlParams) (*MusicPlaybackControlResult, error) {
 	if session == nil || session.mediaPlayer == nil {
-		return nil, fmt.Errorf("mediaplay器noavailable")
+		return nil, fmt.Errorf("media player not available")
 	}
 	if params == nil {
-		return nil, fmt.Errorf("controlparametercannot be empty")
+		return nil, fmt.Errorf("control parameter cannot be empty")
 	}
 
 	action := normalizeMusicPlaybackAction(params.Action)
 	if action == "" {
-		return nil, fmt.Errorf("unsupportedofcontrol动as: %s", params.Action)
+		return nil, fmt.Errorf("unsupported control action: %s", params.Action)
 	}
 
 	result := &MusicPlaybackControlResult{
@@ -250,7 +250,7 @@ func controlMusicPlayback(ctx context.Context, session *ChatSession, params *Mus
 		}
 		result.AddedTitle = appendResult.AddedTitle
 		if _, err := session.mediaPlayer.ResumeIfInterruptedPause(); err != nil {
-			log.Warnf("enqueue_current automaticrecoveryplayfailed: %v", err)
+			log.Warnf("enqueue_current automatic recovery play failed: %v", err)
 		}
 	}
 
@@ -285,11 +285,11 @@ func normalizeMusicPlaybackAction(action string) string {
 	}
 }
 
-// searchMusicFromAPI fromAPIsearching for music
+// searchMusicFromAPI search music from API
 func getMusicURL(musicName string) (string, string, error) {
 	client := getHTTPClient()
 
-	// buildrequestbody
+	// build request body
 	data := fmt.Sprintf("input=%s&filter=name&type=migu&page=1",
 		url.QueryEscape(musicName))
 
@@ -299,7 +299,7 @@ func getMusicURL(musicName string) (string, string, error) {
 		return "", "", fmt.Errorf("failed to create request: %v", err)
 	}
 
-	// setrequest header，mock浏览器request
+	// set request header, mock browser request
 	req.Header.Set("Accept", "application/json, text/javascript, */*; q=0.01")
 	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
 	req.Header.Set("Cache-Control", "no-cache")
@@ -317,7 +317,7 @@ func getMusicURL(musicName string) (string, string, error) {
 	req.Header.Set("sec-ch-ua-mobile", "?0")
 	req.Header.Set("sec-ch-ua-platform", `"Windows"`)
 
-	// settimeout
+	// set timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	req = req.WithContext(ctx)
@@ -329,23 +329,23 @@ func getMusicURL(musicName string) (string, string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", "", fmt.Errorf("API request failed，state码: %d", resp.StatusCode)
+		return "", "", fmt.Errorf("API request failed, status code: %d", resp.StatusCode)
 	}
 
-	// parserespond
+	// parse response
 	var searchResp MusicSearchResponse
 	if err := json.NewDecoder(resp.Body).Decode(&searchResp); err != nil {
 		return "", "", fmt.Errorf("parserespondfailed: %v", err)
 	}
 
 	if searchResp.Code != 200 {
-		return "", "", fmt.Errorf("APIreturnerror: %s", searchResp.Error)
+		return "", "", fmt.Errorf("API return error: %s", searchResp.Error)
 	}
 
 	if len(searchResp.Data) == 0 {
-		return "", "", fmt.Errorf("not找to音乐: %s", musicName)
+		return "", "", fmt.Errorf("music not found: %s", musicName)
 	}
 	musicItem := searchResp.Data[0]
-	// returnnthasearchresultofURL
+	// return nth search result URL
 	return musicItem.URL, musicItem.Title, nil
 }

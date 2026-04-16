@@ -1,28 +1,28 @@
 <template>
   <div class="mobile-login-container">
     <div class="mobile-login-header">
-      <h1>小智管理系统</h1>
-      <p>智能语音助手管理平台</p>
+      <h1>Xiaozhi Management System</h1>
+      <p>Intelligent Voice Assistant Management Platform</p>
     </div>
     
     <van-tabs v-model:active="activeTab" class="mobile-login-tabs">
-      <van-tab title="登录" name="login">
+      <van-tab title="Login" name="login">
         <van-form @submit="handleLogin" class="mobile-login-form">
           <van-cell-group inset>
             <van-field
               v-model="loginForm.username"
               name="username"
-              label="用户名"
-              placeholder="请输入用户名"
-              :rules="[{ required: true, message: '请输入用户名' }]"
+              label="Username"
+              placeholder="Please enter username"
+              :rules="[{ required: true, message: 'Please enter username' }]"
             />
             <van-field
               v-model="loginForm.password"
               type="password"
               name="password"
-              label="密码"
-              placeholder="请输入密码"
-              :rules="[{ required: true, message: '请输入密码' }]"
+              label="Password"
+              placeholder="Please enter password"
+              :rules="[{ required: true, message: 'Please enter password' }]"
             />
           </van-cell-group>
           
@@ -33,54 +33,54 @@
               type="primary"
               native-type="submit"
               :loading="loading"
-              loading-text="登录中..."
+              loading-text="Logging in..."
               class="mobile-login-button"
             >
-              登录
+              Login
             </van-button>
           </div>
         </van-form>
       </van-tab>
       
-      <van-tab title="注册" name="register">
+      <van-tab title="Register" name="register">
         <van-form @submit="handleRegister" class="mobile-login-form">
           <van-cell-group inset>
             <van-field
               v-model="registerForm.username"
               name="username"
-              label="用户名"
-              placeholder="请输入用户名"
-              :rules="[{ required: true, message: '请输入用户名' }]"
+              label="Username"
+              placeholder="Please enter username"
+              :rules="[{ required: true, message: 'Please enter username' }]"
             />
             <van-field
               v-model="registerForm.email"
               name="email"
-              label="邮箱"
-              placeholder="请输入邮箱"
+              label="Email"
+              placeholder="Please enter email"
               :rules="[
-                { required: true, message: '请输入邮箱' },
-                { pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: '请输入正确的邮箱格式' }
+                { required: true, message: 'Please enter email' },
+                { pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Please enter a valid email format' }
               ]"
             />
             <van-field
               v-model="registerForm.password"
               type="password"
               name="password"
-              label="密码"
-              placeholder="请输入密码（至少6位）"
+              label="Password"
+              placeholder="Please enter password (at least 6 characters)"
               :rules="[
-                { required: true, message: '请输入密码' },
-                { pattern: /^.{6,}$/, message: '密码长度不能少于6位' }
+                { required: true, message: 'Please enter password' },
+                { pattern: /^.{6,}$/, message: 'Password must be at least 6 characters' }
               ]"
             />
             <van-field
               v-model="registerForm.confirmPassword"
               type="password"
               name="confirmPassword"
-              label="确认密码"
-              placeholder="请确认密码"
+              label="Confirm Password"
+              placeholder="Please confirm password"
               :rules="[
-                { required: true, message: '请确认密码' },
+                { required: true, message: 'Please confirm password' },
                 { validator: validateConfirmPassword }
               ]"
             />
@@ -93,10 +93,10 @@
               type="primary"
               native-type="submit"
               :loading="loading"
-              loading-text="注册中..."
+              loading-text="Registering..."
               class="mobile-login-button"
             >
-              注册
+              Register
             </van-button>
           </div>
         </van-form>
@@ -131,10 +131,10 @@ const registerForm = reactive({
   confirmPassword: ''
 })
 
-// 自定义验证器：确认密码
+// Custom validator: confirm password
 const validateConfirmPassword = (val) => {
   if (val !== registerForm.password) {
-    return '两次输入密码不一致'
+    return 'Passwords do not match'
   }
   return true
 }
@@ -145,10 +145,10 @@ const handleLogin = async () => {
   loading.value = false
   
   if (result.success) {
-    showSuccessToast('登录成功')
+    showSuccessToast('Login successful')
     router.push(getPostLoginRedirectPath(authStore.user))
   } else {
-    showFailToast(result.message || '登录失败')
+    showFailToast(result.message || 'Login failed')
   }
 }
 
@@ -158,9 +158,9 @@ const handleRegister = async () => {
   loading.value = false
   
   if (result.success) {
-    showSuccessToast('注册成功，请登录')
+    showSuccessToast('Registration successful, please login')
     activeTab.value = 'login'
-    // 清空注册表单
+    // Clear registration form
     Object.assign(registerForm, {
       username: '',
       email: '',
@@ -168,18 +168,18 @@ const handleRegister = async () => {
       confirmPassword: ''
     })
   } else {
-    showFailToast(result.message || '注册失败')
+    showFailToast(result.message || 'Registration failed')
   }
 }
 
-// 检查系统状态，如果未初始化则跳转到引导页面
+// Check system status, redirect to setup page if not initialized
 const checkSystemStatus = async () => {
   try {
     if (await checkNeedsSetup()) {
       router.push('/setup')
     }
   } catch (error) {
-    console.error('检查系统状态失败:', error)
+    console.error('Failed to check system status:', error)
   }
 }
 

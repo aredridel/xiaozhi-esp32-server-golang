@@ -3,67 +3,67 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>资源池统计</span>
+          <span>Resource Pool Statistics</span>
           <div class="header-actions">
             <el-button type="primary" size="small" @click="refreshStats">
               <el-icon><Refresh /></el-icon>
-              刷新
+              Refresh
             </el-button>
             <el-select v-model="viewType" size="small" style="width: 120px; margin-left: 10px;" disabled>
-              <el-option label="最新数据" value="latest" />
+              <el-option label="Latest Data" value="latest" />
             </el-select>
           </div>
         </div>
       </template>
 
-      <!-- 统计摘要 -->
+      <!-- Statistics Summary -->
       <el-row :gutter="20" style="margin-bottom: 20px;">
         <el-col :span="6">
-          <el-statistic title="总记录数" :value="summary.total_records || 0" />
+          <el-statistic title="Total Records" :value="summary.total_records || 0" />
         </el-col>
         <el-col :span="6">
           <div class="stat-item">
-            <div class="stat-title">存储方式</div>
-            <div class="stat-value">仅最新数据</div>
+            <div class="stat-title">Storage Method</div>
+            <div class="stat-value">Latest Only</div>
           </div>
         </el-col>
         <el-col :span="6">
           <div class="stat-item">
-            <div class="stat-title">最早时间</div>
+            <div class="stat-title">Earliest Time</div>
             <div class="stat-value">{{ formatTime(summary.oldest_timestamp) }}</div>
           </div>
         </el-col>
         <el-col :span="6">
           <div class="stat-item">
-            <div class="stat-title">最新时间</div>
+            <div class="stat-title">Latest Time</div>
             <div class="stat-value">{{ formatTime(summary.newest_timestamp) }}</div>
           </div>
         </el-col>
       </el-row>
 
-      <!-- 最新统计数据 -->
+      <!-- Latest Statistics Data -->
       <div v-if="viewType === 'latest' && latestStats">
-        <el-divider>最新统计数据（{{ formatTime(latestStats.timestamp) }}）</el-divider>
+        <el-divider>Latest Statistics ({{ formatTime(latestStats.timestamp) }})</el-divider>
         <el-table :data="formatStatsData(latestStats.stats)" border stripe style="width: 100%" v-if="latestStats.stats">
-          <el-table-column prop="poolKey" label="资源池" width="200" />
-          <el-table-column prop="total" label="总资源数" width="120" />
-          <el-table-column prop="available" label="可用资源" width="120" />
-          <el-table-column prop="inUse" label="使用中" width="120" />
-          <el-table-column prop="maxSize" label="最大容量" width="120" />
-          <el-table-column prop="minSize" label="最小容量" width="120" />
-          <el-table-column prop="maxIdle" label="最大空闲" width="120" />
-          <el-table-column prop="isClosed" label="状态" width="100">
+          <el-table-column prop="poolKey" label="Resource Pool" width="200" />
+          <el-table-column prop="total" label="Total Resources" width="120" />
+          <el-table-column prop="available" label="Available Resources" width="120" />
+          <el-table-column prop="inUse" label="In Use" width="120" />
+          <el-table-column prop="maxSize" label="Max Capacity" width="120" />
+          <el-table-column prop="minSize" label="Min Capacity" width="120" />
+          <el-table-column prop="maxIdle" label="Max Idle" width="120" />
+          <el-table-column prop="isClosed" label="Status" width="100">
             <template #default="{ row }">
               <el-tag :type="row.isClosed ? 'danger' : 'success'">
-                {{ row.isClosed ? '已关闭' : '运行中' }}
+                {{ row.isClosed ? 'Closed' : 'Running' }}
               </el-tag>
             </template>
           </el-table-column>
         </el-table>
       </div>
 
-      <!-- 空状态 -->
-      <el-empty v-if="!latestStats" description="暂无统计数据" />
+      <!-- Empty State -->
+      <el-empty v-if="!latestStats" description="No statistics data available" />
     </el-card>
   </div>
 </template>
@@ -78,7 +78,7 @@ const viewType = ref('latest')
 const latestStats = ref(null)
 const summary = ref({
   total_records: 0,
-  storage_duration: '仅保存最新数据',
+  storage_duration: 'Only save latest data',
   oldest_timestamp: null,
   newest_timestamp: null
 })
@@ -88,7 +88,7 @@ let refreshTimer = null
 onMounted(() => {
   loadSummary()
   loadStats()
-  // 每30秒自动刷新
+  // Auto refresh every 30 seconds
   refreshTimer = setInterval(() => {
     loadStats()
   }, 30000)
@@ -100,41 +100,41 @@ onUnmounted(() => {
   }
 })
 
-// 加载统计摘要
+// Load statistics summary
 const loadSummary = async () => {
   try {
     const response = await api.get('/admin/pool/stats/summary')
-    // 后端返回格式: { data: { data: {...} } }
+    // Backend returns format: { data: { data: {...} } }
     summary.value = response.data?.data || {}
   } catch (error) {
-    console.error('加载统计摘要失败:', error)
+    console.error('Failed to load statistics summary:', error)
   }
 }
 
-// 加载统计数据
+// Load statistics data
 const loadStats = async () => {
   try {
     const response = await api.get('/admin/pool/stats?type=latest')
-    console.log('最新统计数据响应:', response)
-    // 后端返回格式: { data: { timestamp: "...", stats: {...} } }
-    // axios 会自动解析，所以 response.data 就是后端返回的 { data: {...} }
-    // 需要再取一层 data
+    console.log('Latest statistics response:', response)
+    // Backend returns format: { data: { timestamp: "...", stats: {...} } }
+    // axios will automatically parse, so response.data is the backend returned { data: {...} }
+    // Need to get one more layer of data
     latestStats.value = response.data?.data || response.data || null
-    console.log('解析后的最新数据:', latestStats.value)
+    console.log('Parsed latest data:', latestStats.value)
   } catch (error) {
-    console.error('加载统计数据失败:', error)
-    ElMessage.error('加载统计数据失败')
+    console.error('Failed to load statistics data:', error)
+    ElMessage.error('Failed to load statistics data')
   }
 }
 
-// 刷新统计数据
+// Refresh statistics data
 const refreshStats = () => {
   loadSummary()
   loadStats()
-  ElMessage.success('刷新成功')
+  ElMessage.success('Refresh successful')
 }
 
-// 格式化统计数据
+// Format statistics data
 const formatStatsData = (stats) => {
   if (!stats || typeof stats !== 'object') {
     return []
@@ -158,7 +158,7 @@ const formatStatsData = (stats) => {
   return result
 }
 
-// 格式化时间
+// Format time
 const formatTime = (timestamp) => {
   if (!timestamp) {
     return '-'

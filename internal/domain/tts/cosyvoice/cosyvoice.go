@@ -44,7 +44,7 @@ func getHTTPClient() *http.Client {
 	return httpClient
 }
 
-// CosyVoiceTTSProvider CosyVoice TTSprovide者
+// CosyVoiceTTSProvider CosyVoice TTS provider
 type CosyVoiceTTSProvider struct {
 	APIURL        string
 	SpeakerID     string
@@ -61,7 +61,7 @@ type cosyVoiceResponse struct {
 	Data    []byte `json:"data"`
 }
 
-// NewCosyVoiceTTSProvider create newCosyVoice TTSprovide者
+// NewCosyVoiceTTSProvider create newCosyVoice TTS provider
 func NewCosyVoiceTTSProvider(config map[string]interface{}) *CosyVoiceTTSProvider {
 	apiURL, _ := config["api_url"].(string)
 	speakerID, _ := config["spk_id"].(string)
@@ -166,11 +166,11 @@ func (p *CosyVoiceTTSProvider) TextToSpeech(ctx context.Context, text string, sa
 		doneChan := make(chan struct{})
 		outputChan := make(chan []byte, 1000)
 
-		// createMP3decode器
+		// createMP3 decoder
 		mp3Decoder, err := util.CreateAudioDecoder(ctx, resp.Body, outputChan, frameDuration, p.AudioFormat)
 		if err != nil {
 			close(doneChan)
-			return nil, fmt.Errorf("createMP3decode器failed: %v", err)
+			return nil, fmt.Errorf("createMP3 decoderfailed: %v", err)
 		}
 		// startdecodepast程
 		go func() {
@@ -261,10 +261,10 @@ func (p *CosyVoiceTTSProvider) TextToSpeechStream(ctx context.Context, text stri
 
 		// according toaudioformatprocessstreamingrespond
 		if p.AudioFormat == "mp3" {
-			// create MP3 decode器，传入 context 而noyes done channel
+			// create MP3 decoder，传入 context 而noyes done channel
 			mp3Decoder, err := util.CreateAudioDecoder(ctx, resp.Body, outputChan, frameDuration, p.AudioFormat)
 			if err != nil {
-				log.Errorf("createMP3decode器failed: %v", err)
+				log.Errorf("createMP3 decoderfailed: %v", err)
 				close(outputChan)
 				return
 			}
@@ -280,7 +280,7 @@ func (p *CosyVoiceTTSProvider) TextToSpeechStream(ctx context.Context, text stri
 				log.Debugf("TTSstreaming合成cancel, text: %s", text)
 				return
 			default:
-				log.Infof("ttstime consumption: frominput至getMP3dataendtime consumption: %d ms", time.Now().UnixMilli()-startTs)
+				log.Infof("ttstime consumption: from input togetMP3dataendtime consumption: %d ms", time.Now().UnixMilli()-startTs)
 
 			}
 		} else {

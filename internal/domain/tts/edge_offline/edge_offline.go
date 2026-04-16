@@ -14,7 +14,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// EdgeOfflineTTSProvider WebSocket TTS provide者
+// EdgeOfflineTTSProvider WebSocket TTS provider
 type EdgeOfflineTTSProvider struct {
 	ServerURL        string
 	Timeout          time.Duration
@@ -27,7 +27,7 @@ type EdgeOfflineTTSProvider struct {
 	sendMutex sync.Mutex
 }
 
-// NewEdgeOfflineTTSProvider create new Edge Offline TTS provide者
+// NewEdgeOfflineTTSProvider create new Edge Offline TTS provider
 func NewEdgeOfflineTTSProvider(config map[string]interface{}) *EdgeOfflineTTSProvider {
 	serverURL, _ := config["server_url"].(string)
 	timeout, _ := config["timeout"].(float64)
@@ -141,15 +141,15 @@ func (p *EdgeOfflineTTSProvider) TextToSpeech(ctx context.Context, text string, 
 	outputChan := make(chan []byte, 1000)
 	startTs := time.Now().UnixMilli()
 
-	// createaudiodecode器
+	// createaudio decoder
 	audioDecoder, err := util.CreateAudioDecoder(ctx, pipeReader, outputChan, frameDuration, "mp3")
 	if err != nil {
 		pipeReader.Close()
-		p.sendMutex.Unlock() // createdecode器failedwhenimmediatelyreleaselock
-		return nil, fmt.Errorf("createaudiodecode器failed: %v", err)
+		p.sendMutex.Unlock() // createdecoderfailedwhenimmediatelyreleaselock
+		return nil, fmt.Errorf("createaudio decoderfailed: %v", err)
 	}
 
-	// startdecode器
+	// startdecoder
 	go func() {
 		if err := audioDecoder.Run(startTs); err != nil {
 			log.Errorf("audiodecodefailed: %v", err)
@@ -241,14 +241,14 @@ func (p *EdgeOfflineTTSProvider) TextToSpeechStream(ctx context.Context, text st
 			p.sendMutex.Unlock()
 		}()
 
-		// startdecode器（decode器willat defer inautomaticclose outputChan）
+		// startdecoder（decoderwillat defer inautomaticclose outputChan）
 		go func() {
 
 			startTs := time.Now().UnixMilli()
-			// createaudiodecode器
+			// createaudio decoder
 			audioDecoder, err := util.CreateAudioDecoderWithSampleRate(ctx, pipeReader, outputChan, frameDuration, "pcm", sampleRate)
 			if err != nil {
-				log.Errorf("createaudiodecode器failed: %v", err)
+				log.Errorf("createaudio decoderfailed: %v", err)
 				return
 			}
 
@@ -258,7 +258,7 @@ func (p *EdgeOfflineTTSProvider) TextToSpeechStream(ctx context.Context, text st
 				Precision:   2,
 			})
 
-			// decode器willat defer inautomaticclose outputChan
+			// decoderwillat defer inautomaticclose outputChan
 			if err := audioDecoder.Run(startTs); err != nil {
 				log.Errorf("audiodecodefailed: %v", err)
 			}
@@ -269,12 +269,12 @@ func (p *EdgeOfflineTTSProvider) TextToSpeechStream(ctx context.Context, text st
 			select {
 			case <-ctx.Done():
 				log.Debugf("TextToSpeechStream context done, exit")
-				// close pipeWriter，letdecode器自然endandclose channel
+				// close pipeWriter，letdecoder自然endandclose channel
 				return
 			default:
 				messageType, data, err := conn.ReadMessage()
 				if err != nil {
-					// close pipeWriter，letdecode器自然endandclose channel
+					// close pipeWriter，letdecoder自然endandclose channel
 					pipeWriter.Close()
 					if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
 						return

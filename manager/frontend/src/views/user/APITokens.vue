@@ -2,40 +2,40 @@
   <div class="api-tokens-page">
     <div class="page-header">
       <div>
-        <h2>API Token 管理</h2>
-        <p class="page-subtitle">用于访问 /api/open/v1 对外接口，明文仅在创建时展示一次。</p>
+        <h2>API Token Management</h2>
+        <p class="page-subtitle">Used to access /api/open/v1 external interfaces, plaintext is only displayed once during creation.</p>
       </div>
       <el-button type="primary" @click="openCreateDialog">
         <el-icon><Plus /></el-icon>
-        创建 Token
+        Create Token
       </el-button>
     </div>
 
     <el-alert type="info" :closable="false" show-icon>
       <template #title>
-        支持两种调用方式：Authorization: Bearer &lt;token&gt; 或 X-API-Token: &lt;token&gt;
+        Supports two calling methods: Authorization: Bearer &lt;token&gt; or X-API-Token: &lt;token&gt;
       </template>
     </el-alert>
 
     <el-card class="table-card" shadow="never">
-      <el-table :data="tokens" v-loading="loading" empty-text="暂无 Token，请先创建">
-        <el-table-column prop="name" label="名称" min-width="180" />
-        <el-table-column prop="token_prefix" label="前缀" min-width="140" />
-        <el-table-column label="状态" width="100">
+      <el-table :data="tokens" v-loading="loading" empty-text="No Tokens, please create one first">
+        <el-table-column prop="name" label="Name" min-width="180" />
+        <el-table-column prop="token_prefix" label="Prefix" min-width="140" />
+        <el-table-column label="Status" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.is_active ? 'success' : 'info'">{{ row.is_active ? '可用' : '已吊销' }}</el-tag>
+            <el-tag :type="row.is_active ? 'success' : 'info'">{{ row.is_active ? 'Active' : 'Revoked' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="最后使用" min-width="170">
+        <el-table-column label="Last Used" min-width="170">
           <template #default="{ row }">{{ formatTime(row.last_used_at) }}</template>
         </el-table-column>
-        <el-table-column label="过期时间" min-width="170">
+        <el-table-column label="Expires At" min-width="170">
           <template #default="{ row }">{{ formatTime(row.expires_at) }}</template>
         </el-table-column>
-        <el-table-column label="创建时间" min-width="170">
+        <el-table-column label="Created At" min-width="170">
           <template #default="{ row }">{{ formatTime(row.created_at) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="120" fixed="right">
+        <el-table-column label="Actions" width="120" fixed="right">
           <template #default="{ row }">
             <el-button
               link
@@ -43,37 +43,37 @@
               :disabled="!row.is_active"
               @click="handleRevoke(row)"
             >
-              吊销
+              Revoke
             </el-button>
           </template>
         </el-table-column>
       </el-table>
     </el-card>
 
-    <el-dialog v-model="showCreate" title="创建 API Token" width="480px">
+    <el-dialog v-model="showCreate" title="Create API Token" width="480px">
       <el-form :model="form" :rules="rules" ref="formRef" label-width="100px">
-        <el-form-item label="Token 名称" prop="name">
-          <el-input v-model="form.name" maxlength="100" placeholder="例如：生产环境调用" />
+        <el-form-item label="Token Name" prop="name">
+          <el-input v-model="form.name" maxlength="100" placeholder="e.g., Production Environment Call" />
         </el-form-item>
-        <el-form-item label="有效天数">
+        <el-form-item label="Valid Days">
           <el-input-number v-model="form.expires_in_days" :min="0" :max="3650" />
-          <div class="form-tip">0 表示永不过期</div>
+          <div class="form-tip">0 means never expires</div>
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showCreate = false">取消</el-button>
-        <el-button type="primary" :loading="creating" @click="handleCreate">创建</el-button>
+        <el-button @click="showCreate = false">Cancel</el-button>
+        <el-button type="primary" :loading="creating" @click="handleCreate">Create</el-button>
       </template>
     </el-dialog>
 
-    <el-dialog v-model="showPlainToken" title="请立即保存 Token" width="640px">
+    <el-dialog v-model="showPlainToken" title="Please Save Token Immediately" width="640px">
       <el-alert type="warning" :closable="false" show-icon>
-        明文 Token 后续无法再次查看，请立即复制并安全保存。
+        Plaintext Token cannot be viewed again later, please copy and save it securely immediately.
       </el-alert>
       <el-input class="token-input" v-model="latestToken" type="textarea" :rows="3" readonly />
       <template #footer>
-        <el-button @click="showPlainToken = false">关闭</el-button>
-        <el-button type="primary" @click="copyToken">复制 Token</el-button>
+        <el-button @click="showPlainToken = false">Close</el-button>
+        <el-button type="primary" @click="copyToken">Copy Token</el-button>
       </template>
     </el-dialog>
   </div>
@@ -99,7 +99,7 @@ const form = reactive({
 })
 
 const rules = {
-  name: [{ required: true, message: '请输入 Token 名称', trigger: 'blur' }]
+  name: [{ required: true, message: 'Please enter Token name', trigger: 'blur' }]
 }
 
 const formatTime = (val) => {
@@ -133,7 +133,7 @@ const handleCreate = async () => {
     latestToken.value = res.data?.data?.token || ''
     showCreate.value = false
     showPlainToken.value = true
-    ElMessage.success('Token 创建成功')
+    ElMessage.success('Token created successfully')
     await loadTokens()
   } finally {
     creating.value = false
@@ -141,20 +141,20 @@ const handleCreate = async () => {
 }
 
 const handleRevoke = async (row) => {
-  await ElMessageBox.confirm(`确定吊销 Token「${row.name}」吗？`, '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
+  await ElMessageBox.confirm(`Confirm revoke Token "${row.name}"?`, 'Tip', {
+    confirmButtonText: 'Confirm',
+    cancelButtonText: 'Cancel',
     type: 'warning'
   })
   await api.delete(`/user/api-tokens/${row.id}`)
-  ElMessage.success('Token 已吊销')
+  ElMessage.success('Token revoked')
   await loadTokens()
 }
 
 const copyToken = async () => {
   if (!latestToken.value) return
   await navigator.clipboard.writeText(latestToken.value)
-  ElMessage.success('Token 已复制')
+  ElMessage.success('Token copied')
 }
 
 onMounted(loadTokens)

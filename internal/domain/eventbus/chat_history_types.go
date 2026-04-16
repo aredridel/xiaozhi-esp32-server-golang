@@ -5,47 +5,47 @@ import (
 	"time"
 )
 
-// UserMessageEvent usermessageevent
-// Deprecated: use AddMessageEvent 替代，unifieduse TopicAddMessage event
+// UserMessageEvent user message event
+// Deprecated: use AddMessageEvent instead, unified use TopicAddMessage event
 type UserMessageEvent struct {
-	Ctx         context.Context
-	SessionID   string
-	DeviceID    string
-	AgentID     string
+	Ctx       context.Context
+	SessionID string
+	DeviceID  string
+	AgentID   string
 
-	// ASRresult
+	// ASR result
 	Text      string
-	AudioData []byte  // originalaudio data（PCM float32 转byte）
-	AudioSize int     // audiosamplingcount
+	AudioData []byte // original audio data (PCM float32 to byte)
+	AudioSize int    // audio sample count
 
-	// audioformatinfo（used forconvertisWAV）
-	SampleRate int // sampling率
-	Channels   int // channelcount
+	// audio format info (used for convert to WAV)
+	SampleRate int // sampling rate
+	Channels   int // channel count
 
-	// 元data
+	// metadata
 	Timestamp time.Time
 }
 
-// AssistantMessageEvent 机器人回复event
-// Deprecated: use AddMessageEvent 替代，unifieduse TopicAddMessage event
+// AssistantMessageEvent bot reply event
+// Deprecated: use AddMessageEvent instead, unified use TopicAddMessage event
 type AssistantMessageEvent struct {
-	Ctx         context.Context
-	SessionID   string
-	DeviceID    string
-	AgentID     string
+	Ctx       context.Context
+	SessionID string
+	DeviceID  string
+	AgentID   string
 
-	//LLMresult
+	// LLM result
 	Text string
 
-	// TTSresult
-	AudioData [][]byte // 合成audio data（Opusformat，audio framearray）
-	AudioSize int      // audiosize(byte)
+	// TTS result
+	AudioData [][]byte // synthesized audio data (Opus format, audio frame array)
+	AudioSize int      // audio size (byte)
 
-	// audioformatinfo（used forconvertisWAV）
-	SampleRate int // sampling率
-	Channels   int // channelcount
+	// audio format info (used for convert to WAV)
+	SampleRate int // sampling rate
+	Channels   int // channel count
 
-	// 元data
-	TTSDuration int // 毫second
+	// metadata
+	TTSDuration int // millisecond
 	Timestamp   time.Time
 }

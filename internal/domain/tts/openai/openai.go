@@ -48,7 +48,7 @@ func getHTTPClient() *http.Client {
 	return httpClient
 }
 
-// OpenAITTSProvider OpenAI TTSprovide者
+// OpenAITTSProvider OpenAI TTS provider
 type OpenAITTSProvider struct {
 	APIKey         string
 	APIURL         string
@@ -70,7 +70,7 @@ type openAIRequest struct {
 	Stream         bool    `json:"stream,omitempty"`
 }
 
-// NewOpenAITTSProvider create newOpenAI TTSprovide者
+// NewOpenAITTSProvider create newOpenAI TTS provider
 func NewOpenAITTSProvider(config map[string]interface{}) *OpenAITTSProvider {
 	apiKey, _ := config["api_key"].(string)
 	apiURL, _ := config["api_url"].(string)
@@ -217,7 +217,7 @@ func (p *OpenAITTSProvider) TextToSpeechStream(ctx context.Context, text string,
 
 		decoder, err := util.CreateAudioDecoderWithSampleRate(ctx, resp.Body, outputChan, frameDuration, decoderFormat, sampleRate)
 		if err != nil {
-			log.Errorf("createOpenAIaudiodecode器failed: %v", err)
+			log.Errorf("createOpenAIaudio decoderfailed: %v", err)
 			close(outputChan)
 			return
 		}
@@ -242,7 +242,7 @@ func (p *OpenAITTSProvider) TextToSpeechStream(ctx context.Context, text string,
 			log.Debugf("OpenAI TTSstreaming合成cancel, text: %s", text)
 			return
 		default:
-			log.Infof("OpenAI TTStime consumption: frominput至getaudio dataendtime consumption: %d ms", time.Now().UnixMilli()-startTs)
+			log.Infof("OpenAI TTStime consumption: from input togetaudio dataendtime consumption: %d ms", time.Now().UnixMilli()-startTs)
 		}
 	}()
 

@@ -33,19 +33,19 @@ func TestAudioDecoderRunOggOpusPassThrough(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(actualPackets, expectedPackets) {
-		t.Fatalf("直通 packet noconsistent，actual=%x expected=%x", actualPackets, expectedPackets)
+		t.Fatalf("passthrough packet not consistent, actual=%x expected=%x", actualPackets, expectedPackets)
 	}
 }
 
 func TestGetAudioFormatByMimeTypeSupportsOggOpus(t *testing.T) {
 	if got := GetAudioFormatByMimeType("audio/ogg"); got != "ogg_opus" {
-		t.Fatalf("audio/ogg 应mapis ogg_opus，actualis %s", got)
+		t.Fatalf("audio/ogg should map to ogg_opus, actual is %s", got)
 	}
 	if got := GetAudioFormatByMimeType("application/ogg"); got != "ogg_opus" {
-		t.Fatalf("application/ogg 应mapis ogg_opus，actualis %s", got)
+		t.Fatalf("application/ogg should map to ogg_opus, actual is %s", got)
 	}
 	if got := GetAudioFormatByMimeType("audio/opus"); got != "opus" {
-		t.Fatalf("audio/opus 应mapis opus，actualis %s", got)
+		t.Fatalf("audio/opus should map to opus, actual is %s", got)
 	}
 }
 
@@ -75,7 +75,7 @@ func TestAudioDecoderRunOggOpusRepacketizeTo60ms(t *testing.T) {
 
 	expected := []int{60, 60}
 	if !reflect.DeepEqual(durations, expected) {
-		t.Fatalf("重groupafterofframedurationno符合预期，actual=%v expected=%v", durations, expected)
+		t.Fatalf("frame duration after regroup not as expected, actual=%v expected=%v", durations, expected)
 	}
 }
 
@@ -85,12 +85,12 @@ func makeTestOpusPackets(t *testing.T, sampleRate int, channels int, frameDurati
 	frameSize := sampleRate * frameDurationMs / 1000
 	totalSamples := sampleRate * totalDurationMs / 1000
 	if frameSize <= 0 || totalSamples <= 0 {
-		t.Fatalf("illegaltestparameter: frameSize=%d totalSamples=%d", frameSize, totalSamples)
+		t.Fatalf("illegal test parameter: frameSize=%d totalSamples=%d", frameSize, totalSamples)
 	}
 
 	enc, err := opus.NewEncoder(sampleRate, channels, opus.AppAudio)
 	if err != nil {
-		t.Fatalf("createtest Opus encode器failed: %v", err)
+		t.Fatalf("create test Opus encoder failed: %v", err)
 	}
 
 	pcm := make([]int16, totalSamples*channels)

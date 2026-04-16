@@ -16,7 +16,7 @@ type ClientSession struct {
 	LastSeen  time.Time
 }
 
-// AuthManager manageauthenticateandsession
+// AuthManager manage authentication and session
 type AuthManager struct {
 	sessions map[string]*ClientSession
 	mutex    sync.RWMutex
@@ -35,7 +35,7 @@ func A() *AuthManager {
 	return authManager
 }
 
-// NewAuthManager create newauthenticatemanage器
+// NewAuthManager create new authentication manager
 func NewAuthManager() *AuthManager {
 	return &AuthManager{
 		sessions: make(map[string]*ClientSession),
@@ -43,9 +43,9 @@ func NewAuthManager() *AuthManager {
 	}
 }
 
-// CreateSession create newsession
+// CreateSession create new session
 func (am *AuthManager) CreateSession(deviceID string) (*ClientSession, error) {
-	// generaterandomsessionID
+	// generate random session ID
 	sessionID, err := generateClientSessionID()
 	if err != nil {
 		return nil, err
@@ -65,17 +65,17 @@ func (am *AuthManager) CreateSession(deviceID string) (*ClientSession, error) {
 	return session, nil
 }
 
-// GetSession getsession
+// GetSession get session
 func (am *AuthManager) GetSession(sessionID string) (*ClientSession, error) {
 	am.mutex.RLock()
 	session, exists := am.sessions[sessionID]
 	am.mutex.RUnlock()
 
 	if !exists {
-		return nil, errors.New("sessionno存at")
+		return nil, errors.New("session does not exist")
 	}
 
-	// update最afteraccesstime
+	// update last access time
 	am.mutex.Lock()
 	session.LastSeen = time.Now()
 	am.mutex.Unlock()
@@ -83,14 +83,14 @@ func (am *AuthManager) GetSession(sessionID string) (*ClientSession, error) {
 	return session, nil
 }
 
-// RemoveSession removesession
+// RemoveSession remove session
 func (am *AuthManager) RemoveSession(sessionID string) {
 	am.mutex.Lock()
 	delete(am.sessions, sessionID)
 	am.mutex.Unlock()
 }
 
-// CleanupSessions cleanupexpiresession
+// CleanupSessions cleanup expired session
 func (am *AuthManager) CleanupSessions(maxAge time.Duration) {
 	am.mutex.Lock()
 	defer am.mutex.Unlock()
@@ -103,7 +103,7 @@ func (am *AuthManager) CleanupSessions(maxAge time.Duration) {
 	}
 }
 
-// generateClientSessionID generaterandomsessionID
+// generateClientSessionID generate random session ID
 func generateClientSessionID() (string, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
@@ -115,7 +115,7 @@ func generateClientSessionID() (string, error) {
 // ValidateToken validate token
 func (am *AuthManager) ValidateToken(token string) bool {
 	return true
-	// remove "Bearer " before缀
+	// remove "Bearer " prefix
 	if len(token) > 7 && token[:7] == "Bearer " {
 		token = token[7:]
 	}
@@ -127,9 +127,9 @@ func (am *AuthManager) ValidateToken(token string) bool {
 	return exists
 }
 
-// RegisterToken registertoken
+// RegisterToken register token
 func (am *AuthManager) RegisterToken(token string, deviceID string) {
-	// remove "Bearer " before缀
+	// remove "Bearer " prefix
 	if len(token) > 7 && token[:7] == "Bearer " {
 		token = token[7:]
 	}
@@ -139,9 +139,9 @@ func (am *AuthManager) RegisterToken(token string, deviceID string) {
 	am.mutex.Unlock()
 }
 
-// RemoveToken removetoken
+// RemoveToken remove token
 func (am *AuthManager) RemoveToken(token string) {
-	// remove "Bearer " before缀
+	// remove "Bearer " prefix
 	if len(token) > 7 && token[:7] == "Bearer " {
 		token = token[7:]
 	}

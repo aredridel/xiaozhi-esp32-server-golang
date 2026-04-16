@@ -4,10 +4,10 @@ import (
 	"xiaozhi-esp32-server-golang/internal/util"
 )
 
-// ResourceWrapper 泛型resourcepackage装器
+// ResourceWrapper 泛型resource wrapper
 // T: concreteofresourcetype（如 vad.VAD, asr.AsrProvider etc）
 type ResourceWrapper[T any] struct {
-	provider     T                    // actualofresourceprovide者（type安全）
+	provider     T                    // actualofresourceprovider（type安全）
 	configKey    string               // configkey，used for标识resourcepool
 	resourceType string               // resourcetype（vad/asr/llm/ttsetc）
 	closeFunc    func(T) error        // closeresourceoffunction
@@ -32,7 +32,7 @@ func (r *ResourceWrapper[T]) IsValid() bool {
 	return any(r.provider) != any(zero)
 }
 
-// GetProvider getactualofresourceprovide者（type安全，noneedtypeassert）
+// GetProvider getactualofresourceprovider（type安全，noneedtypeassert）
 func (r *ResourceWrapper[T]) GetProvider() T {
 	return r.provider
 }

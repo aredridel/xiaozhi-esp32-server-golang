@@ -61,14 +61,14 @@ func filterGlobalToolsBySelectedServices(globalTools map[string]tool.InvokableTo
 }
 
 func GetToolByName(deviceId string, agentId string, toolName string, selectedMCPServiceNames string) (tool.InvokableTool, bool) {
-	// priorityfromlocalmanage器get
+	// priorityfromlocal managerget
 	localManager := GetLocalMCPManager()
 	tool, ok := localManager.GetToolByName(toolName)
 	if ok {
 		return tool, ok
 	}
 
-	// 其timesfromglobalmanage器get
+	// 其timesfromglobal managerget
 	selected := parseSelectedMCPServiceNames(selectedMCPServiceNames)
 	if len(selected) == 0 {
 		tool, ok = globalManager.GetToolByName(toolName)
@@ -123,15 +123,15 @@ func RemoveDeviceMcpClient(deviceId string) error {
 func GetToolsByDeviceId(deviceId string, agentId string, selectedMCPServiceNames string) (map[string]tool.InvokableTool, error) {
 	retTools := make(map[string]tool.InvokableTool)
 
-	// priorityfromlocalmanage器get
+	// priorityfromlocal managerget
 	localManager := GetLocalMCPManager()
 	localTools := localManager.GetAllTools()
 	for toolName, tool := range localTools {
 		retTools[toolName] = tool
 	}
-	log.Infof("fromlocalmanage器getto %d 个tool", len(localTools))
+	log.Infof("fromlocal managergetto %d 个tool", len(localTools))
 
-	// 其timesfromglobalmanage器get
+	// 其timesfromglobal managerget
 	globalTools := globalManager.GetAllTools()
 	filteredGlobalTools := filterGlobalToolsBySelectedServices(globalTools, selectedMCPServiceNames)
 	for toolName, tool := range filteredGlobalTools {
@@ -140,7 +140,7 @@ func GetToolsByDeviceId(deviceId string, agentId string, selectedMCPServiceNames
 			retTools[toolName] = tool
 		}
 	}
-	log.Infof("fromglobalmanage器getto %d 个tool（filterafter）", len(filteredGlobalTools))
+	log.Infof("fromglobal managergetto %d 个tool（filterafter）", len(filteredGlobalTools))
 
 	// 最afterfromMCPclient-sidepoolget
 	deviceTools, err := mcpClientPool.GetAllToolsByDeviceIdAndAgentId(deviceId, agentId)

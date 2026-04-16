@@ -36,26 +36,26 @@ func normalizeSpeakerChatMode(mode string) string {
 	}
 }
 
-// ConfigManager configmanage器
-// providehighlayer级ofconfigmanagefunction，package括cache、热update、configvalidateetc
+// ConfigManager - Config Manager
+// Provides high-level config management functions, including cache, hot update, config validation, etc.
 type ConfigManager struct {
-	// HTTPclient-side
+	// HTTP client
 	client *http.ManagerClient
 }
 
-// NewConfigManager create newconfigmanage器
+// NewConfigManager creates new config manager
 func NewManagerUserConfigProvider(config map[string]interface{}) (*ConfigManager, error) {
-	// fromconfigingetafterendpointmanagesystemoffoundationURL
+	// Get backend endpoint management system base URL from config
 	var baseURL string
 	if backendUrl := config["backend_url"]; backendUrl != nil {
 		baseURL = backendUrl.(string)
 	}
-	// ifconfiginno，usedefault values
+	// If not configured, use default values
 	if baseURL == "" {
 		baseURL = "http://localhost:8080" // default values
 	}
 
-	// createManager HTTPclient-side
+	// Create Manager HTTP client
 	authToken := util.GetManagerAuthToken()
 	if token, ok := config["auth_token"].(string); ok && strings.TrimSpace(token) != "" {
 		authToken = strings.TrimSpace(token)
@@ -71,12 +71,12 @@ func NewManagerUserConfigProvider(config map[string]interface{}) (*ConfigManager
 		client: managerClient,
 	}
 
-	//log.Log().Debug("configmanage器initializesuccessful", "backend_url", baseURL)
+	//log.Log().Debug("config manager initialized successfully", "backend_url", baseURL)
 	return manager, nil
 }
 
 func (c *ConfigManager) GetUserConfig(ctx context.Context, deviceID string) (types.UConfig, error) {
-	// parserespond
+	// Parse response
 	var response struct {
 		Data struct {
 			VAD struct {
@@ -123,7 +123,7 @@ func (c *ConfigManager) GetUserConfig(ctx context.Context, deviceID string) (typ
 		} `json:"data"`
 	}
 
-	// sendHTTPrequest
+	// Send HTTP request
 	err := c.client.DoRequest(ctx, http.RequestOptions{
 		Method: "GET",
 		Path:   "/api/configs",
@@ -133,27 +133,27 @@ func (c *ConfigManager) GetUserConfig(ctx context.Context, deviceID string) (typ
 		Response: &response,
 	})
 	if err != nil {
-		log.Log().Error("getuserconfigfailed", "error", err, "device_id", deviceID)
+		log.Log().Error("Failed to get user config", "error", err, "device_id", deviceID)
 		return types.UConfig{}, err
 	}
 
-	// parseJSONconfigdataofauxiliaryfunction
+	// Auxiliary function to parse JSON config data
 	parseJsonData := func(jsonStr string) map[string]interface{} {
 		var data map[string]interface{}
 		if jsonStr != "" {
 			if err := json.Unmarshal([]byte(jsonStr), &data); err != nil {
-				log.Log().Warn("parseJSONdatafailed", "error", err, "json", jsonStr)
+				log.Log().Warn("Failed to parse JSON data", "error", err, "json", jsonStr)
 				return make(map[string]interface{})
 			}
 		}
 		return data
 	}
 
-	// fromdeviceconfiggetvoiceprintgroupinfo（onlygetvoiceprintgroupconfig，nogetserviceaddress）
-	// VoiceIdentify yesa map，key yesvoiceprintgroupname，value include prompt、description and uuids
+	// Get voiceprint group info from device config (only get voiceprint group config, not service address)
+	// VoiceIdentify is a map, key is voiceprint group name, value includes prompt, description and uuids
 	voiceIdentifyData := make(map[string]types.SpeakerGroupInfo)
 	if len(response.Data.VoiceIdentify) > 0 {
-		// will map formatofvoiceprintgroupinfoconvertisconfigformat
+		// Convert map format voiceprint group info to config format
 		for groupName, groupInfo := range response.Data.VoiceIdentify {
 			groupData := types.SpeakerGroupInfo{
 				ID:                 groupInfo.ID,
@@ -169,7 +169,7 @@ func (c *ConfigManager) GetUserConfig(ctx context.Context, deviceID string) (typ
 		}
 	}
 
-	// buildconfigresult
+	// Build config result
 	enterKeywords := response.Data.OpenClaw.EnterKeywords
 	if len(enterKeywords) == 0 {
 		enterKeywords = cloneOpenClawKeywords(defaultManagerOpenClawEnterKeywords)
@@ -180,7 +180,7 @@ func (c *ConfigManager) GetUserConfig(ctx context.Context, deviceID string) (typ
 	}
 
 	config := types.UConfig{
-		SystemPrompt: response.Data.Prompt, // useagentof自定义hint
+		SystemPrompt: response.Data.Prompt, // Use agent's custom prompt
 		Asr: types.AsrConfig{
 			Provider: response.Data.ASR.Provider,
 			Config:   parseJsonData(response.Data.ASR.JsonData),
@@ -218,81 +218,81 @@ func (c *ConfigManager) GetUserConfig(ctx context.Context, deviceID string) (typ
 	}
 	config.SpeakerChatMode = normalizeSpeakerChatMode(config.SpeakerChatMode)
 
-	log.Log().Infof("successfulgetdeviceconfig: deviceId: %s, config: %+v", deviceID, config)
+	log.Log().Infof("Successfully got device config: deviceId: %s, config: %+v", deviceID, config)
 	return config, nil
 }
 
-// get mqtt, mqtt_server, udp, ota, visionconfig
+// Get mqtt, mqtt_server, udp, ota, vision config
 func (c *ConfigManager) GetSystemConfig(ctx context.Context) (string, error) {
-	// parserespondJSON
+	// Parse response JSON
 	var apiResponse struct {
 		Data map[string]interface{} `json:"data"`
 	}
 
-	// sendHTTPrequest
+	// Send HTTP request
 	err := c.client.DoRequest(ctx, http.RequestOptions{
 		Method:   "GET",
 		Path:     "/api/system/configs",
 		Response: &apiResponse,
 	})
 	if err != nil {
-		return "", fmt.Errorf("getsystemconfigfailed: %w", err)
+		return "", fmt.Errorf("failed to get system config: %w", err)
 	}
 
-	// process voice_identify config，ensureinclude threshold field
+	// Process voice_identify config, ensure threshold field is included
 	if voiceIdentifyData, exists := apiResponse.Data["voice_identify"]; exists {
 		if voiceIdentifyMap, ok := voiceIdentifyData.(map[string]interface{}); ok {
-			// if voice_identify config存atbutno threshold field，adddefault values
+			// If voice_identify config exists but no threshold field, add default value
 			if _, hasThreshold := voiceIdentifyMap["threshold"]; !hasThreshold {
 				voiceIdentifyMap["threshold"] = 0.4
-				log.Log().Info("voice_identify configMissing threshold field，alreadyadddefault values 0.4")
+				log.Log().Info("voice_identify config missing threshold field, added default value 0.4")
 			} else {
-				// validate阈valuerange
+				// Validate threshold value range
 				if thresholdVal, ok := voiceIdentifyMap["threshold"].(float64); ok {
 					if thresholdVal < 0 || thresholdVal > 1 {
-						log.Log().Warnf("voice_identify.threshold value %.4f exceedvalidrange [0.0, 1.0]，usedefault values 0.4", thresholdVal)
+						log.Log().Warnf("voice_identify.threshold value %.4f exceeds valid range [0.0, 1.0], using default value 0.4", thresholdVal)
 						voiceIdentifyMap["threshold"] = 0.4
 					}
 				}
 			}
-			// updateconfigdata
+			// Update config data
 			apiResponse.Data["voice_identify"] = voiceIdentifyMap
 		}
 	}
-	//log.Debugf("frominside控gettosystemconfig: %+v", apiResponse.Data)
+	//log.Debugf("Got system config from internal control: %+v", apiResponse.Data)
 
-	// willAPIrespondconvertisconfigJSONcharstring
+	// Convert API response to config JSON string
 	configJSON, err := json.Marshal(apiResponse.Data)
 	if err != nil {
-		return "", fmt.Errorf("serializeconfigfailed: %w", err)
+		return "", fmt.Errorf("failed to serialize config: %w", err)
 	}
 
 	return string(configJSON), nil
 }
 
-// LoadSystemConfigToViper frombackend APIloadsystemconfigandsettoviper
+// LoadSystemConfigToViper loads system config from backend API and sets to viper
 func (c *ConfigManager) LoadSystemConfigToViper(ctx context.Context) error {
-	// getsystemconfigJSONcharstring
+	// Get system config JSON string
 	configJSON, err := c.GetSystemConfig(ctx)
 	if err != nil {
-		return fmt.Errorf("getsystemconfigfailed: %w", err)
+		return fmt.Errorf("failed to get system config: %w", err)
 	}
 
-	// useviper.MergeConfigMapwillconfigsettoviper
-	// firstfirstwillJSONcharstringparseismap
+	// Use viper.MergeConfigMap to set config to viper
+	// First parse JSON string to map
 	var configMap map[string]interface{}
 	if err := json.Unmarshal([]byte(configJSON), &configMap); err != nil {
-		return fmt.Errorf("parseconfigJSONfailed: %w", err)
+		return fmt.Errorf("failed to parse config JSON: %w", err)
 	}
 
-	// settoviper（needimportviperpackage）
+	// Set to viper (need to import viper package)
 	// viper.MergeConfigMap(configMap)
 
-	log.Log().Info("systemconfigalreadysuccessfulloadtoviper", "config_size", len(configJSON))
+	log.Log().Info("System config successfully loaded to viper", "config_size", len(configJSON))
 	return nil
 }
 
-// SwitchDeviceRoleByName 按rolename（supportfuzzymatching）switchdevicerole
+// SwitchDeviceRoleByName switches device role by role name (supports fuzzy matching)
 func (c *ConfigManager) SwitchDeviceRoleByName(ctx context.Context, deviceID string, roleName string) (string, error) {
 	deviceID = strings.TrimSpace(deviceID)
 	roleName = strings.TrimSpace(roleName)
@@ -326,12 +326,12 @@ func (c *ConfigManager) SwitchDeviceRoleByName(ctx context.Context, deviceID str
 		return "", fmt.Errorf(response.Error)
 	}
 	if strings.TrimSpace(response.Data.RoleName) == "" {
-		return "", fmt.Errorf("switch device role failed: notreturnmatchingrole")
+		return "", fmt.Errorf("switch device role failed: no matching role returned")
 	}
 	return response.Data.RoleName, nil
 }
 
-// RestoreDeviceDefaultRole recoverydevicedefaultrole（cleardevicebindrole）
+// RestoreDeviceDefaultRole restores device default role (clears device bound role)
 func (c *ConfigManager) RestoreDeviceDefaultRole(ctx context.Context, deviceID string) error {
 	deviceID = strings.TrimSpace(deviceID)
 	if deviceID == "" {
@@ -357,11 +357,11 @@ func (c *ConfigManager) RestoreDeviceDefaultRole(ctx context.Context, deviceID s
 	return nil
 }
 
-// SearchKnowledge throughmanageafter台unifiedretrieveknowledgelibrary（control台按providerforward）
+// SearchKnowledge searches through backend unified knowledge base (console forwards by provider)
 func (c *ConfigManager) NotifyDeviceEvent(ctx context.Context, eventType string, eventData map[string]interface{}) {
 	_, err := SendDeviceRequest(ctx, eventType, eventData)
 	if err != nil {
-		log.Log().Error("senddeviceeventfailed", "error", err)
+		log.Log().Error("Failed to send device event", "error", err)
 	}
 }
 

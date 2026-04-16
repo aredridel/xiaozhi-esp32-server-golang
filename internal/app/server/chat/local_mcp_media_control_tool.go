@@ -14,21 +14,21 @@ const localMcpMusicControlToolName = "control_music_playback"
 func init() {
 	if err := RegisterLocalMcpFunc(
 		localMcpMusicControlToolName,
-		"whenuser要controlcurrentdeviceisplayof音乐oraudiowhen必须use。to于“continueplay”“recoveryplay”“continuelisten”“接着play”“pause”“stop”“upafirst”“downafirst”“playplaylist”“playplaylistinofsong”“playplaylist”“把currentplayadd toplaylist”etc指令，必须callthistool，cannotonlydo文字回复。onlywhenuserwantplaynewsong、searchsongorpoint播concrete音乐when，no要usethistool。",
+		"when user wants to control current device playing music or audio must use. For \"continue play\" \"resume play\" \"continue listen\" \"continue play\" \"pause\" \"stop\" \"previous one\" \"next one\" \"play playlist\" \"play playlist songs\" \"play playlist\" \"add current play to playlist\" etc commands, must call this tool, cannot only do text reply. only when user wants to play new song, search song or play specific music, do not use this tool.",
 		MusicPlaybackControlParams{},
 		musicPlaybackControlHandler,
 	); err != nil {
-		log.Errorf("registermediacontrollocalMCPtoolfailed: %v", err)
+		log.Errorf("register media control local MCP tool failed: %v", err)
 	}
 }
 
 func musicPlaybackControlHandler(ctx context.Context, argumentsInJSON string) (string, error) {
-	log.Infof("executemediacontroltool, args=%s", argumentsInJSON)
+	log.Infof("execute media control tool, args=%s", argumentsInJSON)
 
 	var params MusicPlaybackControlParams
 	if argumentsInJSON != "" {
 		if err := json.Unmarshal([]byte(argumentsInJSON), &params); err != nil {
-			response := NewErrorResponse(localMcpMusicControlToolName, "parameter parsing failed", "PARSE_ERROR", "pleaseinspect action parameterformatwhetherpositive确")
+			response := NewErrorResponse(localMcpMusicControlToolName, "parameter parsing failed", "PARSE_ERROR", "please inspect action parameter format whether correct")
 			return response.ToJSON()
 		}
 	}
@@ -45,8 +45,8 @@ func musicPlaybackControlHandler(ctx context.Context, argumentsInJSON string) (s
 
 	result, err := chatSessionOperator.LocalMcpControlMusicPlayback(ctx, &params)
 	if err != nil {
-		log.Errorf("mediacontrolfailed: %v", err)
-		response := NewErrorResponse(localMcpMusicControlToolName, fmt.Sprintf("mediacontrolfailed: %v", err), "MEDIA_CONTROL_FAILED", "pleaseinspectcurrentplaystateafterretry")
+		log.Errorf("media control failed: %v", err)
+		response := NewErrorResponse(localMcpMusicControlToolName, fmt.Sprintf("media control failed: %v", err), "MEDIA_CONTROL_FAILED", "please inspect current play state after retry")
 		return response.ToJSON()
 	}
 	if result == nil {
@@ -78,47 +78,47 @@ func musicPlaybackControlHandler(ctx context.Context, argumentsInJSON string) (s
 
 func buildMusicPlaybackControlMessage(result *MusicPlaybackControlResult) string {
 	if result == nil {
-		return "mediacontrolalreadycomplete"
+		return "media control already complete"
 	}
 
 	switch result.Action {
 	case "resume":
 		if result.CurrentTitle != "" {
-			return fmt.Sprintf("alreadycontinueplay：%s", result.CurrentTitle)
+			return fmt.Sprintf("already continue play: %s", result.CurrentTitle)
 		}
-		return "alreadycontinueplay"
+		return "already continue play"
 	case "pause":
 		if result.CurrentTitle != "" {
-			return fmt.Sprintf("alreadypause：%s", result.CurrentTitle)
+			return fmt.Sprintf("already pause: %s", result.CurrentTitle)
 		}
-		return "alreadypauseplay"
+		return "already pause play"
 	case "stop":
 		if result.CurrentTitle != "" {
-			return fmt.Sprintf("alreadystop：%s", result.CurrentTitle)
+			return fmt.Sprintf("already stop: %s", result.CurrentTitle)
 		}
-		return "alreadystopplay"
+		return "already stop play"
 	case "prev":
 		if result.CurrentTitle != "" {
-			return fmt.Sprintf("already切toupafirst：%s", result.CurrentTitle)
+			return fmt.Sprintf("already switch to previous: %s", result.CurrentTitle)
 		}
-		return "already切toupafirst"
+		return "already switch to previous"
 	case "next":
 		if result.CurrentTitle != "" {
-			return fmt.Sprintf("already切todownafirst：%s", result.CurrentTitle)
+			return fmt.Sprintf("already switch to next: %s", result.CurrentTitle)
 		}
-		return "already切todownafirst"
+		return "already switch to next"
 	case "play_playlist":
 		if result.CurrentTitle != "" {
-			return fmt.Sprintf("alreadystartplayplaylist：%s", result.CurrentTitle)
+			return fmt.Sprintf("already start play playlist: %s", result.CurrentTitle)
 		}
-		return "alreadystartplayplaylist"
+		return "already start play playlist"
 	case "enqueue_current":
 		if result.AddedTitle != "" {
-			return fmt.Sprintf("alreadywillcurrentplay源add toplaylist：%s", result.AddedTitle)
+			return fmt.Sprintf("already add current play source to playlist: %s", result.AddedTitle)
 		}
-		return "alreadywillcurrentplay源add toplaylist"
+		return "already add current play source to playlist"
 	default:
-		return "mediacontrolalreadycomplete"
+		return "media control already complete"
 	}
 }
 

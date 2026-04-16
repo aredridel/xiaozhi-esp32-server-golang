@@ -11,13 +11,13 @@ import (
 	. "xiaozhi-esp32-server-golang/internal/domain/vad/inter"
 )
 
-// VADdefaultconfig
+// VAD default config
 var defaultVADConfig = map[string]interface{}{
 	"hop_size":  512,
 	"threshold": 0.3,
 }
 
-// TenVAD TEN-VADmodelimplement
+// TenVAD TEN-VAD model implementation
 type TenVAD struct {
 	handle    unsafe.Pointer
 	hopSize   int
@@ -25,11 +25,11 @@ type TenVAD struct {
 	mu        sync.Mutex
 }
 
-// NewTenVAD createTenVADinstance
+// NewTenVAD create TenVAD instance
 func NewTenVAD(config map[string]interface{}) (*TenVAD, error) {
 	hopSize, ok := config["hop_size"].(int)
 	if !ok {
-		// tryfrom float64 convert
+		// try from float64 convert
 		if hopSizeFloat, ok := config["hop_size"].(float64); ok {
 			hopSize = int(hopSizeFloat)
 		} else {
@@ -39,7 +39,7 @@ func NewTenVAD(config map[string]interface{}) (*TenVAD, error) {
 
 	threshold, ok := config["threshold"].(float64)
 	if !ok {
-		// tryfrom float32 convert
+		// try from float32 convert
 		if thresholdFloat32, ok := config["threshold"].(float32); ok {
 			threshold = float64(thresholdFloat32)
 		} else {
@@ -47,14 +47,14 @@ func NewTenVAD(config map[string]interface{}) (*TenVAD, error) {
 		}
 	}
 
-	// createTEN-VADinstance
+	// create TEN-VAD instance
 	tenVAD := GetInstance()
 	handle, err := tenVAD.CreateInstance(hopSize, float32(threshold))
 	if err != nil {
-		return nil, fmt.Errorf("createTEN-VADinstancefailed: %v", err)
+		return nil, fmt.Errorf("create TEN-VAD instance failed: %v", err)
 	}
 
-	log.Debugf("createTEN-VADinstancesuccessful, hopSize: %d, threshold: %f", hopSize, threshold)
+	log.Debugf("create TEN-VAD instance successful, hopSize: %d, threshold: %f", hopSize, threshold)
 
 	return &TenVAD{
 		handle:    handle,
@@ -63,30 +63,30 @@ func NewTenVAD(config map[string]interface{}) (*TenVAD, error) {
 	}, nil
 }
 
-// IsVAD implementVADinterfaceofIsVADmethod
+// IsVAD implement VAD interface IsVAD method
 func (t *TenVAD) IsVAD(pcmData []float32) (bool, error) {
 	return t.IsVADExt(pcmData, 16000, t.hopSize)
 }
 
-// IsVADExt implementVADinterfaceofIsVADExtmethod
+// IsVADExt implement VAD interface IsVADExt method
 func (t *TenVAD) IsVADExt(pcmData []float32, sampleRate int, frameSize int) (bool, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
 	if t.handle == nil {
-		return false, errors.New("TEN-VADinstancenot initialized")
+		return false, errors.New("TEN-VAD instance not initialized")
 	}
 
 	if len(pcmData) == 0 {
 		return false, nil
 	}
 
-	// will float32 convertis int16
+	// convert float32 to int16
 	// float32 range: -1.0 to 1.0
 	// int16 range: -32768 to 32767
 	int16Data := make([]int16, len(pcmData))
 	for i, f := range pcmData {
-		// limitrangeandconvert
+		// limit range and convert
 		if f > 1.0 {
 			f = 1.0
 		} else if f < -1.0 {
@@ -95,7 +95,7 @@ func (t *TenVAD) IsVADExt(pcmData []float32, sampleRate int, frameSize int) (boo
 		int16Data[i] = int16(f * 32768.0)
 	}
 
-	// 按 hopSize minuteframeprocess
+	// process by hopSize frame
 	tenVAD := GetInstance()
 	hasVoice := false
 	voiceFrameCount := 0
@@ -107,42 +107,42 @@ func (t *TenVAD) IsVADExt(pcmData []float32, sampleRate int, frameSize int) (boo
 		}
 
 		frame := int16Data[i:end]
-		// ifframelengthno足 hopSize，need填充orskip
+		// if frame length not enough hopSize, need padding or skip
 		if len(frame) < t.hopSize {
-			// to于最afteraframe，iflengthno足，canselectskipor填充
-			// 这inselectskipno足offrame
+			// for last frame, if length not enough, can select skip or padding
+			// here select skip insufficient frame
 			continue
 		}
 
 		_, flag, err := tenVAD.ProcessAudio(t.handle, frame)
 		if err != nil {
-			log.Errorf("TEN-VADprocessaudio framefailed: %v", err)
+			log.Errorf("TEN-VAD process audio frame failed: %v", err)
 			continue
 		}
 
-		// flag == 1 indicatedetected voice
+		// flag == 1 indicate detected voice
 		if flag == 1 {
 			hasVoice = true
 			voiceFrameCount++
 		}
 	}
 
-	// ifat leasthaveaframedetected voice，then认ishavevoice活动
+	// if at least have one frame detected voice, then consider has voice activity
 	return hasVoice, nil
 }
 
-// Reset resetVADdetect器state
+// Reset reset VAD detector state
 func (t *TenVAD) Reset() error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	// TEN-VADnoneedreset，every timeprocessareyesindependentof
-	// but我们canrecreateinstance来resetstate
-	// 这innodo任何操as，becauseisTEN-VADyesnostateof
+	// TEN-VAD no need reset, every time process are independent
+	// but we can recreate instance to reset state
+	// here do nothing, because TEN-VAD has no state
 	return nil
 }
 
-// Close closeandreleaseresource
+// Close close and release resource
 func (t *TenVAD) Close() error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -151,21 +151,21 @@ func (t *TenVAD) Close() error {
 		tenVAD := GetInstance()
 		err := tenVAD.DestroyInstance(t.handle)
 		if err != nil {
-			return fmt.Errorf("destroyTEN-VADinstancefailed: %v", err)
+			return fmt.Errorf("destroy TEN-VAD instance failed: %v", err)
 		}
 		t.handle = nil
 	}
 	return nil
 }
 
-// IsValid inspectresourcewhethervalid
+// IsValid inspect resource whether valid
 func (t *TenVAD) IsValid() bool {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	return t.handle != nil
 }
 
-// AcquireVAD createandreturn TEN-VAD instance（byglobalresourcepoolmanage）
+// AcquireVAD create and return TEN-VAD instance (by global resource pool manage)
 func AcquireVAD(config map[string]interface{}) (VAD, error) {
 	return NewTenVAD(config)
 }

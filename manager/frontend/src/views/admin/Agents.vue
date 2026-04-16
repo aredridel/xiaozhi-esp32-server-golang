@@ -1,106 +1,106 @@
 <template>
   <div class="admin-agents">
     <div class="page-header">
-      <h2>智能体管理</h2>
-      <p class="page-subtitle">管理系统中的所有智能体</p>
+      <h2>Agent Management</h2>
+      <p class="page-subtitle">Manage all agents in the system</p>
     </div>
 
     <div class="toolbar">
       <el-button type="primary" @click="showAddDialog = true">
         <el-icon><Plus /></el-icon>
-        添加智能体
+        Add Agent
       </el-button>
       <el-button @click="loadAgents">
         <el-icon><Refresh /></el-icon>
-        刷新
+        Refresh
       </el-button>
     </div>
 
     <el-table :data="agents" v-loading="loading" stripe>
       <el-table-column prop="id" label="ID" width="80" />
-      <el-table-column prop="name" label="昵称" width="150" />
-      <el-table-column prop="user_id" label="用户ID" width="100" />
-      <el-table-column label="角色介绍" min-width="200" show-overflow-tooltip>
+      <el-table-column prop="name" label="Name" width="150" />
+      <el-table-column prop="user_id" label="User ID" width="100" />
+      <el-table-column label="Role Description" min-width="200" show-overflow-tooltip>
         <template #default="{ row }">
-          {{ row.custom_prompt || '未设置' }}
+          {{ row.custom_prompt || 'Not Set' }}
         </template>
       </el-table-column>
-      <el-table-column label="语言模型" width="150">
+      <el-table-column label="Language Model" width="150">
         <template #default="{ row }">
-          {{ row.llm_config?.name || '未设置' }}
+          {{ row.llm_config?.name || 'Not Set' }}
         </template>
       </el-table-column>
-      <el-table-column label="音色" width="150">
+      <el-table-column label="Voice" width="150">
         <template #default="{ row }">
-          {{ row.tts_config?.name || '未设置' }}
+          {{ row.tts_config?.name || 'Not Set' }}
         </template>
       </el-table-column>
-      <el-table-column label="语音识别速度" width="120">
+      <el-table-column label="ASR Speed" width="120">
         <template #default="{ row }">
           <el-tag :type="getASRSpeedType(row.asr_speed)">
             {{ getASRSpeedText(row.asr_speed) }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="记忆模式" width="120">
+      <el-table-column label="Memory Mode" width="120">
         <template #default="{ row }">
           <el-tag :type="getMemoryModeType(row.memory_mode)">
             {{ getMemoryModeText(row.memory_mode) }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="声纹聊天" width="180">
+      <el-table-column label="Speaker Chat" width="180">
         <template #default="{ row }">
           <el-tag :type="getSpeakerChatModeType(row.speaker_chat_mode)">
             {{ getSpeakerChatModeText(row.speaker_chat_mode) }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="status" label="状态" width="100">
+      <el-table-column prop="status" label="Status" width="100">
         <template #default="{ row }">
           <el-tag :type="row.status === 'active' ? 'success' : 'info'">
-            {{ row.status === 'active' ? '活跃' : '非活跃' }}
+            {{ row.status === 'active' ? 'Active' : 'Inactive' }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="280">
+      <el-table-column label="Actions" width="280">
         <template #default="{ row }">
           <el-button size="small" @click="editAgent(row)">
-            编辑
+            Edit
           </el-button>
           <el-button size="small" type="primary" @click="showMCPEndpoint(row)">
-            MCP接入点
+            MCP Endpoint
           </el-button>
           <el-button size="small" type="danger" @click="deleteAgent(row)">
-            删除
+            Delete
           </el-button>
         </template>
       </el-table-column>
     </el-table>
 
-    <!-- 添加/编辑智能体对话框 -->
+    <!-- Add/Edit Agent Dialog -->
     <el-dialog
       v-model="showAddDialog"
-      :title="editingAgent ? '编辑智能体' : '添加智能体'"
+      :title="editingAgent ? 'Edit Agent' : 'Add Agent'"
       width="600px"
     >
       <el-form :model="agentForm" :rules="agentRules" ref="agentFormRef" label-width="120px">
-        <el-form-item label="用户ID" prop="user_id">
+        <el-form-item label="User ID" prop="user_id">
           <el-input-number v-model="agentForm.user_id" :min="1" style="width: 100%" />
         </el-form-item>
-        <el-form-item label="昵称" prop="name">
-          <el-input v-model="agentForm.name" placeholder="请输入智能体昵称" />
+        <el-form-item label="Name" prop="name">
+          <el-input v-model="agentForm.name" placeholder="Enter agent name" />
         </el-form-item>
-        <el-form-item label="角色介绍" prop="custom_prompt">
+        <el-form-item label="Role Description" prop="custom_prompt">
           <el-input
             v-model="agentForm.custom_prompt"
             type="textarea"
             :rows="4"
-            placeholder="请输入角色介绍/系统提示词"
+            placeholder="Enter role description/system prompt"
           />
         </el-form-item>
-        <el-form-item label="语言模型" prop="llm_config_id">
-          <el-select v-model="agentForm.llm_config_id" placeholder="请选择语言模型" style="width: 100%">
+        <el-form-item label="Language Model" prop="llm_config_id">
+          <el-select v-model="agentForm.llm_config_id" placeholder="Select language model" style="width: 100%">
             <el-option 
               v-for="config in llmConfigs" 
               :key="config.config_id" 
@@ -109,8 +109,8 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="音色" prop="tts_config_id">
-          <el-select v-model="agentForm.tts_config_id" placeholder="请选择音色" style="width: 100%">
+        <el-form-item label="Voice" prop="tts_config_id">
+          <el-select v-model="agentForm.tts_config_id" placeholder="Select voice" style="width: 100%">
             <el-option 
               v-for="config in ttsConfigs" 
               :key="config.config_id" 
@@ -119,76 +119,76 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="语音识别速度" prop="asr_speed">
+        <el-form-item label="ASR Speed" prop="asr_speed">
           <el-select v-model="agentForm.asr_speed" style="width: 100%">
-            <el-option label="正常" value="normal" />
-            <el-option label="耐心" value="patient" />
-            <el-option label="快速" value="fast" />
+            <el-option label="Normal" value="normal" />
+            <el-option label="Patient" value="patient" />
+            <el-option label="Fast" value="fast" />
           </el-select>
         </el-form-item>
-        <el-form-item label="记忆模式" prop="memory_mode">
+        <el-form-item label="Memory Mode" prop="memory_mode">
           <el-select v-model="agentForm.memory_mode" style="width: 100%">
-            <el-option label="无记忆" value="none" />
-            <el-option label="短记忆" value="short" />
-            <el-option label="长记忆" value="long" />
+            <el-option label="No Memory" value="none" />
+            <el-option label="Short Memory" value="short" />
+            <el-option label="Long Memory" value="long" />
           </el-select>
         </el-form-item>
-        <el-form-item label="只允许声纹聊天" prop="speaker_chat_mode">
+        <el-form-item label="Speaker Chat Only" prop="speaker_chat_mode">
           <el-select v-model="agentForm.speaker_chat_mode" style="width: 100%">
-            <el-option label="关闭" value="off" />
-            <el-option label="仅命中声纹时允许聊天" value="identified_only" />
+            <el-option label="Off" value="off" />
+            <el-option label="Only when speaker identified" value="identified_only" />
           </el-select>
         </el-form-item>
-        <el-form-item label="MCP服务">
+        <el-form-item label="MCP Services">
           <el-input
             v-model="agentForm.mcp_service_names"
             clearable
-            placeholder="多个服务用英文逗号分隔，留空表示使用全部已启用服务"
+            placeholder="Separate multiple services with commas, leave empty to use all enabled services"
           />
           <div style="margin-top: 6px; color: #909399; font-size: 12px;">
-            例如：发现报告,高德地图。留空会清空智能体的服务筛选条件。
+            Example: Discovery Report, Amap. Leaving empty will clear the agent's service filter.
           </div>
         </el-form-item>
         <el-form-item label="OpenClaw">
           <el-button type="primary" size="large" style="width: 100%" @click="showOpenClawSettings">
-            查看openclaw
+            View OpenClaw
           </el-button>
           <div style="margin-top: 6px; color: #909399; font-size: 12px;">
-            已配置: {{ agentForm.openclaw_allowed ? '开启' : '关闭' }}，进入词 {{ agentForm.openclaw_enter_keywords.length }} 个，退出词 {{ agentForm.openclaw_exit_keywords.length }} 个。
+            Configured: {{ agentForm.openclaw_allowed ? 'On' : 'Off' }}, Enter keywords: {{ agentForm.openclaw_enter_keywords.length }}, Exit keywords: {{ agentForm.openclaw_exit_keywords.length }}.
           </div>
         </el-form-item>
-        <el-form-item label="状态" prop="status">
+        <el-form-item label="Status" prop="status">
           <el-select v-model="agentForm.status" style="width: 100%">
-            <el-option label="活跃" value="active" />
-            <el-option label="非活跃" value="inactive" />
+            <el-option label="Active" value="active" />
+            <el-option label="Inactive" value="inactive" />
           </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showAddDialog = false">取消</el-button>
+        <el-button @click="showAddDialog = false">Cancel</el-button>
         <el-button type="primary" @click="saveAgent" :loading="saving">
-          {{ editingAgent ? '更新' : '添加' }}
+          {{ editingAgent ? 'Update' : 'Add' }}
         </el-button>
       </template>
     </el-dialog>
 
     <el-dialog
       v-model="showOpenClawDialog"
-      title="OpenClaw设置"
+      title="OpenClaw Settings"
       width="680px"
     >
       <div>
         <div class="openclaw-tip-row">
-          <span class="openclaw-tip-title">接入tips</span>
+          <span class="openclaw-tip-title">Integration Tips</span>
           <el-tooltip effect="light" placement="top-start" :show-after="200" :enterable="true" popper-class="openclaw-tip-popper">
             <template #content>
               <div class="openclaw-tip-content">
-                <div>架构：设备语音 -> 服务端路由 -> OpenClaw 会话 -> xiaozhi 插件。</div>
-                <div>角色配置：在 OpenClaw 控制台角色配置中使用下方四条命令，最后执行 `openclaw gateway restart` 使配置生效。</div>
-                <div>进入逻辑：命中进入词（默认“打开龙虾/进入龙虾”）后进入 OpenClaw 模式，后续文本优先走 OpenClaw。</div>
-                <div>退出逻辑：在 OpenClaw 模式下命中退出词（默认“关闭龙虾/退出龙虾”）即退出，恢复普通 LLM 对话。</div>
+                <div>Architecture: Device Voice -> Server Routing -> OpenClaw Session -> Xiaozhi Plugin.</div>
+                <div>Role Configuration: Use the four commands below in the OpenClaw console role configuration, then execute `openclaw gateway restart` to apply changes.</div>
+                <div>Entry Logic: After matching entry keywords (default "Open Lobster/Enter Lobster"), enter OpenClaw mode; subsequent text will be routed to OpenClaw first.</div>
+                <div>Exit Logic: In OpenClaw mode, matching exit keywords (default "Close Lobster/Exit Lobster") will exit and return to normal LLM conversation.</div>
                 <el-link :href="openClawDocURL" target="_blank" type="primary" :underline="false">
-                  查看完整文档
+                  View Full Documentation
                 </el-link>
               </div>
             </template>
@@ -197,10 +197,10 @@
         </div>
 
         <el-form label-width="100px">
-          <el-form-item label="开关">
+          <el-form-item label="Switch">
             <el-switch v-model="agentForm.openclaw_allowed" />
           </el-form-item>
-          <el-form-item label="进入关键词">
+          <el-form-item label="Entry Keywords">
             <el-select
               v-model="agentForm.openclaw_enter_keywords"
               multiple
@@ -209,10 +209,10 @@
               default-first-option
               clearable
               style="width: 100%"
-              placeholder="输入后回车，可添加多个关键词"
+              placeholder="Press Enter after typing, can add multiple keywords"
             />
           </el-form-item>
-          <el-form-item label="退出关键词">
+          <el-form-item label="Exit Keywords">
             <el-select
               v-model="agentForm.openclaw_exit_keywords"
               multiple
@@ -221,7 +221,7 @@
               default-first-option
               clearable
               style="width: 100%"
-              placeholder="输入后回车，可添加多个关键词"
+              placeholder="Press Enter after typing, can add multiple keywords"
             />
           </el-form-item>
         </el-form>
@@ -230,7 +230,7 @@
 
         <div v-loading="openClawEndpointLoading">
           <div class="openclaw-status-bar">
-            <div class="endpoint-label">连接状态：</div>
+            <div class="endpoint-label">Connection Status:</div>
             <el-tag :type="openClawStatusTagType">{{ openClawStatusText }}</el-tag>
           </div>
           <div v-if="openClawEndpointData.status_message" class="openclaw-status-message">
@@ -238,20 +238,20 @@
           </div>
           <div class="mcp-endpoint-display">
             <div class="endpoint-header">
-              <div class="endpoint-label">OpenClaw角色配置命令：</div>
+              <div class="endpoint-label">OpenClaw Role Configuration Commands:</div>
               <div class="endpoint-actions">
-                <el-button size="small" @click="fetchOpenClawEndpoint" :disabled="!editingAgent" :loading="openClawEndpointLoading">刷新</el-button>
-                <el-button size="small" type="primary" @click="copyOpenClawCommands" :disabled="!openClawCommandData.ready">复制命令</el-button>
+                <el-button size="small" @click="fetchOpenClawEndpoint" :disabled="!editingAgent" :loading="openClawEndpointLoading">Refresh</el-button>
+                <el-button size="small" type="primary" @click="copyOpenClawCommands" :disabled="!openClawCommandData.ready">Copy Commands</el-button>
               </div>
             </div>
-            <div v-if="openClawCommandData.ready" class="openclaw-command-hint">在 OpenClaw 控制台角色配置中依次执行以下命令：</div>
+            <div v-if="openClawCommandData.ready" class="openclaw-command-hint">Execute the following commands in the OpenClaw console role configuration:</div>
             <div v-if="openClawCommandData.ready" class="openclaw-command-steps">
               <div
                 v-for="(step, index) in openClawCommandData.steps"
                 :key="`${step.title}-${index}`"
                 class="openclaw-command-step"
               >
-                <div class="openclaw-command-step-title">第 {{ index + 1 }} 行：{{ step.title }}</div>
+                <div class="openclaw-command-step-title">Line {{ index + 1 }}: {{ step.title }}</div>
                 <pre class="openclaw-command-content">{{ step.command }}</pre>
               </div>
             </div>
@@ -261,20 +261,20 @@
 
         <el-divider />
         <el-alert
-          title="对话测试"
-          description="向openclaw发送文本测试请求并查看回复。"
+          title="Conversation Test"
+          description="Send a text test request to OpenClaw and view the response."
           type="info"
           :closable="false"
           show-icon
           style="margin-bottom: 12px"
         />
         <el-form label-width="100px">
-          <el-form-item label="测试消息">
+          <el-form-item label="Test Message">
             <el-input
               v-model="openClawChatTestForm.message"
               type="textarea"
               :rows="3"
-              placeholder="请输入测试消息"
+              placeholder="Enter test message"
             />
           </el-form-item>
         </el-form>
@@ -284,26 +284,26 @@
           :loading="openClawChatTesting"
           :disabled="!editingAgent"
         >
-          发送测试
+          Send Test
         </el-button>
-        <div class="mcp-result-box">{{ openClawChatTestResult || '暂无测试结果' }}</div>
+        <div class="mcp-result-box">{{ openClawChatTestResult || 'No test results yet' }}</div>
       </div>
       <template #footer>
-        <el-button @click="showOpenClawDialog = false">关闭</el-button>
+        <el-button @click="showOpenClawDialog = false">Close</el-button>
       </template>
     </el-dialog>
 
-    <!-- MCP接入点对话框 -->
+    <!-- MCP Endpoint Dialog -->
     <el-dialog
       v-model="showMCPDialog"
-      title="MCP接入点"
+      title="MCP Endpoint"
       width="700px"
     >
       <div v-loading="mcpLoading">
-        <!-- 工具列表区域 -->
+        <!-- Tools List Section -->
         <div class="mcp-tools-section">
           <div class="tools-header">
-            <div class="tools-title">MCP工具列表</div>
+            <div class="tools-title">MCP Tools List</div>
             <el-button 
               size="small" 
               type="primary" 
@@ -311,14 +311,14 @@
               :loading="toolsLoading"
             >
               <el-icon><Refresh /></el-icon>
-              刷新工具列表
+              Refresh Tools List
             </el-button>
           </div>
           
           <div class="tools-list">
             <div v-if="mcpTools.length === 0" class="tools-empty">
               <el-tag type="info" size="large" class="tool-tag">
-                暂无工具数据
+                No tools data available
               </el-tag>
             </div>
             
@@ -346,8 +346,8 @@
         </div>
 
         <el-alert
-          title="接入点信息"
-          description="这是智能体的MCP WebSocket接入点URL，可用于设备连接"
+          title="Endpoint Information"
+          description="This is the agent's MCP WebSocket endpoint URL, which can be used for device connection"
           type="info"
           :closable="false"
           show-icon
@@ -356,8 +356,8 @@
         
         <div class="mcp-endpoint-display">
           <div class="endpoint-header">
-            <div class="endpoint-label">MCP接入点URL：</div>
-            <el-button size="small" type="primary" @click="copyMCPEndpoint">复制URL</el-button>
+            <div class="endpoint-label">MCP Endpoint URL:</div>
+            <el-button size="small" type="primary" @click="copyMCPEndpoint">Copy URL</el-button>
           </div>
           <div class="endpoint-content">
             {{ mcpEndpointData.endpoint }}
@@ -366,22 +366,22 @@
 
         <el-divider />
         <el-form :model="mcpCallForm" label-width="90px">
-          <el-form-item label="工具">
-            <el-select v-model="mcpCallForm.tool_name" placeholder="请选择工具" style="width: 100%" @change="handleMcpToolChange">
+          <el-form-item label="Tool">
+            <el-select v-model="mcpCallForm.tool_name" placeholder="Select tool" style="width: 100%" @change="handleMcpToolChange">
               <el-option v-for="tool in mcpTools" :key="tool.name" :label="tool.name" :value="tool.name" />
             </el-select>
           </el-form-item>
-          <el-form-item label="参数JSON">
-            <el-input v-model="mcpCallForm.argumentsText" type="textarea" :rows="6" placeholder='例如: {"query":"hello"}' />
+          <el-form-item label="Params JSON">
+            <el-input v-model="mcpCallForm.argumentsText" type="textarea" :rows="6" placeholder='e.g.: {"query":"hello"}' />
           </el-form-item>
         </el-form>
-        <el-button type="primary" @click="callAgentMcpTool" :loading="callingTool">调用工具</el-button>
-        <div class="endpoint-content" style="margin-top: 12px">{{ mcpCallResult || "暂无调用结果" }}</div>
+        <el-button type="primary" @click="callAgentMcpTool" :loading="callingTool">Call Tool</el-button>
+        <div class="endpoint-content" style="margin-top: 12px">{{ mcpCallResult || "No call results yet" }}</div>
 
       </div>
       
       <template #footer>
-        <el-button @click="showMCPDialog = false">关闭</el-button>
+        <el-button @click="showMCPDialog = false">Close</el-button>
       </template>
     </el-dialog>
   </div>
@@ -433,9 +433,9 @@ const openClawChatTestForm = ref({
 })
 const openClawStatusText = computed(() => {
   const status = String(openClawEndpointData.value.status || '').toLowerCase()
-  if (status === 'online') return '已连接'
-  if (status === 'offline') return '未连接'
-  return '状态未知'
+  if (status === 'online') return 'Connected'
+  if (status === 'offline') return 'Disconnected'
+  return 'Unknown Status'
 })
 const openClawStatusTagType = computed(() => {
   const status = String(openClawEndpointData.value.status || '').toLowerCase()
@@ -449,12 +449,12 @@ const openClawCommandDisplayText = computed(() => {
     return openClawCommandData.value.copyText
   }
   if (!editingAgent.value?.id) {
-    return '新建智能体时尚未生成安装命令，保存后可查看。'
+    return 'Installation commands are not yet generated for new agents. Save to view them.'
   }
-  return '暂无安装命令，请刷新后重试。'
+  return 'No installation commands available. Please refresh and try again.'
 })
-const OPENCLAW_DEFAULT_ENTER_KEYWORDS = ['打开龙虾', '进入龙虾']
-const OPENCLAW_DEFAULT_EXIT_KEYWORDS = ['关闭龙虾', '退出龙虾']
+const OPENCLAW_DEFAULT_ENTER_KEYWORDS = ['Open Lobster', 'Enter Lobster']
+const OPENCLAW_DEFAULT_EXIT_KEYWORDS = ['Close Lobster', 'Exit Lobster']
 const openClawDocURL = 'https://github.com/hackers365/xiaozhi-esp32-server-golang/blob/main/doc/openclaw_integration.md'
 
 const agentForm = ref({
@@ -474,12 +474,12 @@ const agentForm = ref({
 })
 
 const agentRules = {
-  user_id: [{ required: true, message: '请输入用户ID', trigger: 'blur' }],
-  name: [{ required: true, message: '请输入智能体昵称', trigger: 'blur' }],
-  asr_speed: [{ required: true, message: '请选择语音识别速度', trigger: 'change' }],
-  memory_mode: [{ required: true, message: '请选择记忆模式', trigger: 'change' }],
-  speaker_chat_mode: [{ required: true, message: '请选择声纹聊天限制', trigger: 'change' }],
-  status: [{ required: true, message: '请选择状态', trigger: 'change' }]
+  user_id: [{ required: true, message: 'Please enter user ID', trigger: 'blur' }],
+  name: [{ required: true, message: 'Please enter agent name', trigger: 'blur' }],
+  asr_speed: [{ required: true, message: 'Please select ASR speed', trigger: 'change' }],
+  memory_mode: [{ required: true, message: 'Please select memory mode', trigger: 'change' }],
+  speaker_chat_mode: [{ required: true, message: 'Please select speaker chat restriction', trigger: 'change' }],
+  status: [{ required: true, message: 'Please select status', trigger: 'change' }]
 }
 
 const loadAgents = async () => {
@@ -488,7 +488,7 @@ const loadAgents = async () => {
     const response = await api.get('/admin/agents')
     agents.value = response.data.data || []
   } catch (error) {
-    ElMessage.error('加载智能体列表失败')
+    ElMessage.error('Failed to load agent list')
     console.error('Error loading agents:', error)
   } finally {
     loading.value = false
@@ -504,7 +504,7 @@ const loadConfigs = async () => {
     llmConfigs.value = llmResponse.data.data || []
     ttsConfigs.value = ttsResponse.data.data || []
     
-    // 对配置进行排序，默认配置排在前面
+    // Sort configs, default configs first
     llmConfigs.value.sort((a, b) => {
       if (a.is_default && !b.is_default) return -1
       if (!a.is_default && b.is_default) return 1
@@ -570,16 +570,16 @@ const saveAgent = async () => {
 
     if (editingAgent.value) {
       await api.put(`/admin/agents/${editingAgent.value.id}`, payload)
-      ElMessage.success('智能体更新成功')
+      ElMessage.success('Agent updated successfully')
     } else {
       await api.post('/admin/agents', payload)
-      ElMessage.success('智能体添加成功')
+      ElMessage.success('Agent added successfully')
     }
     showAddDialog.value = false
     resetForm()
     loadAgents()
   } catch (error) {
-    ElMessage.error(editingAgent.value ? '智能体更新失败' : '智能体添加失败')
+    ElMessage.error(editingAgent.value ? 'Failed to update agent' : 'Failed to add agent')
     console.error('Error saving agent:', error)
   } finally {
     saving.value = false
@@ -589,21 +589,21 @@ const saveAgent = async () => {
 const deleteAgent = async (agent) => {
   try {
     await ElMessageBox.confirm(
-      `确定要删除智能体 "${agent.name}" 吗？`,
-      '确认删除',
+      `Are you sure you want to delete agent "${agent.name}"?`,
+      'Confirm Delete',
       {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
+        confirmButtonText: 'Confirm',
+        cancelButtonText: 'Cancel',
         type: 'warning'
       }
     )
     
     await api.delete(`/admin/agents/${agent.id}`)
-    ElMessage.success('智能体删除成功')
+    ElMessage.success('Agent deleted successfully')
     loadAgents()
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('智能体删除失败')
+      ElMessage.error('Failed to delete agent')
       console.error('Error deleting agent:', error)
     }
   }
@@ -635,7 +635,7 @@ const resetForm = () => {
     status: 'active'
   }
   
-  // 为新建智能体自动选择默认配置
+  // Auto-select default config for new agents
   if (!editingAgent.value) {
     const defaultLlmConfig = llmConfigs.value.find(config => config.is_default)
     const defaultTtsConfig = ttsConfigs.value.find(config => config.is_default)
@@ -655,11 +655,11 @@ const resetForm = () => {
 
 const getASRSpeedText = (speed) => {
   const speedMap = {
-    'normal': '正常',
-    'patient': '耐心',
-    'fast': '快速'
+    'normal': 'Normal',
+    'patient': 'Patient',
+    'fast': 'Fast'
   }
-  return speedMap[speed] || '正常'
+  return speedMap[speed] || 'Normal'
 }
 
 const getASRSpeedType = (speed) => {
@@ -673,11 +673,11 @@ const getASRSpeedType = (speed) => {
 
 const getMemoryModeText = (mode) => {
   const modeMap = {
-    none: '无记忆',
-    short: '短记忆',
-    long: '长记忆'
+    none: 'No Memory',
+    short: 'Short Memory',
+    long: 'Long Memory'
   }
-  return modeMap[mode] || '短记忆'
+  return modeMap[mode] || 'Short Memory'
 }
 
 const getMemoryModeType = (mode) => {
@@ -691,10 +691,10 @@ const getMemoryModeType = (mode) => {
 
 const getSpeakerChatModeText = (mode) => {
   const modeMap = {
-    off: '关闭',
-    identified_only: '仅命中声纹'
+    off: 'Off',
+    identified_only: 'Speaker ID Only'
   }
-  return modeMap[mode] || '关闭'
+  return modeMap[mode] || 'Off'
 }
 
 const getSpeakerChatModeType = (mode) => {
@@ -761,7 +761,7 @@ const fetchOpenClawEndpoint = async () => {
       endpoint: '',
       connected: false,
       status: 'unknown',
-      status_message: '新建智能体时尚未生成接入点，保存后可查看。'
+      status_message: 'Endpoint not yet generated for new agents. Save to view it.'
     }
     return
   }
@@ -776,12 +776,12 @@ const fetchOpenClawEndpoint = async () => {
     openClawEndpointData.value.status = status || (connected ? 'online' : 'offline')
     openClawEndpointData.value.status_message = typeof data.status_message === 'string' ? data.status_message : ''
   } catch (error) {
-    console.error('获取OpenClaw接入点失败:', error)
+    console.error('Failed to get OpenClaw endpoint:', error)
     openClawEndpointData.value.endpoint = ''
     openClawEndpointData.value.connected = false
     openClawEndpointData.value.status = 'unknown'
     openClawEndpointData.value.status_message = error.response?.data?.error || ''
-    ElMessage.error('获取OpenClaw接入点失败')
+    ElMessage.error('Failed to get OpenClaw endpoint')
   } finally {
     openClawEndpointLoading.value = false
   }
@@ -790,15 +790,15 @@ const fetchOpenClawEndpoint = async () => {
 const copyOpenClawCommands = async () => {
   const commands = openClawCommandData.value.copyText
   if (!commands) {
-    ElMessage.warning('暂无可复制的 OpenClaw 角色配置命令')
+    ElMessage.warning('No OpenClaw role configuration commands available to copy')
     return
   }
   try {
     await navigator.clipboard.writeText(commands)
-    ElMessage.success('OpenClaw 角色配置命令已复制')
+    ElMessage.success('OpenClaw role configuration commands copied')
   } catch (error) {
-    console.error('复制 OpenClaw 角色配置命令失败:', error)
-    ElMessage.error('复制失败，请手动复制')
+    console.error('Failed to copy OpenClaw role configuration commands:', error)
+    ElMessage.error('Copy failed, please copy manually')
   }
 }
 
@@ -812,33 +812,33 @@ const showOpenClawSettings = async () => {
       endpoint: '',
       connected: false,
       status: 'unknown',
-      status_message: '新建智能体时尚未生成接入点，保存后可查看。'
+      status_message: 'Endpoint not yet generated for new agents. Save to view it.'
     }
   }
 }
 
 const formatOpenClawChatResult = (reply, latency) => {
-  const lines = [`回复: ${String(reply || '') || '(空)'}`]
+  const lines = [`Reply: ${String(reply || '') || '(empty)'}`]
   if (Number.isFinite(latency)) {
-    lines.push(`耗时: ${latency}ms`)
+    lines.push(`Time: ${latency}ms`)
   }
   return lines.join('\n')
 }
 
 const testOpenClawChat = async () => {
   if (!editingAgent.value?.id) {
-    ElMessage.warning('请先保存智能体后再测试')
+    ElMessage.warning('Please save the agent first before testing')
     return
   }
 
   const message = String(openClawChatTestForm.value.message || '').trim()
   if (!message) {
-    ElMessage.warning('请输入测试消息')
+    ElMessage.warning('Please enter test message')
     return
   }
 
   openClawChatTesting.value = true
-  openClawChatTestResult.value = '连接中...'
+  openClawChatTestResult.value = 'Connecting...'
   try {
     const requestTimeoutMs = 610000
     const timeoutMs = 600000
@@ -860,7 +860,7 @@ const testOpenClawChat = async () => {
       onEvent: (event, payload) => {
         const envelope = normalizePayload(payload)
         if (event === 'start') {
-          openClawChatTestResult.value = '已连接，等待回复...'
+          openClawChatTestResult.value = 'Connected, waiting for reply...'
           return
         }
         if (event === 'chunk') {
@@ -871,7 +871,7 @@ const testOpenClawChat = async () => {
           }
           const reply = String(data.reply || chunks.join(''))
           const latency = Number(data.latency_ms)
-          openClawChatTestResult.value = `流式回复中...\n${formatOpenClawChatResult(reply, latency)}`
+          openClawChatTestResult.value = `Streaming reply...\n${formatOpenClawChatResult(reply, latency)}`
           return
         }
         if (event === 'result') {
@@ -883,12 +883,12 @@ const testOpenClawChat = async () => {
         }
         if (event === 'error') {
           const data = normalizePayload(envelope.data)
-          const messageText = String(envelope.error || data.error || 'OpenClaw对话测试失败')
+          const messageText = String(envelope.error || data.error || 'OpenClaw conversation test failed')
           const partialReply = String(data.reply || chunks.join(''))
           streamError = messageText
           openClawChatTestResult.value = partialReply
-            ? `错误: ${messageText}\n已接收: ${partialReply}`
-            : `错误: ${messageText}`
+            ? `Error: ${messageText}\nReceived: ${partialReply}`
+            : `Error: ${messageText}`
           return
         }
         if (event === 'done') {
@@ -896,7 +896,7 @@ const testOpenClawChat = async () => {
             finalData = normalizePayload(envelope.data)
           }
           if (envelope.ok === false && !streamError) {
-            streamError = 'OpenClaw对话测试失败'
+            streamError = 'OpenClaw conversation test failed'
           }
         }
       }
@@ -907,7 +907,7 @@ const testOpenClawChat = async () => {
       const reply = String(data.reply || '')
       const latency = Number(data.latency_ms)
       openClawChatTestResult.value = formatOpenClawChatResult(reply, latency)
-      ElMessage.success('OpenClaw对话测试成功')
+      ElMessage.success('OpenClaw conversation test successful')
       return
     }
 
@@ -922,13 +922,13 @@ const testOpenClawChat = async () => {
     } else if (chunks.length > 0) {
       openClawChatTestResult.value = formatOpenClawChatResult(chunks.join(''), Number.NaN)
     } else {
-      throw new Error('未收到OpenClaw返回内容')
+      throw new Error('No content received from OpenClaw')
     }
 
-    ElMessage.success('OpenClaw对话测试成功')
+    ElMessage.success('OpenClaw conversation test successful')
   } catch (error) {
-    const msg = error.response?.data?.error || error.message || 'OpenClaw对话测试失败'
-    openClawChatTestResult.value = `错误: ${msg}`
+    const msg = error.response?.data?.error || error.message || 'OpenClaw conversation test failed'
+    openClawChatTestResult.value = `Error: ${msg}`
     ElMessage.error(msg)
   } finally {
     openClawChatTesting.value = false
@@ -936,7 +936,7 @@ const testOpenClawChat = async () => {
   }
 }
 
-// 显示MCP接入点
+// Show MCP Endpoint
 const showMCPEndpoint = async (agent) => {
   showMCPDialog.value = true
   mcpLoading.value = true
@@ -948,10 +948,10 @@ const showMCPEndpoint = async (agent) => {
     const response = await api.get(`/admin/agents/${agent.id}/mcp-endpoint`)
     mcpEndpointData.value = response.data.data
     
-    // 自动刷新工具列表
+    // Auto-refresh tools list
     await refreshMcpTools()
   } catch (error) {
-    ElMessage.error('获取MCP接入点失败')
+    ElMessage.error('Failed to get MCP endpoint')
     console.error('Error getting MCP endpoint:', error)
     showMCPDialog.value = false
   } finally {
@@ -959,10 +959,10 @@ const showMCPEndpoint = async (agent) => {
   }
 }
 
-// 刷新MCP工具列表
+// Refresh MCP Tools List
 const refreshMcpTools = async () => {
   if (!currentAgentId.value) {
-    ElMessage.warning('未选择智能体')
+    ElMessage.warning('No agent selected')
     return
   }
   
@@ -977,13 +977,13 @@ const refreshMcpTools = async () => {
         }
         updateMcpExampleByTool(mcpCallForm.value.tool_name)
       }
-      ElMessage.success(`成功获取 ${mcpTools.value.length} 个工具`)
+      ElMessage.success(`Successfully retrieved ${mcpTools.value.length} tools`)
     } else {
       mcpTools.value = []
-      ElMessage.info('未找到工具数据')
+      ElMessage.info('No tools data found')
     }
   } catch (error) {
-    ElMessage.error('获取工具列表失败: ' + (error.response?.data?.error || error.message))
+    ElMessage.error('Failed to get tools list: ' + (error.response?.data?.error || error.message))
     console.error('Error refreshing MCP tools:', error)
     mcpTools.value = []
   } finally {
@@ -1101,7 +1101,7 @@ const formatMcpCallResult = (payload) => {
 
 const callAgentMcpTool = async () => {
   if (!currentAgentId.value || !mcpCallForm.value.tool_name) {
-    ElMessage.warning('请选择工具')
+    ElMessage.warning('Please select a tool')
     return
   }
 
@@ -1109,7 +1109,7 @@ const callAgentMcpTool = async () => {
   try {
     argumentsObj = mcpCallForm.value.argumentsText ? JSON.parse(mcpCallForm.value.argumentsText) : {}
   } catch (e) {
-    ElMessage.error('参数JSON格式错误')
+    ElMessage.error('Invalid JSON format for parameters')
     return
   }
 
@@ -1120,22 +1120,22 @@ const callAgentMcpTool = async () => {
       arguments: argumentsObj
     })
     mcpCallResult.value = formatMcpCallResult(response.data.data || {})
-    ElMessage.success('MCP工具调用成功')
+    ElMessage.success('MCP tool called successfully')
   } catch (error) {
     mcpCallResult.value = JSON.stringify(error.response?.data || { error: error.message }, null, 2)
-    ElMessage.error('MCP工具调用失败')
+    ElMessage.error('Failed to call MCP tool')
   } finally {
     callingTool.value = false
   }
 }
 
-// 复制MCP接入点URL
+// Copy MCP Endpoint URL
 const copyMCPEndpoint = async () => {
   try {
     await navigator.clipboard.writeText(mcpEndpointData.value.endpoint)
-    ElMessage.success('MCP接入点URL已复制到剪贴板')
+    ElMessage.success('MCP endpoint URL copied to clipboard')
   } catch (error) {
-    ElMessage.error('复制失败')
+    ElMessage.error('Copy failed')
     console.error('Error copying to clipboard:', error)
   }
 }
