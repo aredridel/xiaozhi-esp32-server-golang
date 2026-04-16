@@ -12,7 +12,7 @@ COPY . .
 # Build application
 RUN npm run build
 
-# 运行阶段
+# Runtime stage
 FROM nginx:alpine
 
 # Copy build results

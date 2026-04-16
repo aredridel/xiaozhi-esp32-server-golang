@@ -3,7 +3,7 @@ FROM hackers365/xiaozhi_golang_build:0.1 AS builder
 
 WORKDIR /app
 COPY . .
-RUN go build -o /app/xiaozhi_server /app/cmd/server/  # 编译生成二进制文件
+RUN go build -o /app/xiaozhi_server /app/cmd/server/  # Compile binary file
 
 FROM ubuntu:22.04
 

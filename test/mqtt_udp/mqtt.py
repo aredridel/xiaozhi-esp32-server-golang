@@ -2,7 +2,7 @@ import json
 import sys
 import paho.mqtt.client as mqtt
 
-# hello 消息体结构
+# hello message structure
 def build_hello_message():
     return {
         "type": "hello",
@@ -18,27 +18,27 @@ def build_hello_message():
 
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
-        print("MQTT 连接成功")
-        # 连接成功后发布 hello 消息
+        print("MQTT connection successful")
+        # Publish hello message after successful connection
         public_hello(client)
     else:
-        print("连接失败，返回码:", rc)
+        print("Connection failed, return code:", rc)
         sys.exit(1)
 
 def on_message(client, userdata, msg):
-    print(f"收到消息: [{msg.topic}] {msg.payload.decode('utf-8')}")
+    print(f"Received message: [{msg.topic}] {msg.payload.decode('utf-8')}")
 
 def public_hello(client):
     topic = "device-server"
     message = build_hello_message()
     json_data = json.dumps(message)
-    print("发布消息:", json_data)
+    print("Publish message:", json_data)
     result = client.publish(topic, json_data, qos=0, retain=False)
     result.wait_for_publish()
     if result.is_published():
-        print("发布消息成功")
+        print("Publish message successful")
     else:
-        print("发布消息失败")
+        print("Publish message failed")
 
 def main():
     broker = "mqtt.xiaozhi.me"
@@ -49,7 +49,7 @@ def main():
 
     client = mqtt.Client(client_id=client_id)
     client.username_pw_set(username, password)
-    client.tls_set()  # 使用 SSL 连接
+    client.tls_set()  # Use SSL connection
 
     client.on_connect = on_connect
     client.on_message = on_message

@@ -84,8 +84,8 @@ def main() -> None:
     print_stats("first_frame", first_frame)
     print_stats("tts_stop", tts_stop)
 
-    # 简单成功率近似：有 first_frame 视作成功一次。
-    # 若 tts_stop 远高于 first_frame，说明可能有重叠轮次或统计周期差异。
+    # Simple success rate approximation: having first_frame counts as one success.
+    # If tts_stop is much higher than first_frame, it indicates possible overlapping rounds or statistical period differences.
     if tts_stop:
         success_rate = (len(first_frame) / len(tts_stop)) * 100
         print(f"approx_success_rate(first_frame/tts_stop): {success_rate:.2f}%")

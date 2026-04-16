@@ -24,7 +24,7 @@ const (
 	defaultKnowledgeSearchMaxParallel   = 8
 )
 
-// Search 按knowledgelibrary provider groupretrieveandaggregatesort。
+// Search retrieves and aggregates results by knowledge library provider group and sorts them.
 func Search(
 	ctx context.Context,
 	query string,
@@ -92,7 +92,7 @@ func Search(
 	for provider, providerKBs := range grouped {
 		searcher := getSearcher(provider)
 		if searcher == nil {
-			errs = append(errs, fmt.Sprintf("provider %s 暂unsupported", provider))
+			errs = append(errs, fmt.Sprintf("provider %s temporarily unsupported", provider))
 			continue
 		}
 		providerConfig, ok := getProviderConfig(provider)

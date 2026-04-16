@@ -166,7 +166,7 @@ def opus_to_wav(opus_data, sample_rate, channels, output_file):
                 input_bytes = len(frame)
                 total_input_bytes += input_bytes
                 output_bytes = len(decoded_pcm)
-                output_samples = output_bytes // (2 * channels)  # 16位PCM
+                output_samples = output_bytes // (2 * channels)  # 16-bit PCM
                 output_duration_ms = output_samples * 1000 / sample_rate
                 
                 pcm_data.extend(decoded_pcm)

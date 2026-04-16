@@ -63,7 +63,7 @@ COPY lib ./lib
 COPY . .
 
 # Verify asr_server submodule content is included in build context (CI should checkout with submodules: recursive)
-RUN test -f asr_server/server/setup.go || (echo "ERROR: asr_server 子模块内容缺失，构建上下文中无 voice_server/server 包。CI 请确保 checkout 使用 submodules: recursive。" && exit 1)
+RUN test -f asr_server/server/setup.go || (echo "ERROR: asr_server submodule content missing, voice_server/server package not found in build context. CI please ensure checkout uses submodules: recursive." && exit 1)
 
 # Download Go modules
 RUN go mod tidy
@@ -78,7 +78,7 @@ RUN go build -o /app/xiaozhi_server ./cmd/server/
 # Runtime stage (amd64/x64 architecture only)
 FROM --platform=linux/amd64 ubuntu:22.04
 
-# 设置非交互式安装环境变量
+# Set non-interactive installation environment variable
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install runtime dependencies (minimal installation)
@@ -90,7 +90,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# 复制 onnxruntime 库文件（仅 x64）
+# Copy onnxruntime library files (x64 only)
 COPY docker/lib/onnxruntime-linux-x64-1.21.0.tgz /tmp/
 
 # Install ONNX Runtime runtime (x64 architecture)

@@ -44,10 +44,10 @@ require (
 	xiaozhi/manager/backend v0.0.0-00010101000000-000000000000
 )
 
-// 主进程内嵌 manager HTTP 时引用 backend 子模块
+// Reference backend submodule when main process embeds manager HTTP
 replace xiaozhi/manager/backend => ./manager/backend
 
-// 主进程内嵌 asr_server 时引用 asr_server 子模块（Git submodule）
+// Reference asr_server submodule when main process embeds asr_server (Git submodule)
 replace voice_server => ./asr_server
 
 require (
