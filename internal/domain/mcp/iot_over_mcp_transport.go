@@ -3,9 +3,14 @@ package mcp
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"sync"
+	"time"
 
 	"github.com/mark3labs/mcp-go/client/transport"
 	"github.com/mark3labs/mcp-go/mcp"
+
+	log "xiaozhi-esp32-server-golang/logger"
 )
 
 /**
@@ -32,14 +37,28 @@ type Interface interface {
 type ConnInterface interface {
 	SendMcpMsg(payload []byte) error
 	RecvMcpMsg(ctx context.Context, timeOut int) ([]byte, error)
+	HandleMcpMessage(payload []byte) error
+	GetMcpTransportType() string
 }
 
 type IotOverMcpTransport struct {
 	conn ConnInterface
 
 	notifyHandler func(notification mcp.JSONRPCNotification)
-	// addclosecallback
+	// 添加关闭回调
 	onCloseHandler func(reason string)
+
+	respChans    map[string]*pendingResponse
+	respChansMux sync.RWMutex
+	readDone     chan struct{}
+	ctx          context.Context
+	cancel       context.CancelFunc
+	closed       bool
+	closedMux    sync.RWMutex
+	writeMux     sync.Mutex
+
+	requestTimeout time.Duration
+	closeTimeout   time.Duration
 }
 
 func (t *IotOverMcpTransport) Send(ctx context.Context, msg []byte) error {
@@ -47,57 +66,217 @@ func (t *IotOverMcpTransport) Send(ctx context.Context, msg []byte) error {
 }
 
 func NewIotOverMcpTransport(conn ConnInterface) (*IotOverMcpTransport, error) {
-	return &IotOverMcpTransport{conn: conn}, nil
+	ctx, cancel := context.WithCancel(context.Background())
+	transportInstance := &IotOverMcpTransport{
+		conn:           conn,
+		respChans:      make(map[string]*pendingResponse),
+		readDone:       make(chan struct{}),
+		ctx:            ctx,
+		cancel:         cancel,
+		requestTimeout: DefaultRequestTimeout,
+		closeTimeout:   DefaultCloseTimeout,
+	}
+	go transportInstance.readMessages()
+	return transportInstance, nil
 }
 
-// implement Interface interface
+// 实现 Interface 接口
 func (t *IotOverMcpTransport) Start(ctx context.Context) error {
-	// TODO: start connection/listen message etc
+	// TODO: 启动连接/监听消息等
 
 	return nil
+}
+
+func (t *IotOverMcpTransport) popPending(id string) *pendingResponse {
+	t.respChansMux.Lock()
+	defer t.respChansMux.Unlock()
+
+	pending := t.respChans[id]
+	if pending != nil {
+		delete(t.respChans, id)
+	}
+	return pending
+}
+
+func (t *IotOverMcpTransport) failAllPending(err error) {
+	t.respChansMux.Lock()
+	pending := make([]*pendingResponse, 0, len(t.respChans))
+	for id, pendingResp := range t.respChans {
+		pending = append(pending, pendingResp)
+		delete(t.respChans, id)
+	}
+	t.respChansMux.Unlock()
+
+	for _, pendingResp := range pending {
+		pendingResp.resolve(nil, err)
+	}
+}
+
+func (t *IotOverMcpTransport) readMessages() {
+	defer close(t.readDone)
+
+	for {
+		select {
+		case <-t.ctx.Done():
+			return
+		default:
+			message, err := t.conn.RecvMcpMsg(t.ctx, 1000)
+			if err != nil {
+				if t.ctx.Err() != nil {
+					return
+				}
+				if isTransportTimeoutErr(err) {
+					continue
+				}
+
+				t.closedMux.Lock()
+				t.closed = true
+				t.closedMux.Unlock()
+				t.failAllPending(fmt.Errorf("connection is closed"))
+
+				if t.onCloseHandler != nil {
+					t.onCloseHandler("connection_closed")
+				}
+				return
+			}
+
+			t.handleMessage(message)
+		}
+	}
+}
+
+func (t *IotOverMcpTransport) handleMessage(message []byte) {
+	method, hasID, err := classifyJSONRPCMessage(message)
+	if err != nil {
+		log.Warnf("Received unrecognized IoT MCP message: %s", string(message))
+		return
+	}
+
+	if method != "" {
+		if hasID {
+			log.Warnf("Received unsupported IoT JSON-RPC request: %s", method)
+			return
+		}
+
+		var notification mcp.JSONRPCNotification
+		if err := json.Unmarshal(message, &notification); err != nil {
+			log.Warnf("Received malformed IoT JSON-RPC notification: %s", string(message))
+			return
+		}
+		if t.notifyHandler != nil {
+			t.notifyHandler(notification)
+		}
+		return
+	}
+
+	if hasID {
+		var response transport.JSONRPCResponse
+		if err := json.Unmarshal(message, &response); err != nil {
+			log.Warnf("Received malformed IoT JSON-RPC response: %s", string(message))
+			return
+		}
+
+		pending := t.popPending(response.ID.String())
+		if pending == nil {
+			log.Warnf("No IoT response channel found for ID: %s", response.ID.String())
+			return
+		}
+		pending.resolve(&response, nil)
+		return
+	}
+
+	log.Warnf("Received unrecognized IoT MCP message: %s", string(message))
 }
 
 func (t *IotOverMcpTransport) SendRequest(ctx context.Context, request transport.JSONRPCRequest) (*transport.JSONRPCResponse, error) {
+	t.closedMux.RLock()
+	if t.closed {
+		t.closedMux.RUnlock()
+		return nil, fmt.Errorf("connection is closed")
+	}
+	t.closedMux.RUnlock()
+
+	idStr := request.ID.String()
+	pending := newPendingResponse()
+
+	t.respChansMux.Lock()
+	t.respChans[idStr] = pending
+	t.respChansMux.Unlock()
+
 	payload, err := json.Marshal(request)
 	if err != nil {
-		return nil, err
-	}
-	// TODO: send request and synchronization wait respond
-	err = t.conn.SendMcpMsg(payload)
-	if err != nil {
+		t.popPending(idStr)
 		return nil, err
 	}
 
-	var response transport.JSONRPCResponse
-	msg, err := t.conn.RecvMcpMsg(ctx, 15000) // 15 second timeout
+	t.writeMux.Lock()
+	err = t.conn.SendMcpMsg(payload)
+	t.writeMux.Unlock()
 	if err != nil {
+		t.popPending(idStr)
 		return nil, err
 	}
-	err = json.Unmarshal(msg, &response)
-	return &response, nil
+
+	select {
+	case result := <-pending.resultCh:
+		if result.err != nil {
+			return nil, result.err
+		}
+		return result.response, nil
+	case <-ctx.Done():
+		t.popPending(idStr)
+		return nil, ctx.Err()
+	case <-time.After(t.requestTimeout):
+		t.popPending(idStr)
+		return nil, fmt.Errorf("request timeout")
+	}
 }
 
 func (t *IotOverMcpTransport) SendNotification(ctx context.Context, notification mcp.JSONRPCNotification) error {
-	// TODO: send notify message
-	if t.notifyHandler != nil {
-		t.notifyHandler(notification)
+	t.closedMux.RLock()
+	if t.closed {
+		t.closedMux.RUnlock()
+		return fmt.Errorf("connection is closed")
 	}
-	return nil
+	t.closedMux.RUnlock()
+
+	payload, err := json.Marshal(notification)
+	if err != nil {
+		return err
+	}
+
+	t.writeMux.Lock()
+	err = t.conn.SendMcpMsg(payload)
+	t.writeMux.Unlock()
+	return err
 }
 
 func (t *IotOverMcpTransport) SetNotificationHandler(handler func(notification mcp.JSONRPCNotification)) {
 	t.notifyHandler = handler
 }
 
-// SetOnCloseHandler set connection close callback
+// SetOnCloseHandler 设置连接关闭回调
 func (t *IotOverMcpTransport) SetOnCloseHandler(handler func(reason string)) {
 	t.onCloseHandler = handler
 }
 
 func (t *IotOverMcpTransport) Close() error {
-	// notify client layer connection will close
+	t.closedMux.Lock()
+	t.closed = true
+	t.closedMux.Unlock()
+	t.failAllPending(fmt.Errorf("connection is closed"))
+
+	// 通知client层连接即将关闭
 	if t.onCloseHandler != nil {
 		t.onCloseHandler("manual_close")
+	}
+
+	t.cancel()
+
+	select {
+	case <-t.readDone:
+	case <-time.After(t.closeTimeout):
+		log.Warnf("Timeout waiting for IoT MCP read goroutine to finish")
 	}
 	return nil
 }

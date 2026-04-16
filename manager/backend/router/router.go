@@ -232,6 +232,8 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 				openV1.POST("/devices/inject-message", userController.InjectMessage)
 				openV1.GET("/agents/:id/mcp-tools", userController.GetAgentMcpTools)
 				openV1.POST("/agents/:id/mcp-call", userController.CallAgentMcpTool)
+				openV1.GET("/devices/:id/mcp-tools", userController.GetDeviceMcpTools)
+				openV1.POST("/devices/:id/mcp-call", userController.CallDeviceMcpTool)
 			}
 
 			// Admin routes

@@ -12,11 +12,12 @@ import (
 	log "xiaozhi-esp32-server-golang/logger"
 )
 
-// DeviceHook Device permission and auto-subscription hook
-// Regular users are prohibited from subscribing arbitrarily, only allowed to publish to specified topics, and automatically subscribe to /p2p/device_sub/{mac} upon connection
+// DeviceHook 设备权限与自动订阅钩子
+// 普通用户禁止随意订阅，只允许发布指定 topic，连接时自动订阅 /p2p/device_sub/{mac}
 type DeviceHook struct {
 	mqttServer.HookBase
-	server *mqttServer.Server
+	server           *mqttServer.Server
+	publishLifecycle func(event client.MqttLifecycleEvent) error
 }
 
 func (h *DeviceHook) ID() string {
@@ -27,26 +28,26 @@ func (h *DeviceHook) Provides(b byte) bool {
 	return b == mqttServer.OnDisconnect || b == mqttServer.OnACLCheck || b == mqttServer.OnSessionEstablished || b == mqttServer.OnSubscribe || b == mqttServer.OnPublish
 }
 
-// OnACLCheck publish/subscribepermissioncontrol
+// OnACLCheck 发布/订阅权限控制
 func (h *DeviceHook) OnACLCheck(cl *mqttServer.Client, topic string, write bool) bool {
 	isAdmin := isAdminUser(cl)
 
 	if isAdmin {
-		return true // super admin no limit
+		return true // 超级管理员无限制
 	}
 
 	if write {
-		// Only allow regular users to publish to "device-server"
+		// 只允许普通用户发布到 "device-server"
 		if topic == client.MDeviceMockPubTopicPrefix {
 			return true
 		}
-		log.Warnf("Regular users are prohibited from publishing to %s", topic)
+		log.Warnf("禁止普通用户发布到 %s", topic)
 		return false
 	}
 
 	mac := parseMacFromClientId(cl.ID)
 	if mac == "" {
-		log.Warnf("Regular users are prohibited from subscribing to %s: unable to parse MAC from clientID, clientID=%s", topic, cl.ID)
+		log.Warnf("禁止普通用户订阅 %s: 无法从客户端ID解析MAC, clientID=%s", topic, cl.ID)
 		return false
 	}
 
@@ -55,7 +56,7 @@ func (h *DeviceHook) OnACLCheck(cl *mqttServer.Client, topic string, write bool)
 		return true
 	}
 
-	log.Warnf("Regular users are prohibited from subscribing to %s: only allowed to subscribe to own topic %s", topic, allowedTopic)
+	log.Warnf("禁止普通用户订阅 %s: 仅允许订阅自己的主题 %s", topic, allowedTopic)
 	return false
 }
 
@@ -74,57 +75,59 @@ func (h *DeviceHook) OnDisconnect(cl *mqttServer.Client, err error, ok bool) {
 		return
 	}
 	if cl.IsTakenOver() {
-		log.Infof("Client %s has been taken over by a new connection with the same ID, skipping unsubscription", cl.ID)
+		log.Infof("客户端 %s 已被同ID新连接接管，跳过取消订阅", cl.ID)
 		return
 	}
 	mac := parseMacFromClientId(cl.ID)
 	if mac == "" {
-		log.Info("Warning: unable to parse MAC address from clientID:", cl.ID)
+		log.Info("警告: 无法从客户端ID解析MAC地址:", cl.ID)
 		return
 	}
+	h.publishLifecycleEvent(cl.ID, client.MqttLifecycleStateOffline)
 	topic := deviceSubTopic(mac)
 
 	action := h.server.Topics.Unsubscribe(topic, cl.ID)
-	log.Infof("Unsubscribed client %s from topic %s, action: %v", cl.ID, topic, action)
+	log.Infof("取消订阅客户端 %s 到主题 %s, action: %v", cl.ID, topic, action)
 
 	return
 }
 
-// OnSessionEstablished Auto-subscribe after connection is established
+// OnSessionEstablished 连接建立后自动订阅
 func (h *DeviceHook) OnSessionEstablished(cl *mqttServer.Client, pk packets.Packet) {
 	isAdmin := isAdminUser(cl)
 	mac := parseMacFromClientId(cl.ID)
 	if isAdmin {
-		return // Super admin has no restrictions
+		return // 超级管理员不做限制
 	}
 	if mac == "" {
-		log.Info("Warning: unable to parse MAC address from clientID:", cl.ID)
+		log.Info("警告: 无法从客户端ID解析MAC地址:", cl.ID)
 		return
 	}
+	h.publishLifecycleEvent(cl.ID, client.MqttLifecycleStateOnline)
 
 	topic := deviceSubTopic(mac)
 
-	// Use server API to subscribe directly instead of injecting packets
+	// 使用服务器的API直接订阅，而不是注入数据包
 	clientID := cl.ID
 	exists := h.server.Topics.Subscribe(clientID, packets.Subscription{
 		Filter: topic,
 		Qos:    0,
 	})
 
-	log.Infof("Subscribed client %s to topic %s, exists: %v", clientID, topic, exists)
+	log.Infof("订阅客户端 %s 到主题 %s, exists: %v", clientID, topic, exists)
 }
 
-// OnSubscribe Print subscription packet
+// OnSubscribe 打印订阅包
 func (h *DeviceHook) OnSubscribe(cl *mqttServer.Client, pk packets.Packet) packets.Packet {
-	log.Info("=== Received Subscribe Packet ===")
-	log.Infof("Client ID: %s", cl.ID)
-	log.Infof("Packet Type: %v", pk.FixedHeader.Type)
-	log.Infof("Packet ID: %d", pk.PacketID)
+	log.Info("=== 收到订阅包 ===")
+	log.Infof("客户端ID: %s", cl.ID)
+	log.Infof("包类型: %v", pk.FixedHeader.Type)
+	log.Infof("包ID: %d", pk.PacketID)
 
 	if len(pk.Filters) > 0 {
-		log.Info("Subscription Info:")
+		log.Info("订阅信息:")
 		for i, sub := range pk.Filters {
-			log.Infof("  %d. Topic: %s, QoS: %d", i+1, sub.Filter, sub.Qos)
+			log.Infof("  %d. 主题: %s, QoS: %d", i+1, sub.Filter, sub.Qos)
 		}
 	}
 
@@ -132,13 +135,17 @@ func (h *DeviceHook) OnSubscribe(cl *mqttServer.Client, pk packets.Packet) packe
 	return pk
 }
 
-// OnPublish Print publish packet
+// OnPublish 打印发布包
 func (h *DeviceHook) OnPublish(cl *mqttServer.Client, pk packets.Packet) (packets.Packet, error) {
-	log.Info("=== Received Publish Packet ===")
-	log.Infof("Client ID: %s", cl.ID)
-	log.Infof("Packet Type: %v", pk.FixedHeader.Type)
-	log.Infof("Packet ID: %d", pk.PacketID)
-	log.Infof("Topic: %s", pk.TopicName)
+	if cl == nil {
+		return pk, nil
+	}
+
+	log.Info("=== 收到发布包 ===")
+	log.Infof("客户端ID: %s", cl.ID)
+	log.Infof("包类型: %v", pk.FixedHeader.Type)
+	log.Infof("包ID: %d", pk.PacketID)
+	log.Infof("主题: %s", pk.TopicName)
 
 	if isAdminUser(cl) {
 		return pk, nil
@@ -146,19 +153,19 @@ func (h *DeviceHook) OnPublish(cl *mqttServer.Client, pk packets.Packet) (packet
 
 	if len(pk.Payload) > 0 {
 		if len(pk.Payload) > 100 {
-			// If message is too long, only show first 100 bytes
-			log.Infof("Message Content (first 100 bytes): %s...", pk.Payload[:100])
+			// 如果消息太长，只显示前100个字节
+			log.Infof("消息内容(前100字节): %s...", pk.Payload[:100])
 		} else {
-			log.Infof("Message Content: %s", pk.Payload)
+			log.Infof("消息内容: %s", pk.Payload)
 		}
 	} else {
-		log.Info("Message Content: <empty>")
+		log.Info("消息内容: <空>")
 	}
 
-	// Find MAC address from cl
+	//从cl中找到mac地址
 	mac := parseMacFromClientId(cl.ID)
 	if mac == "" {
-		log.Info("Warning: unable to parse MAC address from clientID:", cl.ID)
+		log.Info("警告: 无法从客户端ID解析MAC地址:", cl.ID)
 		return pk, nil
 	}
 	forwardTopic := fmt.Sprintf("%s%s", client.MDevicePubTopicPrefix, mac)
@@ -169,12 +176,15 @@ func (h *DeviceHook) OnPublish(cl *mqttServer.Client, pk packets.Packet) (packet
 	return pk, nil
 }
 
-// Check if super admin
+// 判断是否超级管理员
 func isAdminUser(cl *mqttServer.Client) bool {
+	if cl == nil {
+		return false
+	}
 	return string(cl.Properties.Username) == "admin"
 }
 
-// Parse clientId to get MAC address
+// 解析 clientId，获取 mac 地址
 func parseMacFromClientId(clientId string) string {
 	parts := strings.Split(clientId, "@@@")
 	if len(parts) >= 3 {
@@ -183,11 +193,39 @@ func parseMacFromClientId(clientId string) string {
 	return ""
 }
 
+func deviceIDFromClientId(clientID string) string {
+	mac := parseMacFromClientId(clientID)
+	if mac == "" {
+		return ""
+	}
+	return strings.ReplaceAll(mac, "_", ":")
+}
+
+func (h *DeviceHook) publishLifecycleEvent(clientID string, state string) {
+	if h == nil || h.publishLifecycle == nil {
+		return
+	}
+	deviceID := deviceIDFromClientId(clientID)
+	if deviceID == "" {
+		return
+	}
+	event := client.MqttLifecycleEvent{
+		Type:     client.MqttLifecycleType,
+		DeviceID: deviceID,
+		State:    state,
+		ClientID: clientID,
+		Ts:       time.Now().UnixMilli(),
+	}
+	if err := h.publishLifecycle(event); err != nil {
+		log.Warnf("发布 MQTT 生命周期事件失败: device=%s state=%s err=%v", deviceID, state, err)
+	}
+}
+
 func deviceSubTopic(mac string) string {
 	return fmt.Sprintf("%s%s", client.MDeviceSubTopicPrefix, mac)
 }
 
-// Start periodic subscription topic printing task
+// 启动周期性打印订阅主题的任务
 func (h *DeviceHook) StartPeriodicSubscriptionPrinter(interval time.Duration) {
 	go func() {
 		ticker := time.NewTicker(interval)
@@ -199,37 +237,37 @@ func (h *DeviceHook) StartPeriodicSubscriptionPrinter(interval time.Duration) {
 	}()
 }
 
-// Print all client subscription topics
+// 打印所有客户端的订阅主题
 func (h *DeviceHook) PrintAllClientSubscriptions() {
-	log.Info("=== Client Subscription Topic List ===")
+	log.Info("=== 客户端订阅主题列表 ===")
 	clients := h.server.Clients.GetAll()
 	if len(clients) == 0 {
-		log.Info("No connected clients currently")
+		log.Info("当前无连接客户端")
 		return
 	}
 
 	for clientID, _ := range clients {
-		log.Infof("Topics subscribed by client %s: ", clientID)
+		log.Infof("客户端 %s 订阅的主题: ", clientID)
 
-		// Use server.Topics.Subscribers("+") to get all topic subscribers
-		// Then filter subscriptions matching current clientID
+		// 使用server.Topics.Subscribers("+")获取所有主题的订阅者
+		// 然后过滤出与当前clientID匹配的订阅
 		allSubs := h.server.Topics.Subscribers("+")
 		foundTopics := false
 
-		// Check client subscriptions
+		// 检查客户端的订阅
 		if subs, ok := allSubs.Subscriptions[clientID]; ok {
 			log.Infof("  - %s (QoS: %d)", subs.Filter, subs.Qos)
 			foundTopics = true
 		}
 
-		// Check more possible topic subscriptions
+		// 检查更多可能的主题订阅
 		allSubs = h.server.Topics.Subscribers("#")
 		if subs, ok := allSubs.Subscriptions[clientID]; ok {
 			log.Infof("  - %s (QoS: %d)", subs.Filter, subs.Qos)
 			foundTopics = true
 		}
 
-		// Check specific topics
+		// 再检查一下特定主题
 		mac := parseMacFromClientId(clientID)
 		if mac != "" {
 			topic := deviceSubTopic(mac)
@@ -241,7 +279,7 @@ func (h *DeviceHook) PrintAllClientSubscriptions() {
 		}
 
 		if !foundTopics {
-			log.Info("  No subscription topics or unable to retrieve")
+			log.Info("  无订阅主题或无法获取")
 		}
 	}
 	log.Info("=====================")

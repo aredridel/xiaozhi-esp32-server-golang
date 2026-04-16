@@ -71,8 +71,7 @@ func getHTTPClient() *http.Client {
 
 // close session
 func (c *ChatManager) LocalMcpCloseChat() error {
-	//c.Close()
-	return nil
+	return c.ExitChat()
 }
 
 // clear history to conversation
@@ -197,7 +196,7 @@ func (c *ChatManager) LocalMcpControlMusicPlayback(ctx context.Context, params *
 	if c == nil {
 		return nil, fmt.Errorf("chat manager not available")
 	}
-	return controlMusicPlayback(ctx, c.session, params)
+	return controlMusicPlayback(ctx, c.GetSession(), params)
 }
 
 func controlMusicPlayback(ctx context.Context, session *ChatSession, params *MusicPlaybackControlParams) (*MusicPlaybackControlResult, error) {

@@ -25,14 +25,14 @@ import (
 	"github.com/spf13/viper"
 )
 
-// App unified manages all protocol services and ChatManager
+// App 统一管理所有协议服务和 ChatManager
 
 type App struct {
 	wsServer       *websocket.WebSocketServer
 	mqttUdpAdapter *mqtt_udp.MqttUdpAdapter
 	mqttUdpMu      sync.RWMutex
 
-	// ChatManager manager - use concurrent map
+	// ChatManager管理 - 使用concurrent map
 	chatManagers cmap.ConcurrentMap[string, *chat.ChatManager]
 }
 
@@ -41,6 +41,13 @@ func NewApp() *App {
 	app := &App{
 		chatManagers: cmap.New[*chat.ChatManager](),
 	}
+	mcp.RegisterCurrentDeviceTransportResolver(func(deviceID string) string {
+		chatManager, exists := app.GetChatManager(deviceID)
+		if !exists || chatManager == nil {
+			return ""
+		}
+		return chatManager.GetTransportType()
+	})
 	app.wsServer = app.newWebSocketServer()
 	app.mqttUdpAdapter, err = app.newMqttUdpAdapter()
 	if err != nil {
@@ -65,46 +72,46 @@ func (a *App) Run() {
 	adapter := a.mqttUdpAdapter
 	a.mqttUdpMu.RUnlock()
 	if adapter != nil {
-		go adapter.Start() // non-blocking, connect and retry at adapter internal background execution
+		go adapter.Start() // 非阻塞，连接与重试在 adapter 内部后台执行
 	}
 
-	// register chat relevant local MCP tools
+	// 注册聊天相关的本地MCP工具
 	a.registerChatMCPTools()
 
 	a.registerHandler()
 
 	a.initEventHandle()
 
-	// start resource pool count monitor (output once every 5 minutes to log)
+	// 启动资源池统计监控（每5分钟输出一次到日志）
 	ctx := context.Background()
 	pool.StartStatsMonitor(ctx, 5*time.Minute)
 
-	// start resource pool count report (report once every 5 seconds to manager backend)
+	// 启动资源池统计上报（每5秒上报一次到 manager backend）
 	pool.StartStatsReporter(ctx)
 
-	select {} // block main thread
+	select {} // 阻塞主线程
 }
 
 func (app *App) initEventHandle() {
 	eventHandle, err := NewEventHandle(app)
 	if err != nil {
-		log.Errorf("initialize EventHandle failed: %v", err)
+		log.Errorf("初始化 EventHandle 失败: %v", err)
 		return
 	}
 	if err := eventHandle.Start(); err != nil {
-		log.Errorf("start EventHandle failed: %v", err)
+		log.Errorf("启动 EventHandle 失败: %v", err)
 		return
 	}
 
-	// initialize message processor (always enabled, unified process Redis + MemoryProvider + History)
+	// 初始化消息处理器（总是启用，统一处理Redis+MemoryProvider+History）
 	historyCfg := history.HistoryClientConfig{
 		BaseURL:   util.GetBackendURL(),
 		AuthToken: util.GetManagerAuthToken(),
 		Timeout:   viper.GetDuration("manager.history_timeout"),
-		Enabled:   true, // always enabled
+		Enabled:   true, // 总是启用
 	}
 	NewMessageWorker(historyCfg)
-	log.Info("message processor initialized")
+	log.Info("消息处理器已初始化")
 }
 
 func (app *App) currentMqttConfig() *mqtt_udp.MqttConfig {
@@ -136,7 +143,21 @@ func (app *App) newMqttUdpAdapter() (*mqtt_udp.MqttUdpAdapter, error) {
 		mqttConfig,
 		mqtt_udp.WithUdpServer(udpServer),
 		mqtt_udp.WithOnNewConnection(app.OnNewConnection),
+		mqtt_udp.WithOnDeviceOnline(app.DeviceOnline),
+		mqtt_udp.WithOnDeviceOffline(app.DeviceOffline),
+		mqtt_udp.WithOnTransportReady(app.onMqttTransportReady),
+		mqtt_udp.WithOfflineGracePeriod(app.mqttOfflineGracePeriod()),
 	), nil
+}
+
+func (app *App) mqttOfflineGracePeriod() time.Duration {
+	if duration := viper.GetDuration("mqtt.transport_offline_grace_period"); duration > 0 {
+		return duration
+	}
+	if seconds := viper.GetInt("mqtt.transport_offline_grace_period_seconds"); seconds > 0 {
+		return time.Duration(seconds) * time.Second
+	}
+	return 2 * time.Minute
 }
 
 func (app *App) newUdpServer() (*mqtt_udp.UdpServer, error) {
@@ -166,7 +187,7 @@ func (app *App) startMqttServer() error {
 	return mqtt_server.StartMqttServer()
 }
 
-// ReloadMqttServer hot reload MQTT Server: first stop, then according to mqtt_server.enable decide whether to start (if not enabled then only stop without starting)
+// ReloadMqttServer 热更 MQTT Server：先停，再根据 mqtt_server.enable 决定是否启动（未启用则仅停止不启动）
 func (app *App) ReloadMqttServer() {
 	_ = mqtt_server.StopMqttServer()
 	if !viper.GetBool("mqtt_server.enable") {
@@ -177,7 +198,7 @@ func (app *App) ReloadMqttServer() {
 	}
 }
 
-// ReloadMqttUdp hot reload MQTT+UDP: first stop old adapter, then according to mqtt.enable decide whether to create new and start (if not enabled then only stop without starting)
+// ReloadMqttUdp 热更 MQTT+UDP：先停旧适配器，再根据 mqtt.enable 决定是否新建并启动（未启用则仅停止不启动）
 func (app *App) ReloadMqttUdp() {
 	app.mqttUdpMu.Lock()
 	old := app.mqttUdpAdapter
@@ -201,7 +222,7 @@ func (app *App) ReloadMqttUdp() {
 	go adapter.Start()
 }
 
-// ReloadMqttUdpWithFlags according to change mark decide whether to hot reload MQTT + UDP
+// ReloadMqttUdpWithFlags 根据变更标记决定是否热更 MQTT+UDP
 func (app *App) ReloadMqttUdpWithFlags(doMqttReload, doUdpReload bool) {
 	if !doMqttReload && !doUdpReload {
 		return
@@ -260,10 +281,10 @@ func (app *App) ReloadMqttUdpWithFlags(doMqttReload, doUdpReload bool) {
 	}
 }
 
-// ReloadMCP hot reload MCP: when disabled only stop global MCP; when enabled and already started then restart global MCP, if not started then start MCP cluster
+// ReloadMCP 热更 MCP：禁用时仅停止全局 MCP；启用时已启动则重启全局 MCP，未启动则启动 MCP 集群
 func (app *App) ReloadMCP() error {
 	if !viper.GetBool("mcp.global.enabled") {
-		// disabled: only stop without starting, avoid dependency on Start() internal judgment or merge sequence
+		// 禁用：只停不启，避免依赖 Start() 内判断或合并时序
 		if err := mcp.GetGlobalMCPManager().Stop(); err != nil {
 			return err
 		}
@@ -282,53 +303,67 @@ func (app *App) ReloadMCP() error {
 	return nil
 }
 
-// all protocol new connections go through here
+// 所有协议新连接都走这里
 func (a *App) OnNewConnection(transport types.IConn) {
 	deviceID := transport.GetDeviceID()
+	transportType := transport.GetTransportType()
+	notifyLifecycleOnManager := transportType != types.TransportTypeMqttUdp
 
-	// check if already exists this device's ChatManager
+	// 检查是否已存在该设备的ChatManager
 	if existingManager, exists := a.chatManagers.Get(deviceID); exists {
-		log.Infof("device %s already has ChatManager, first close old connection", deviceID)
-		// close old ChatManager
+		log.Infof("设备 %s 已存在ChatManager，先关闭旧的连接", deviceID)
+		// 关闭旧的ChatManager
 		existingManager.Close()
 		a.chatManagers.Remove(deviceID)
 	}
 
-	// create new ChatManager
+	// 创建新的ChatManager
 	chatManager, err := chat.NewChatManager(deviceID, transport)
 	if err != nil {
-		log.Errorf("create chatManager failed: %v", err)
+		log.Errorf("创建chatManager失败: %v", err)
 		return
 	}
 
-	// store ChatManager
+	// 存储ChatManager
 	a.chatManagers.Set(deviceID, chatManager)
 
-	a.DeviceOnline(deviceID)
+	if notifyLifecycleOnManager {
+		a.DeviceOnline(deviceID)
+	}
 
-	log.Infof("device %s ChatManager created and stored", deviceID)
+	log.Infof("设备 %s 的ChatManager已创建并存储", deviceID)
 
-	// OpenClaw offline message replay (delay retry, avoid when connection just established but session is not yet initialized)
+	// OpenClaw离线消息补发（延迟重试，避免连接刚建立时会话尚未初始化）
 	go a.replayOpenClawOfflineMessages(deviceID)
 
-	// start ChatManager
+	// 启动ChatManager
 	go func() {
 		defer func() {
-			// when ChatManager ends, remove from map
+			// ChatManager结束时，从映射中移除
 			if storedManager, exists := a.chatManagers.Get(deviceID); exists && storedManager == chatManager {
 				a.chatManagers.Remove(deviceID)
-				log.Infof("device %s ChatManager removed from map", deviceID)
-				a.DeviceOffline(deviceID)
+				log.Infof("设备 %s 的ChatManager已从映射中移除", deviceID)
+				if notifyLifecycleOnManager {
+					a.DeviceOffline(deviceID)
+				}
 			}
 		}()
 
 		if err := chatManager.Start(); err != nil {
-			log.Errorf("ChatManager start failed: %v", err)
+			log.Errorf("ChatManager启动失败: %v", err)
 		}
 	}()
 }
 
-// OnOpenClawResponse OpenClaw real-time response delivery callback
+func (a *App) onMqttTransportReady(deviceID string) {
+	chatManager, exists := a.GetChatManager(deviceID)
+	if !exists || chatManager == nil {
+		return
+	}
+	chatManager.WarmupMcp()
+}
+
+// OnOpenClawResponse OpenClaw实时响应下发回调
 func (a *App) OnOpenClawResponse(event openclaw.ResponseDelivery) bool {
 	deviceID := strings.TrimSpace(event.DeviceID)
 	if deviceID == "" {
@@ -340,7 +375,7 @@ func (a *App) OnOpenClawResponse(event openclaw.ResponseDelivery) bool {
 	}
 	if err := chatManager.InjectOpenClawResponse(event); err != nil {
 		log.Warnf(
-			"OpenClaw real-time message injection failed, device=%s correlation_id=%s start=%v end=%v err=%v",
+			"OpenClaw实时消息注入失败, device=%s correlation_id=%s start=%v end=%v err=%v",
 			deviceID,
 			strings.TrimSpace(event.CorrelationID),
 			event.IsStart,
@@ -368,7 +403,7 @@ func (a *App) replayOpenClawOfflineMessages(deviceID string) {
 			return chatManager.InjectMessage(msg.Text, true)
 		})
 		if delivered > 0 {
-			log.Infof("OpenClaw offline message replay successful, device=%s delivered=%d remaining=%d", deviceID, delivered, remaining)
+			log.Infof("OpenClaw离线消息补发成功, device=%s delivered=%d remaining=%d", deviceID, delivered, remaining)
 		}
 		if remaining == 0 {
 			return
@@ -376,25 +411,25 @@ func (a *App) replayOpenClawOfflineMessages(deviceID string) {
 	}
 }
 
-// GetChatManager get specified device's ChatManager
+// GetChatManager 获取指定设备的ChatManager
 func (a *App) GetChatManager(deviceID string) (*chat.ChatManager, bool) {
 	return a.chatManagers.Get(deviceID)
 }
 
-// CloseChatManager close specified device's ChatManager
+// CloseChatManager 关闭指定设备的ChatManager
 func (a *App) CloseChatManager(deviceID string) bool {
 	if manager, exists := a.chatManagers.Get(deviceID); exists {
 		manager.Close()
 		a.chatManagers.Remove(deviceID)
-		log.Infof("device %s ChatManager closed and removed", deviceID)
+		log.Infof("设备 %s 的ChatManager已关闭并移除", deviceID)
 		return true
 	}
 	return false
 }
 
-// GetAllChatManagers get all ChatManager copy
+// GetAllChatManagers 获取所有ChatManager的副本
 func (a *App) GetAllChatManagers() map[string]*chat.ChatManager {
-	// return copy to avoid concurrent access issues
+	// 返回副本以避免并发访问问题
 	managers := make(map[string]*chat.ChatManager)
 	for tuple := range a.chatManagers.IterBuffered() {
 		managers[tuple.Key] = tuple.Val
@@ -402,29 +437,29 @@ func (a *App) GetAllChatManagers() map[string]*chat.ChatManager {
 	return managers
 }
 
-// GetChatManagerCount get current active ChatManager count
+// GetChatManagerCount 获取当前活跃的ChatManager数量
 func (a *App) GetChatManagerCount() int {
 	return a.chatManagers.Count()
 }
 
-// CloseAllChatManagers close all ChatManager
+// CloseAllChatManagers 关闭所有ChatManager
 func (a *App) CloseAllChatManagers() {
 	for tuple := range a.chatManagers.IterBuffered() {
 		tuple.Val.Close()
-		log.Infof("device %s ChatManager closed", tuple.Key)
+		log.Infof("设备 %s 的ChatManager已关闭", tuple.Key)
 	}
 
-	// clear map
+	// 清空映射
 	a.chatManagers.Clear()
-	log.Info("all ChatManager closed")
+	log.Info("所有ChatManager已关闭")
 }
 
-// registerChatMCPTools register chat relevant local MCP tools
+// registerChatMCPTools 注册聊天相关的本地MCP工具
 func (s *App) registerChatMCPTools() {
-	// call chat package register function
+	// 调用chat包的注册函数
 	chat.RegisterChatMCPTools()
 
-	log.Info("chat relevant local MCP tools registered")
+	log.Info("聊天相关的本地MCP工具注册完成")
 }
 
 func (s *App) DeviceOnline(deviceID string) {
@@ -465,7 +500,7 @@ func (a *App) registerHandler() {
 	log.Infof("registerHandler: registered paths=[%s]", config_types.EventHandleMessageInject)
 }
 
-// inject message to client
+// 向客户端注入消息
 func (a *App) HandleInjectMsg(ctx context.Context, eventType string, eventData map[string]interface{}) (string, error) {
 	type InjectMsg struct {
 		SkipLlm  bool   `json:"skip_llm"`
@@ -480,7 +515,7 @@ func (a *App) HandleInjectMsg(ctx context.Context, eventType string, eventData m
 		return "", fmt.Errorf("HandleInjectMsg error")
 	}
 
-	// validate required parameters
+	// 验证必要参数
 	if msg.DeviceId == "" {
 		log.Errorf("HandleInjectMsg: device_id is required")
 		return "", fmt.Errorf("device_id is required")
@@ -490,7 +525,7 @@ func (a *App) HandleInjectMsg(ctx context.Context, eventType string, eventData m
 		return "", fmt.Errorf("message is required")
 	}
 
-	// get specified device's ChatManager
+	// 获取指定设备的ChatManager
 	chatManager, exists := a.GetChatManager(msg.DeviceId)
 	if !exists {
 		log.Errorf("HandleInjectMsg: device %s not found or offline", msg.DeviceId)
@@ -500,7 +535,7 @@ func (a *App) HandleInjectMsg(ctx context.Context, eventType string, eventData m
 	log.Debugf("HandleInjectMsg: injecting message to device %s, skip_llm: %v, message: %s",
 		msg.DeviceId, msg.SkipLlm, msg.Message)
 
-	// use ChatManager public method to inject message
+	// 使用ChatManager的公开方法注入消息
 	err = chatManager.InjectMessage(msg.Message, msg.SkipLlm)
 	if err != nil {
 		log.Errorf("HandleInjectMsg: failed to inject message to device %s: %v", msg.DeviceId, err)

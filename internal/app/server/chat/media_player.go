@@ -381,7 +381,7 @@ func (c *mediaPlaybackCoordinator) snapshotAgentPlaylist(agentID string) []Media
 func (c *mediaPlaybackCoordinator) appendToAgentPlaylist(agentID string, source MediaSourceDescriptor) (MediaPlaylistItem, int, []MediaPlaylistItem, error) {
 	agentID = strings.TrimSpace(agentID)
 	if agentID == "" {
-		return MediaPlaylistItem{}, -1, nil, fmt.Errorf("agentID cannot be empty")
+		return MediaPlaylistItem{}, -1, nil, fmt.Errorf("agentID 不能为空")
 	}
 
 	playlist := c.getOrCreateAgentPlaylist(agentID)
@@ -411,7 +411,7 @@ func (c *mediaPlaybackCoordinator) appendToAgentPlaylist(agentID string, source 
 
 func (b *sessionMediaOutputBridge) BeginExclusiveMediaPlayback(ctx context.Context) error {
 	if b == nil || b.session == nil || b.session.ttsManager == nil {
-		return fmt.Errorf("media output bridge not initialized")
+		return fmt.Errorf("媒体输出桥未初始化")
 	}
 	return b.session.ttsManager.BeginExclusiveMediaPlayback(ctx)
 }
@@ -425,21 +425,21 @@ func (b *sessionMediaOutputBridge) EndExclusiveMediaPlayback() {
 
 func (b *sessionMediaOutputBridge) SendSentenceStart(ctx context.Context, text string, onError func(error)) error {
 	if b == nil || b.session == nil || b.session.ttsManager == nil {
-		return fmt.Errorf("media output bridge not initialized")
+		return fmt.Errorf("媒体输出桥未初始化")
 	}
 	return b.session.ttsManager.EnqueueMediaSentenceStart(ctx, text, onError)
 }
 
 func (b *sessionMediaOutputBridge) SendSentenceEnd(ctx context.Context, text string, onError func(error), onEnd func(error)) error {
 	if b == nil || b.session == nil || b.session.ttsManager == nil {
-		return fmt.Errorf("media output bridge not initialized")
+		return fmt.Errorf("媒体输出桥未初始化")
 	}
 	return b.session.ttsManager.EnqueueMediaSentenceEnd(ctx, text, onError, onEnd)
 }
 
 func (b *sessionMediaOutputBridge) SendAudioFrame(ctx context.Context, frame []byte, onError func(error)) error {
 	if b == nil || b.session == nil || b.session.ttsManager == nil {
-		return fmt.Errorf("media output bridge not initialized")
+		return fmt.Errorf("媒体输出桥未初始化")
 	}
 	return b.session.ttsManager.EnqueueMediaFrame(ctx, frame, onError)
 }
@@ -459,7 +459,7 @@ func NewSessionMediaPlayer(session *ChatSession) *SessionMediaPlayer {
 
 func (p *SessionMediaPlayer) runtimeOrErr() (*deviceMediaRuntime, error) {
 	if p == nil || p.runtime == nil {
-		return nil, fmt.Errorf("media player not initialized")
+		return nil, fmt.Errorf("media player 未初始化")
 	}
 	return p.runtime, nil
 }
@@ -610,6 +610,22 @@ func (p *SessionMediaPlayer) GetState() MediaPlayerState {
 	return runtime.GetState()
 }
 
+func (p *SessionMediaPlayer) HasRealtimeMcpAudioControlContext() bool {
+	runtime, err := p.runtimeOrErr()
+	if err != nil {
+		return false
+	}
+	return runtime.hasRealtimeMcpAudioControlContext()
+}
+
+func (p *SessionMediaPlayer) ShouldGateRealtimeMcpAudioASR() bool {
+	runtime, err := p.runtimeOrErr()
+	if err != nil {
+		return false
+	}
+	return runtime.shouldGateRealtimeMcpAudioASR()
+}
+
 func (p *SessionMediaPlayer) AppendCurrentToPlaylist() (*PlaylistAppendResult, error) {
 	runtime, err := p.runtimeOrErr()
 	if err != nil {
@@ -640,12 +656,12 @@ func (r *deviceMediaRuntime) attachSession(session *ChatSession) {
 	shouldResume = r.resumeOnAttach
 	r.mu.Unlock()
 
-	log.Infof("device %s media play attachment already bind", r.deviceID)
+	log.Infof("设备 %s 媒体播放 attachment 已绑定", r.deviceID)
 
 	if shouldResume {
 		go func() {
 			if err := r.RecoverPlayback(context.Background(), r.currentAudioConfig(), mediaRecoveryTriggerAttach); err != nil && !errors.Is(err, context.Canceled) {
-				log.Warnf("device %s recovery media play failed: %v", r.deviceID, err)
+				log.Warnf("设备 %s 恢复媒体播放失败: %v", r.deviceID, err)
 			}
 		}()
 	}
@@ -684,7 +700,7 @@ func (r *deviceMediaRuntime) detachSession(session *ChatSession, preserve bool) 
 	r.notifyAttachmentChangedLocked()
 	r.mu.Unlock()
 
-	log.Infof("device %s media play attachment already unbind, preserve=%v", r.deviceID, preserve)
+	log.Infof("设备 %s 媒体播放 attachment 已解绑, preserve=%v", r.deviceID, preserve)
 
 	if releaseAttachment != nil {
 		releaseAttachment.bridge.EndExclusiveMediaPlayback()
@@ -705,13 +721,13 @@ func (r *deviceMediaRuntime) ReplaceStandaloneQueueAndPlay(ctx context.Context, 
 
 func (r *deviceMediaRuntime) ReplaceStandaloneQueueAndPlayWithHandle(ctx context.Context, sources []MediaSourceDescriptor, startIndex int, cfg mediaPlaybackAudioConfig) (*MediaPlaybackHandle, error) {
 	if r == nil {
-		return nil, fmt.Errorf("media player not initialized")
+		return nil, fmt.Errorf("媒体播放器未初始化")
 	}
 	if len(sources) == 0 {
 		return nil, r.Stop(ctx)
 	}
 	if startIndex < 0 || startIndex >= len(sources) {
-		return nil, fmt.Errorf("invalid play start index: %d", startIndex)
+		return nil, fmt.Errorf("无效的播放起始索引: %d", startIndex)
 	}
 
 	items := buildMediaPlaylistItems(sources)
@@ -738,7 +754,7 @@ func (r *deviceMediaRuntime) ReplaceStandaloneQueueAndPlayWithHandle(ctx context
 	r.state.UpdatedAt = time.Now().UnixMilli()
 	r.mu.Unlock()
 
-	log.Infof("device %s start standalone media play, source=%s, title=%s", r.deviceID, items[startIndex].Source.SourceType, items[startIndex].Source.Title)
+	log.Infof("设备 %s 开始 standalone 媒体播放, source=%s, title=%s", r.deviceID, items[startIndex].Source.SourceType, items[startIndex].Source.Title)
 
 	releaseMediaAttachment(oldExclusive)
 	stopOldPlayback(oldActive)
@@ -749,19 +765,19 @@ func (r *deviceMediaRuntime) ReplaceStandaloneQueueAndPlayWithHandle(ctx context
 
 func (r *deviceMediaRuntime) PlayAgentPlaylistIndex(ctx context.Context, agentID string, startIndex int, cfg mediaPlaybackAudioConfig) error {
 	if r == nil {
-		return fmt.Errorf("media player not initialized")
+		return fmt.Errorf("媒体播放器未初始化")
 	}
 	agentID = strings.TrimSpace(agentID)
 	if agentID == "" {
-		return fmt.Errorf("agentID cannotisempty")
+		return fmt.Errorf("agentID 不能为空")
 	}
 
 	snapshot := r.coordinator.snapshotAgentPlaylist(agentID)
 	if len(snapshot) == 0 {
-		return fmt.Errorf("playlist is empty")
+		return fmt.Errorf("播放列表为空")
 	}
 	if startIndex < 0 || startIndex >= len(snapshot) {
-		return fmt.Errorf("invalid play start index: %d", startIndex)
+		return fmt.Errorf("无效的播放起始索引: %d", startIndex)
 	}
 
 	active := newActiveMediaPlayback(r.coordinator.ctx)
@@ -787,7 +803,7 @@ func (r *deviceMediaRuntime) PlayAgentPlaylistIndex(ctx context.Context, agentID
 	r.state.UpdatedAt = time.Now().UnixMilli()
 	r.mu.Unlock()
 
-	log.Infof("device %s start agent playlist play, agent=%s, index=%d, title=%s", r.deviceID, agentID, startIndex, snapshot[startIndex].Source.Title)
+	log.Infof("设备 %s 开始智能体歌单播放, agent=%s, index=%d, title=%s", r.deviceID, agentID, startIndex, snapshot[startIndex].Source.Title)
 
 	releaseMediaAttachment(oldExclusive)
 	stopOldPlayback(oldActive)
@@ -798,17 +814,17 @@ func (r *deviceMediaRuntime) PlayAgentPlaylistIndex(ctx context.Context, agentID
 
 func (r *deviceMediaRuntime) PlayAgentPlaylist(ctx context.Context, agentID string, cfg mediaPlaybackAudioConfig) error {
 	if r == nil {
-		return fmt.Errorf("media player not initialized")
+		return fmt.Errorf("媒体播放器未初始化")
 	}
 
 	agentID = strings.TrimSpace(agentID)
 	if agentID == "" {
-		return fmt.Errorf("agentID cannotisempty")
+		return fmt.Errorf("agentID 不能为空")
 	}
 
 	snapshot := r.coordinator.snapshotAgentPlaylist(agentID)
 	if len(snapshot) == 0 {
-		return fmt.Errorf("playlist is empty")
+		return fmt.Errorf("播放列表为空")
 	}
 
 	startIndex := 0
@@ -836,10 +852,10 @@ func (r *deviceMediaRuntime) Play(ctx context.Context, cfg mediaPlaybackAudioCon
 
 func (r *deviceMediaRuntime) RecoverPlayback(ctx context.Context, cfg mediaPlaybackAudioConfig, trigger mediaRecoveryTrigger) error {
 	if r == nil {
-		return fmt.Errorf("media player not initialized")
+		return fmt.Errorf("媒体播放器未初始化")
 	}
 
-	if trigger == mediaRecoveryTriggerAttach && !r.consumeResumeOnAttach() {
+	if trigger == mediaRecoveryTriggerAttach && !r.shouldResumeOnAttach() {
 		return nil
 	}
 
@@ -855,7 +871,10 @@ func (r *deviceMediaRuntime) RecoverPlayback(ctx context.Context, cfg mediaPlayb
 		if active.isPaused() {
 			return r.recoverActivePlayback(trigger)
 		}
-		log.Infof("device %s skip media recovery, trigger=%s, reason=already_playing", r.deviceID, trigger)
+		if trigger == mediaRecoveryTriggerAttach {
+			r.clearResumeOnAttach()
+		}
+		log.Infof("设备 %s 跳过媒体恢复, trigger=%s, 原因=already_playing", r.deviceID, trigger)
 		return nil
 	}
 
@@ -863,18 +882,18 @@ func (r *deviceMediaRuntime) RecoverPlayback(ctx context.Context, cfg mediaPlayb
 	case mediaPlaybackModeAgentPlaylist:
 		snapshot := r.coordinator.snapshotAgentPlaylist(agentID)
 		if len(snapshot) == 0 {
-			return fmt.Errorf("playlist is empty")
+			return fmt.Errorf("播放列表为空")
 		}
 		if playbackIndex < 0 || playbackIndex >= len(snapshot) {
 			playbackIndex = 0
 		}
-		log.Infof("device %s execute media recovery, trigger=%s, mode=agent_playlist, index=%d", r.deviceID, trigger, playbackIndex)
+		log.Infof("设备 %s 执行媒体恢复, trigger=%s, mode=agent_playlist, index=%d", r.deviceID, trigger, playbackIndex)
 		return r.PlayAgentPlaylistIndex(ctx, agentID, playbackIndex, cfg)
 	default:
 		if currentSource == nil {
-			return fmt.Errorf("current no playable media")
+			return fmt.Errorf("当前没有可播放的媒体")
 		}
-		log.Infof("device %s execute media recovery, trigger=%s, mode=standalone, source=%s, title=%s", r.deviceID, trigger, currentSource.SourceType, currentSource.Title)
+		log.Infof("设备 %s 执行媒体恢复, trigger=%s, mode=standalone, source=%s, title=%s", r.deviceID, trigger, currentSource.SourceType, currentSource.Title)
 		return r.ReplaceStandaloneQueueAndPlay(ctx, []MediaSourceDescriptor{*currentSource}, 0, cfg)
 	}
 }
@@ -885,34 +904,34 @@ func (r *deviceMediaRuntime) Resume() error {
 
 func (r *deviceMediaRuntime) recoverActivePlayback(trigger mediaRecoveryTrigger) error {
 	if r == nil {
-		return fmt.Errorf("media player not initialized")
+		return fmt.Errorf("媒体播放器未初始化")
 	}
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	if r.active == nil {
-		return fmt.Errorf("current no playing media")
+		return fmt.Errorf("当前没有正在播放的媒体")
 	}
 	if r.attachment == nil {
-		return fmt.Errorf("current temporarily unavailable play channel")
+		return fmt.Errorf("当前暂无可用播放通道")
 	}
 	if !r.active.setPaused(false) {
 		r.resumeOnAttach = false
-		log.Infof("device %s skip media recovery, trigger=%s, reason=already_playing", r.deviceID, trigger)
+		log.Infof("设备 %s 跳过媒体恢复, trigger=%s, 原因=already_playing", r.deviceID, trigger)
 		return nil
 	}
 	r.pauseReason = mediaPauseReasonNone
 	r.resumeOnAttach = false
 	r.state.Status = play_music.StatusPlaying
 	r.state.UpdatedAt = time.Now().UnixMilli()
-	log.Infof("device %s execute media recovery, trigger=%s, mode=resume_active", r.deviceID, trigger)
+	log.Infof("设备 %s 执行媒体恢复, trigger=%s, mode=resume_active", r.deviceID, trigger)
 	return nil
 }
 
 func (r *deviceMediaRuntime) ResumeIfInterruptedPause() (bool, error) {
 	if r == nil {
-		return false, fmt.Errorf("media player not initialized")
+		return false, fmt.Errorf("媒体播放器未初始化")
 	}
 
 	r.mu.RLock()
@@ -929,24 +948,30 @@ func (r *deviceMediaRuntime) ResumeIfInterruptedPause() (bool, error) {
 	return true, nil
 }
 
-func (r *deviceMediaRuntime) consumeResumeOnAttach() bool {
+func (r *deviceMediaRuntime) shouldResumeOnAttach() bool {
 	if r == nil {
 		return false
 	}
 
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 
-	if !r.resumeOnAttach {
-		return false
+	return r.resumeOnAttach
+}
+
+func (r *deviceMediaRuntime) clearResumeOnAttach() {
+	if r == nil {
+		return
 	}
+
+	r.mu.Lock()
 	r.resumeOnAttach = false
-	return true
+	r.mu.Unlock()
 }
 
 func (r *deviceMediaRuntime) Stop(ctx context.Context) error {
 	if r == nil {
-		return fmt.Errorf("media player not initialized")
+		return fmt.Errorf("媒体播放器未初始化")
 	}
 
 	var (
@@ -1001,9 +1026,47 @@ func (r *deviceMediaRuntime) GetState() MediaPlayerState {
 	return state
 }
 
+func (r *deviceMediaRuntime) hasRealtimeMcpAudioControlContext() bool {
+	canControl, _ := r.realtimeMcpAudioGateStatus()
+	return canControl
+}
+
+func (r *deviceMediaRuntime) shouldGateRealtimeMcpAudioASR() bool {
+	_, shouldGate := r.realtimeMcpAudioGateStatus()
+	return shouldGate
+}
+
+func (r *deviceMediaRuntime) realtimeMcpAudioGateStatus() (bool, bool) {
+	if r == nil {
+		return false, false
+	}
+
+	r.mu.RLock()
+	sourceType := r.state.CurrentSourceType
+	if sourceType == "" && r.currentSource != nil {
+		sourceType = r.currentSource.SourceType
+	}
+	status := r.state.Status
+	active := r.active
+	attachment := r.attachment
+	resumeOnAttach := r.resumeOnAttach
+	r.mu.RUnlock()
+
+	if !isRealtimeMcpAudioSourceType(sourceType) {
+		return false, false
+	}
+
+	canControl := active != nil || resumeOnAttach || status == play_music.StatusPaused
+	if active == nil || attachment == nil || status != play_music.StatusPlaying {
+		return canControl, false
+	}
+
+	return true, !active.isPaused()
+}
+
 func (r *deviceMediaRuntime) AppendCurrentToAgentPlaylist(agentID string) (*PlaylistAppendResult, error) {
 	if r == nil {
-		return nil, fmt.Errorf("media player not initialized")
+		return nil, fmt.Errorf("媒体播放器未初始化")
 	}
 
 	agentID = strings.TrimSpace(agentID)
@@ -1018,10 +1081,10 @@ func (r *deviceMediaRuntime) AppendCurrentToAgentPlaylist(agentID string) (*Play
 	r.mu.RUnlock()
 
 	if currentSource == nil {
-		return nil, fmt.Errorf("current no media can be added to playlist")
+		return nil, fmt.Errorf("当前没有可加入歌单的媒体")
 	}
 	if currentSource.SourceType == MediaSourceTypeInlineAudio {
-		return nil, fmt.Errorf("current audio source does not support adding to playlist")
+		return nil, fmt.Errorf("当前音频来源不支持加入歌单")
 	}
 
 	item, index, snapshot, err := r.coordinator.appendToAgentPlaylist(agentID, *currentSource)
@@ -1051,7 +1114,7 @@ func (r *deviceMediaRuntime) AppendCurrentToAgentPlaylist(agentID string) (*Play
 	r.state.UpdatedAt = time.Now().UnixMilli()
 	r.mu.Unlock()
 
-	log.Infof("device %s will current media add to agent playlist, agent=%s, title=%s, index=%d", r.deviceID, strings.TrimSpace(agentID), item.Source.Title, index)
+	log.Infof("设备 %s 将当前媒体加入智能体歌单, agent=%s, title=%s, index=%d", r.deviceID, strings.TrimSpace(agentID), item.Source.Title, index)
 
 	return &PlaylistAppendResult{
 		AddedTitle:      item.Source.Title,
@@ -1065,7 +1128,7 @@ func (r *deviceMediaRuntime) AppendCurrentToAgentPlaylist(agentID string) (*Play
 
 func (r *deviceMediaRuntime) pausePlayback(requireActive bool, reason mediaPauseReason) error {
 	if r == nil {
-		return fmt.Errorf("media player not initialized")
+		return fmt.Errorf("媒体播放器未初始化")
 	}
 
 	var exclusiveAttach *mediaSessionAttachment
@@ -1075,7 +1138,7 @@ func (r *deviceMediaRuntime) pausePlayback(requireActive bool, reason mediaPause
 	if active == nil {
 		if requireActive {
 			r.mu.Unlock()
-			return fmt.Errorf("current no playing media")
+			return fmt.Errorf("当前没有正在播放的媒体")
 		}
 		r.mu.Unlock()
 		return nil
@@ -1097,7 +1160,7 @@ func (r *deviceMediaRuntime) pausePlayback(requireActive bool, reason mediaPause
 
 func (r *deviceMediaRuntime) jumpToRelative(ctx context.Context, delta int, cfg mediaPlaybackAudioConfig) error {
 	if r == nil {
-		return fmt.Errorf("media player not initialized")
+		return fmt.Errorf("媒体播放器未初始化")
 	}
 
 	r.mu.RLock()
@@ -1107,12 +1170,12 @@ func (r *deviceMediaRuntime) jumpToRelative(ctx context.Context, delta int, cfg 
 	r.mu.RUnlock()
 
 	if mode != mediaPlaybackModeAgentPlaylist {
-		return fmt.Errorf("current play not added to agent playlist, please execute enqueue_current first")
+		return fmt.Errorf("当前播放未加入智能体播放列表，请先执行 enqueue_current")
 	}
 
 	snapshot := r.coordinator.snapshotAgentPlaylist(agentID)
 	if len(snapshot) == 0 {
-		return fmt.Errorf("playlist is empty")
+		return fmt.Errorf("播放列表为空")
 	}
 
 	if currentIndex < 0 || currentIndex >= len(snapshot) {
@@ -1366,10 +1429,10 @@ func (r *deviceMediaRuntime) waitForAttachment(active *activeMediaPlayback, ctx 
 
 func (r *deviceMediaRuntime) ensureExclusivePlayback(active *activeMediaPlayback, attachment *mediaSessionAttachment, ctx context.Context) error {
 	if active == nil {
-		return fmt.Errorf("current no playing media")
+		return fmt.Errorf("当前没有正在播放的媒体")
 	}
 	if attachment == nil {
-		return fmt.Errorf("current temporarily unavailable play channel")
+		return fmt.Errorf("当前暂无可用播放通道")
 	}
 
 	r.mu.RLock()
@@ -1454,7 +1517,7 @@ func (r *deviceMediaRuntime) handleAttachmentFailure(active *activeMediaPlayback
 	r.mu.Unlock()
 
 	releaseMediaAttachment(releaseAttachment)
-	log.Warnf("device %s media output channel unavailable, wait reconnect recovery: %v", r.deviceID, err)
+	log.Warnf("设备 %s 媒体输出通道失效，等待重连恢复: %v", r.deviceID, err)
 }
 
 func (r *deviceMediaRuntime) playItem(active *activeMediaPlayback, item MediaPlaylistItem) error {
@@ -1462,7 +1525,7 @@ func (r *deviceMediaRuntime) playItem(active *activeMediaPlayback, item MediaPla
 	title := deriveMediaTitle(source)
 	playText := ""
 	if title != "" {
-		playText = fmt.Sprintf("play music: %s", title)
+		playText = fmt.Sprintf("正在播放音乐: %s", title)
 	}
 
 	audioChan, err := r.openSourceAudioStream(active.ctx, source, active)
@@ -1475,7 +1538,7 @@ func (r *deviceMediaRuntime) playItem(active *activeMediaPlayback, item MediaPla
 		return err
 	}
 
-	log.Infof("media play complete: %s", title)
+	log.Infof("媒体播放完成: %s", title)
 	return nil
 }
 
@@ -1597,33 +1660,33 @@ func (r *deviceMediaRuntime) openSourceAudioStream(ctx context.Context, source M
 	switch source.SourceType {
 	case MediaSourceTypeInlineAudio:
 		if source.Inline == nil || len(source.Inline.Data) == 0 {
-			return nil, fmt.Errorf("inline audio data is empty")
+			return nil, fmt.Errorf("inline 音频数据为空")
 		}
 		return play_music.PlayMusicFromAudioData(ctx, source.Inline.Data, cfg.SampleRate, cfg.FrameDuration, audioFormat)
 	case MediaSourceTypeHTTPURL:
 		if source.HTTP == nil || strings.TrimSpace(source.HTTP.URL) == "" {
-			return nil, fmt.Errorf("HTTP audio address is empty")
+			return nil, fmt.Errorf("HTTP 音频地址为空")
 		}
 		return play_music.PlayMusicStream(ctx, source.HTTP.URL, cfg.SampleRate, cfg.FrameDuration, audioFormat)
 	case MediaSourceTypeLocalFile:
 		if source.Local == nil || strings.TrimSpace(source.Local.Path) == "" {
-			return nil, fmt.Errorf("local audio path is empty")
+			return nil, fmt.Errorf("本地音频路径为空")
 		}
 		return openLocalMediaFileStream(ctx, source.Local.Path, cfg.SampleRate, cfg.FrameDuration, audioFormat)
 	case MediaSourceTypeMCPResource:
 		if source.MCP == nil {
-			return nil, fmt.Errorf("MCP audio source is empty")
+			return nil, fmt.Errorf("MCP 音频源为空")
 		}
 		return r.openMCPResourceAudioStream(ctx, source.MCP, active, cfg.SampleRate, cfg.FrameDuration, audioFormat)
 	default:
-		return nil, fmt.Errorf("unsupported media source type: %s", source.SourceType)
+		return nil, fmt.Errorf("不支持的媒体源类型: %s", source.SourceType)
 	}
 }
 
 func openLocalMediaFileStream(ctx context.Context, path string, sampleRate int, frameDuration int, audioFormat string) (<-chan []byte, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("open local audio file failed: %v", err)
+		return nil, fmt.Errorf("打开本地音频文件失败: %v", err)
 	}
 
 	outputChan := make(chan []byte, 100)
@@ -1631,12 +1694,12 @@ func openLocalMediaFileStream(ctx context.Context, path string, sampleRate int, 
 		defer file.Close()
 		decoder, err := util.CreateAudioDecoderWithSampleRate(ctx, file, outputChan, frameDuration, audioFormat, sampleRate)
 		if err != nil {
-			log.Errorf("create local audio decoder failed: %v", err)
+			log.Errorf("创建本地音频解码器失败: %v", err)
 			close(outputChan)
 			return
 		}
 		if err := decoder.Run(time.Now().UnixMilli()); err != nil && !errors.Is(err, context.Canceled) {
-			log.Errorf("local audio decode failed: %v", err)
+			log.Errorf("本地音频解码失败: %v", err)
 		}
 	}()
 	return outputChan, nil
@@ -1644,17 +1707,17 @@ func openLocalMediaFileStream(ctx context.Context, path string, sampleRate int, 
 
 func (r *deviceMediaRuntime) openMCPResourceAudioStream(ctx context.Context, source *MCPMediaSource, active *activeMediaPlayback, sampleRate int, frameDuration int, audioFormat string) (<-chan []byte, error) {
 	if source == nil {
-		return nil, fmt.Errorf("MCP audio source is empty")
+		return nil, fmt.Errorf("MCP 音频源为空")
 	}
 	if strings.TrimSpace(source.ResourceURI) == "" {
-		return nil, fmt.Errorf("MCP Resource URI isempty")
+		return nil, fmt.Errorf("MCP Resource URI 为空")
 	}
 
 	pipeReader, pipeWriter := io.Pipe()
 	audioChan, err := play_music.PlayMusicFromPipe(ctx, pipeReader, sampleRate, frameDuration, audioFormat)
 	if err != nil {
 		pipeWriter.CloseWithError(err)
-		return nil, fmt.Errorf("create MCP audio decode stream failed: %v", err)
+		return nil, fmt.Errorf("创建 MCP 音频解码流失败: %v", err)
 	}
 
 	go r.streamMCPResourceToPipe(ctx, source, active, pipeWriter)
@@ -1702,7 +1765,7 @@ func (r *deviceMediaRuntime) streamMCPResourceToPipe(ctx context.Context, source
 
 			rawAudioData, err := base64.StdEncoding.DecodeString(audioContent.Blob)
 			if err != nil {
-				pipeWriter.CloseWithError(fmt.Errorf("decode MCP audio data failed: %v", err))
+				pipeWriter.CloseWithError(fmt.Errorf("解码 MCP 音频数据失败: %v", err))
 				return
 			}
 			if string(rawAudioData) == McpReadResourceStreamDoneFlag {
@@ -1715,7 +1778,7 @@ func (r *deviceMediaRuntime) streamMCPResourceToPipe(ctx context.Context, source
 			}
 
 			if _, err := pipeWriter.Write(rawAudioData); err != nil {
-				pipeWriter.CloseWithError(fmt.Errorf("write MCP audio stream failed: %v", err))
+				pipeWriter.CloseWithError(fmt.Errorf("写入 MCP 音频流失败: %v", err))
 				return
 			}
 			hasData = true
@@ -1736,7 +1799,7 @@ func (r *deviceMediaRuntime) readMCPResourcePage(ctx context.Context, source *MC
 		client = mcp_domain.GetServerClientByName(source.ServerName)
 	}
 	if client == nil {
-		return mcp_go.ReadResourceResult{}, fmt.Errorf("MCP client unavailable: %s", source.ServerName)
+		return mcp_go.ReadResourceResult{}, fmt.Errorf("MCP client 不可用: %s", source.ServerName)
 	}
 
 	readCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
@@ -1761,7 +1824,7 @@ func (r *deviceMediaRuntime) readMCPResourcePage(ctx context.Context, source *MC
 
 	newClient, reconnErr := mcp_domain.ReconnectServerByName(source.ServerName)
 	if reconnErr != nil {
-		return mcp_go.ReadResourceResult{}, fmt.Errorf("MCP resource read failed and reconnect failed: %v", err)
+		return mcp_go.ReadResourceResult{}, fmt.Errorf("MCP 资源读取失败且重连失败: %v", err)
 	}
 	source.Client = newClient
 
@@ -1919,7 +1982,7 @@ func deriveMediaTitle(source MediaSourceDescriptor) string {
 		}
 	}
 
-	return "unknown audio"
+	return "未知音频"
 }
 
 func cloneMediaSourceDescriptor(source MediaSourceDescriptor) MediaSourceDescriptor {

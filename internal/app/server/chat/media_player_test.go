@@ -236,6 +236,72 @@ func TestDeviceMediaRuntimeResumeIfInterruptedPauseOnlyResumesInterruptPause(t *
 	}
 }
 
+func TestDeviceMediaRuntimeRecoverPlaybackAttachKeepsResumeOnAttachWhenRecoverFails(t *testing.T) {
+	coordinator := newMediaPlaybackCoordinator()
+	runtime := coordinator.getOrCreateRuntime("device-test-attach-failure")
+
+	active := newActiveMediaPlayback(context.Background())
+	defer active.cancel()
+	defer active.closeDone()
+	active.setPaused(true)
+
+	runtime.mu.Lock()
+	runtime.active = active
+	runtime.resumeOnAttach = true
+	runtime.state.Status = play_music.StatusPaused
+	runtime.state.CurrentSourceType = MediaSourceTypeMCPResource
+	runtime.mu.Unlock()
+
+	err := runtime.RecoverPlayback(context.Background(), mediaPlaybackAudioConfig{}, mediaRecoveryTriggerAttach)
+	if err == nil {
+		t.Fatal("expected attach recovery without attachment to fail")
+	}
+
+	runtime.mu.RLock()
+	resumeOnAttach := runtime.resumeOnAttach
+	runtime.mu.RUnlock()
+	if !resumeOnAttach {
+		t.Fatal("expected failed attach recovery to keep resumeOnAttach for next reconnect")
+	}
+}
+
+func TestDeviceMediaRuntimeRealtimeMcpAudioGateStatus(t *testing.T) {
+	coordinator := newMediaPlaybackCoordinator()
+	runtime := coordinator.getOrCreateRuntime("device-test-realtime-gate")
+
+	active := newActiveMediaPlayback(context.Background())
+	defer active.cancel()
+	defer active.closeDone()
+
+	source := MediaSourceDescriptor{SourceType: MediaSourceTypeMCPResource}
+	runtime.mu.Lock()
+	runtime.active = active
+	runtime.attachment = &mediaSessionAttachment{}
+	runtime.currentSource = &source
+	runtime.state.Status = play_music.StatusPlaying
+	runtime.state.CurrentSourceType = MediaSourceTypeMCPResource
+	runtime.mu.Unlock()
+
+	if !runtime.hasRealtimeMcpAudioControlContext() {
+		t.Fatal("expected active realtime media playback to keep control context")
+	}
+	if !runtime.shouldGateRealtimeMcpAudioASR() {
+		t.Fatal("expected active realtime media playback to gate general ASR")
+	}
+
+	active.setPaused(true)
+	runtime.mu.Lock()
+	runtime.state.Status = play_music.StatusPaused
+	runtime.mu.Unlock()
+
+	if !runtime.hasRealtimeMcpAudioControlContext() {
+		t.Fatal("expected paused realtime media playback to keep control context")
+	}
+	if runtime.shouldGateRealtimeMcpAudioASR() {
+		t.Fatal("expected paused realtime media playback not to gate general ASR")
+	}
+}
+
 func appendTestPlaylistItem(t *testing.T, coordinator *mediaPlaybackCoordinator, agentID, title string) {
 	t.Helper()
 

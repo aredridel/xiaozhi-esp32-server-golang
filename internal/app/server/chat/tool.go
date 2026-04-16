@@ -204,7 +204,11 @@ func (e *toolCallExecutor) executeToolCall(order int, toolCall schema.ToolCall) 
 
 	state := e.manager.clientState
 	toolName := toolCall.Function.Name
-	toolObj, ok := mcp.GetToolByName(state.DeviceID, state.AgentID, toolName, state.DeviceConfig.MCPServiceNames)
+	transportType := ""
+	if e.manager != nil && e.manager.serverTransport != nil {
+		transportType = e.manager.serverTransport.GetTransportType()
+	}
+	toolObj, ok := mcp.GetToolByNameWithTransport(state.DeviceID, state.AgentID, transportType, toolName, state.DeviceConfig.MCPServiceNames)
 	if !ok || toolObj == nil {
 		log.Errorf("not found tool: %s", toolName)
 		resultMessage.Content = fmt.Sprintf("not found tool: %s", toolName)

@@ -20,12 +20,12 @@ import (
 	log "xiaozhi-esp32-server-golang/logger"
 )
 
-// MCPServerConfig MCPserverconfig
+// MCPServerConfig MCP服务器配置
 type MCPServerConfig struct {
 	Name         string            `json:"name" mapstructure:"name"`
 	Type         string            `json:"type" mapstructure:"type"`
 	Url          string            `json:"url" mapstructure:"url"`
-	SSEUrl       string            `json:"sse_url" mapstructure:"sse_url"` // for backward compatibility sse_url field
+	SSEUrl       string            `json:"sse_url" mapstructure:"sse_url"` // 向后兼容 sse_url 字段
 	Enabled      bool              `json:"enabled" mapstructure:"enabled"`
 	Provider     string            `json:"provider,omitempty" mapstructure:"provider"`
 	ServiceID    string            `json:"service_id,omitempty" mapstructure:"service_id"`
@@ -34,7 +34,7 @@ type MCPServerConfig struct {
 	AllowedTools []string          `json:"allowed_tools,omitempty" mapstructure:"allowed_tools"`
 }
 
-// GlobalMCPManager global MCP manager
+// GlobalMCPManager 全局MCP管理器
 type GlobalMCPManager struct {
 	servers       map[string]*MCPServerConnection
 	tools         map[string]tool.InvokableTool
@@ -45,22 +45,24 @@ type GlobalMCPManager struct {
 	httpClient    *http.Client
 }
 
-// ReconnectConfig reconnectconfig
+// ReconnectConfig 重连配置
 type ReconnectConfig struct {
 	Interval    time.Duration
 	MaxAttempts int
 }
 
-// MCPServerConnection MCPserverjoin
+// MCPServerConnection MCP服务器连接
 type MCPServerConnection struct {
-	config     MCPServerConfig
-	client     *client.Client
-	tools      map[string]tool.InvokableTool
-	connected  bool
-	mu         sync.RWMutex
-	lastError  error
-	retryCount int
-	lastPing   time.Time
+	config        MCPServerConfig
+	client        *client.Client
+	tools         map[string]tool.InvokableTool
+	connected     bool
+	mu            sync.RWMutex
+	lastError     error
+	retryCount    int
+	lastPing      time.Time
+	reconnecting  bool
+	reconnectWait chan struct{}
 }
 
 var (
@@ -68,7 +70,7 @@ var (
 	once          sync.Once
 )
 
-// GetGlobalMCPManager get global MCP manager singleton
+// GetGlobalMCPManager 获取全局MCP管理器单例
 func GetGlobalMCPManager() *GlobalMCPManager {
 	once.Do(func() {
 		ctx, cancel := context.WithCancel(context.Background())
@@ -89,9 +91,9 @@ func GetGlobalMCPManager() *GlobalMCPManager {
 	return globalManager
 }
 
-// Start start global MCP manager
+// Start 启动全局MCP管理器
 func (g *GlobalMCPManager) Start() error {
-	// Hot reload scenario: Stop after ctx already cancelled, need rebuild so that restart after monitor and reconnect normal
+	// 热更场景：Stop 后 ctx 已取消，需重建以便重启后监控与重连正常
 	if g.ctx != nil && g.ctx.Err() != nil {
 		g.ctx, g.cancel = context.WithCancel(context.Background())
 		g.reconnectConf = ReconnectConfig{
@@ -100,78 +102,87 @@ func (g *GlobalMCPManager) Start() error {
 		}
 	}
 
-	// first check config
+	// 首先检查配置
 	CheckMCPConfig()
 
 	if !viper.GetBool("mcp.global.enabled") {
-		log.Info("global MCP manager already disabled")
+		log.Info("全局MCP管理器已禁用")
 		return nil
 	}
 
 	var serverConfigs []MCPServerConfig
 	if err := viper.UnmarshalKey("mcp.global.servers", &serverConfigs); err != nil {
-		log.Errorf("parse MCP server config failed: %v", err)
-		return fmt.Errorf("parse MCP server config failed: %v", err)
+		log.Errorf("解析MCP服务器配置失败: %v", err)
+		return fmt.Errorf("解析MCP服务器配置失败: %v", err)
 	}
 
-	log.Infof("read %d MCP server config from config", len(serverConfigs))
+	log.Infof("从配置中读取到 %d 个MCP服务器配置", len(serverConfigs))
 
-	// detailed record each server config
+	// 详细记录每个服务器配置
 	for i, config := range serverConfigs {
-		log.Infof("MCP server[%d]: Type=%s, Name=%s, Url=%s, SSEUrl=%s, Enabled=%v",
+		log.Infof("MCP服务器[%d]: Type=%s, Name=%s, Url=%s, SSEUrl=%s, Enabled=%v",
 			i+1, config.Type, config.Name, config.Url, config.SSEUrl, config.Enabled)
 	}
 
-	// connect enabled servers
+	// 连接启用的服务器
 	connectedCount := 0
 	for _, config := range serverConfigs {
 		if config.Enabled {
 			if err := g.connectToServer(config); err != nil {
-				log.Errorf("connect to MCP server %s failed: %v", config.Name, err)
+				log.Errorf("连接到MCP服务器 %s 失败: %v", config.Name, err)
 			} else {
 				connectedCount++
 			}
 		} else {
-			log.Infof("MCP server %s already disabled, skip connect", config.Name)
+			log.Infof("MCP服务器 %s 已禁用，跳过连接", config.Name)
 		}
 	}
 
-	log.Infof("successfully connected %d MCP servers", connectedCount)
+	log.Infof("成功连接了 %d 个MCP服务器", connectedCount)
 
-	// start monitor goroutine
+	// 启动监控goroutine
 	go g.monitorConnections()
 
-	log.Info("global MCP manager already started")
+	log.Info("全局MCP管理器已启动")
 	return nil
 }
 
-// Stop stop global MCP manager
+// Stop 停止全局MCP管理器
 func (g *GlobalMCPManager) Stop() error {
 	g.cancel()
 
 	g.mu.Lock()
-	defer g.mu.Unlock()
-
+	type serverEntry struct {
+		name string
+		conn *MCPServerConnection
+	}
+	servers := make([]serverEntry, 0, len(g.servers))
 	for name, conn := range g.servers {
-		if err := conn.disconnect(); err != nil {
-			log.Errorf("disconnect MCP server %s connection failed: %v", name, err)
+		if conn != nil {
+			servers = append(servers, serverEntry{name: name, conn: conn})
+		}
+	}
+	g.servers = make(map[string]*MCPServerConnection)
+	g.tools = make(map[string]tool.InvokableTool)
+	g.mu.Unlock()
+
+	for _, server := range servers {
+		if err := server.conn.disconnect(); err != nil {
+			log.Errorf("断开MCP服务器 %s 连接失败: %v", server.name, err)
 		}
 	}
 
-	g.servers = make(map[string]*MCPServerConnection)
-	g.tools = make(map[string]tool.InvokableTool)
-
-	log.Info("global MCP manager already stopped")
+	log.Info("全局MCP管理器已停止")
 	return nil
 }
 
-// createFailedConnection create failed connection object for later reconnect
+// createFailedConnection 创建失败的连接对象用于后续重连
 func (g *GlobalMCPManager) createFailedConnection(config MCPServerConfig) {
 	conn := &MCPServerConnection{
 		config:     config,
 		tools:      make(map[string]tool.InvokableTool),
 		connected:  false,
-		lastError:  fmt.Errorf("initialize connection failed"),
+		lastError:  fmt.Errorf("初始化连接失败"),
 		retryCount: 0,
 	}
 
@@ -179,18 +190,18 @@ func (g *GlobalMCPManager) createFailedConnection(config MCPServerConfig) {
 	g.servers[config.Name] = conn
 	g.mu.Unlock()
 
-	log.Infof("create connection object for failed MCP server: %s", config.Name)
+	log.Infof("已为失败的MCP服务器创建连接对象: %s", config.Name)
 }
 
-// connectToServer connect to MCP server
+// connectToServer 连接到MCP服务器
 func (g *GlobalMCPManager) connectToServer(config MCPServerConfig) error {
-	// validate config
+	// 验证配置
 	if config.Name == "" {
-		return fmt.Errorf("MCP server name cannot be empty")
+		return fmt.Errorf("MCP服务器名称不能为空")
 	}
 
 	if !config.Enabled {
-		log.Infof("MCP server %s already disabled, skip connect", config.Name)
+		log.Infof("MCP服务器 %s 已禁用，跳过连接", config.Name)
 		return nil
 	}
 
@@ -198,7 +209,7 @@ func (g *GlobalMCPManager) connectToServer(config MCPServerConfig) error {
 	if endpointErr != nil {
 		return endpointErr
 	}
-	log.Infof("connecting to MCP server: %s (URL: %s)", config.Name, endpoint)
+	log.Infof("正在连接MCP服务器: %s (URL: %s)", config.Name, endpoint)
 
 	conn := &MCPServerConnection{
 		config: config,
@@ -209,18 +220,18 @@ func (g *GlobalMCPManager) connectToServer(config MCPServerConfig) error {
 	g.servers[config.Name] = conn
 	g.mu.Unlock()
 
-	// connect to server
+	// 连接到服务器
 	if err := conn.connect(); err != nil {
-		return fmt.Errorf("connect MCP server failed: %v", err)
+		return fmt.Errorf("连接MCP服务器失败: %v", err)
 	}
 
-	log.Infof("already connected to MCP server: %s", config.Name)
+	log.Infof("已连接到MCP服务器: %s", config.Name)
 	return nil
 }
 
-// connect connect to MCP server
+// connect 连接到MCP服务器
 func (conn *MCPServerConnection) connect() error {
-	// use background context, no timeout, let SSE connection long-term keep
+	// 使用背景上下文，不设置超时，让SSE连接长期保持
 	ctx := context.Background()
 
 	transportInstance, endpoint, err := buildMCPTransport(conn.config)
@@ -228,22 +239,23 @@ func (conn *MCPServerConnection) connect() error {
 		return err
 	}
 
-	// use client.NewClient create MCP client
+	// 使用 client.NewClient 创建 MCP 客户端
 	mcpClient := client.NewClient(transportInstance)
-
+	conn.mu.Lock()
 	conn.client = mcpClient
+	conn.mu.Unlock()
 
-	log.Infof("start connecting to MCP server: %s, %s URL: %s", conn.config.Name, conn.config.Type, endpoint)
+	log.Infof("开始连接MCP服务器: %s, %s URL: %s", conn.config.Name, conn.config.Type, endpoint)
 
-	// start client
-	if err := conn.client.Start(ctx); err != nil {
-		log.Errorf("start MCP client failed, server: %s, error: %v", conn.config.Name, err)
-		return fmt.Errorf("start client failed: %v", err)
+	// 启动客户端
+	if err := mcpClient.Start(ctx); err != nil {
+		log.Errorf("启动MCP客户端失败，服务器: %s, 错误: %v", conn.config.Name, err)
+		return fmt.Errorf("启动客户端失败: %v", err)
 	}
 
-	log.Infof("MCP client start successful: %s", conn.config.Name)
+	log.Infof("MCP客户端启动成功: %s", conn.config.Name)
 
-	// initialize client
+	// 初始化客户端
 	initRequest := mcp.InitializeRequest{
 		Params: mcp.InitializeParams{
 			ProtocolVersion: mcp.LATEST_PROTOCOL_VERSION,
@@ -257,19 +269,19 @@ func (conn *MCPServerConnection) connect() error {
 		},
 	}
 
-	log.Infof("initializing MCP server: %s", conn.config.Name)
-	initResult, err := conn.client.Initialize(ctx, initRequest)
+	log.Infof("正在初始化MCP服务器: %s", conn.config.Name)
+	initResult, err := mcpClient.Initialize(ctx, initRequest)
 	if err != nil {
-		log.Errorf("initialize MCP server failed, server: %s, error: %v", conn.config.Name, err)
-		return fmt.Errorf("initialize failed: %v", err)
+		log.Errorf("初始化MCP服务器失败，服务器: %s, 错误: %v", conn.config.Name, err)
+		return fmt.Errorf("初始化失败: %v", err)
 	}
 
-	log.Infof("MCP server initialize successful: %s, result: %+v", conn.config.Name, initResult)
+	log.Infof("MCP服务器初始化成功: %s, 结果: %+v", conn.config.Name, initResult)
 
-	// get tool list
+	// 获取工具列表
 	if err := conn.refreshTools(ctx); err != nil {
-		log.Errorf("get tool list failed: %v", err)
-		// don't return error directly, because tool list get failed should not prevent connection establishment
+		log.Errorf("获取工具列表失败: %v", err)
+		// 不直接返回错误，因为工具列表获取失败不应该阻止连接建立
 	}
 
 	conn.mu.Lock()
@@ -278,7 +290,7 @@ func (conn *MCPServerConnection) connect() error {
 	conn.retryCount = 0
 	conn.mu.Unlock()
 
-	log.Infof("MCP server connection establishment complete: %s", conn.config.Name)
+	log.Infof("MCP服务器连接建立完成: %s", conn.config.Name)
 	return nil
 }
 
@@ -311,7 +323,7 @@ func endpointForConfig(config MCPServerConfig) (string, string, error) {
 		if strings.TrimSpace(config.Url) != "" {
 			return transportType, strings.TrimSpace(config.Url), nil
 		}
-		return "", "", fmt.Errorf("MCP server %s Missing SSE URL", config.Name)
+		return "", "", fmt.Errorf("MCP服务器 %s 缺少SSE URL", config.Name)
 	case "streamablehttp":
 		if strings.TrimSpace(config.Url) != "" {
 			return transportType, strings.TrimSpace(config.Url), nil
@@ -319,9 +331,9 @@ func endpointForConfig(config MCPServerConfig) (string, string, error) {
 		if strings.TrimSpace(config.SSEUrl) != "" {
 			return transportType, strings.TrimSpace(config.SSEUrl), nil
 		}
-		return "", "", fmt.Errorf("MCP server %s Missing StreamableHTTP URL", config.Name)
+		return "", "", fmt.Errorf("MCP服务器 %s 缺少StreamableHTTP URL", config.Name)
 	default:
-		return "", "", fmt.Errorf("MCP server %s type unsupported: %s", config.Name, config.Type)
+		return "", "", fmt.Errorf("MCP服务器 %s 类型不支持: %s", config.Name, config.Type)
 	}
 }
 
@@ -347,7 +359,7 @@ func buildMCPTransport(config MCPServerConfig) (transport.Interface, string, err
 		}
 		sseTransport, err := transport.NewSSE(endpoint, opts...)
 		if err != nil {
-			return nil, "", fmt.Errorf("create SSE transport layer failed: %v", err)
+			return nil, "", fmt.Errorf("创建SSE传输层失败: %v", err)
 		}
 		return sseTransport, endpoint, nil
 	case "streamablehttp":
@@ -357,11 +369,11 @@ func buildMCPTransport(config MCPServerConfig) (transport.Interface, string, err
 		}
 		httpTransport, err := transport.NewStreamableHTTP(endpoint, opts...)
 		if err != nil {
-			return nil, "", fmt.Errorf("create StreamableHTTP transport layer failed: %v", err)
+			return nil, "", fmt.Errorf("创建StreamableHTTP传输层失败: %v", err)
 		}
 		return httpTransport, endpoint, nil
 	default:
-		return nil, "", fmt.Errorf("unsupported MCP transport type: %s", transportType)
+		return nil, "", fmt.Errorf("不支持的MCP传输类型: %s", transportType)
 	}
 }
 
@@ -399,25 +411,35 @@ func filterMCPToolsByAllowList(tools []mcp.Tool, allowedTools []string) []mcp.To
 	return filtered
 }
 
-// refreshTools refresh tool list
+// refreshTools 刷新工具列表
 func (conn *MCPServerConnection) refreshTools(ctx context.Context) error {
-	// get tool list
-	listRequest := mcp.ListToolsRequest{}
-	toolsResult, err := conn.client.ListTools(ctx, listRequest)
-	if err != nil {
-		return fmt.Errorf("get tool list failed: %v", err)
+	conn.mu.RLock()
+	serverName := conn.config.Name
+	allowedTools := append([]string(nil), conn.config.AllowedTools...)
+	mcpClient := conn.client
+	conn.mu.RUnlock()
+	if mcpClient == nil {
+		return fmt.Errorf("MCP客户端未初始化")
 	}
 
+	// 获取工具列表
+	listRequest := mcp.ListToolsRequest{}
+	toolsResult, err := mcpClient.ListTools(ctx, listRequest)
+	if err != nil {
+		return fmt.Errorf("获取工具列表失败: %v", err)
+	}
+
+	tools := filterMCPToolsByAllowList(toolsResult.Tools, allowedTools)
+	convertedTools := ConvertMcpToolListToInvokableToolList(tools, serverName, mcpClient)
+
 	conn.mu.Lock()
-	defer conn.mu.Unlock()
+	conn.tools = convertedTools
+	conn.mu.Unlock()
 
-	tools := filterMCPToolsByAllowList(toolsResult.Tools, conn.config.AllowedTools)
-	conn.tools = ConvertMcpToolListToInvokableToolList(tools, conn.config.Name, conn.client)
+	// 全局工具表的更新放在 conn.mu 外，避免与 g.mu 形成锁顺序反转。
+	globalManager.updateGlobalTools(serverName, convertedTools)
 
-	// update global tool list
-	globalManager.updateGlobalTools(conn.config.Name, conn.tools)
-
-	log.Infof("MCP server %s tool list already updated, total %d tools", conn.config.Name, len(conn.tools))
+	log.Infof("MCP服务器 %s 工具列表已更新，共 %d 个工具", serverName, len(convertedTools))
 	return nil
 }
 
@@ -427,13 +449,13 @@ func ConvertMcpToolListToInvokableToolList(tools []mcp.Tool, serverName string, 
 
 		marshaledInputSchema, err := sonic.Marshal(tool.InputSchema)
 		if err != nil {
-			log.Errorf("convert mcp tool to invokable tool err: %+v", err)
+			log.Errorf("convert mcp tool to invokeable tool err: %+v", err)
 			continue
 		}
 		inputSchema := &openapi3.Schema{}
 		err = sonic.Unmarshal(marshaledInputSchema, inputSchema)
 		if err != nil {
-			log.Errorf("convert mcp tool to invokable tool err: %+v", err)
+			log.Errorf("convert mcp tool to invokeable tool err: %+v", err)
 			continue
 		}
 
@@ -451,44 +473,60 @@ func ConvertMcpToolListToInvokableToolList(tools []mcp.Tool, serverName string, 
 	return invokeTools
 }
 
-// disconnect disconnect connection
+// disconnect 断开连接
 func (conn *MCPServerConnection) disconnect() error {
 	conn.mu.Lock()
-	defer conn.mu.Unlock()
-
-	if conn.client != nil {
-		// close client
-		if err := conn.client.Close(); err != nil {
-			log.Errorf("close MCP client failed: %v", err)
-		}
-		conn.client = nil
-	}
-
+	serverName := conn.config.Name
+	mcpClient := conn.client
+	conn.client = nil
 	conn.connected = false
 	conn.tools = make(map[string]tool.InvokableTool)
+	conn.mu.Unlock()
+
+	if globalManager != nil {
+		globalManager.removeGlobalTools(serverName)
+	}
+
+	if mcpClient != nil {
+		// 关闭客户端放在锁外，避免锁住快路径。
+		if err := mcpClient.Close(); err != nil {
+			log.Errorf("关闭MCP客户端失败: %v", err)
+		}
+	}
 
 	return nil
 }
 
-// updateGlobalTools update global tool list
+func (g *GlobalMCPManager) removeGlobalTools(serverName string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	for name, mcpToolInterface := range g.tools {
+		if mt, ok := mcpToolInterface.(*McpTool); ok && mt.serverName == serverName {
+			delete(g.tools, name)
+		}
+	}
+}
+
+// updateGlobalTools 更新全局工具列表
 func (g *GlobalMCPManager) updateGlobalTools(serverName string, tools map[string]tool.InvokableTool) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	// remove this server's old tools
+	// 移除该服务器的旧工具
 	for name, mcpToolInterface := range g.tools {
 		if mt, ok := mcpToolInterface.(*McpTool); ok && mt.serverName == serverName {
 			delete(g.tools, name)
 		}
 	}
 
-	// add new tools
+	// 添加新工具
 	for name, mcpToolInterface := range tools {
 		g.tools[fmt.Sprintf("%s_%s", serverName, name)] = mcpToolInterface
 	}
 }
 
-// GetAllTools get all available tools
+// GetAllTools 获取所有可用工具
 func (g *GlobalMCPManager) GetAllTools() map[string]tool.InvokableTool {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
@@ -500,12 +538,12 @@ func (g *GlobalMCPManager) GetAllTools() map[string]tool.InvokableTool {
 	return result
 }
 
-// GetToolByName get tool by name
+// GetToolByName 根据名称获取工具
 func (g *GlobalMCPManager) GetToolByName(name string) (tool.InvokableTool, bool) {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
-	// all servers
+	//所有的server
 	for _, conn := range g.servers {
 		sname := fmt.Sprintf("%s_%s", conn.config.Name, name)
 		mcpToolInterface, exists := g.tools[sname]
@@ -522,9 +560,8 @@ func GetServerClientByName(serverName string) *client.Client {
 
 func (g *GlobalMCPManager) GetServerClientByName(serverName string) *client.Client {
 	g.mu.RLock()
-	defer g.mu.RUnlock()
-
 	conn, ok := g.servers[serverName]
+	g.mu.RUnlock()
 	if !ok || conn == nil {
 		return nil
 	}
@@ -564,7 +601,7 @@ func ReconnectServerByName(serverName string) (*client.Client, error) {
 	return GetGlobalMCPManager().reconnectServer(serverName)
 }
 
-// isSessionClosedError determine if is session closed error
+// isSessionClosedError 判断是否为session closed错误
 func isSessionClosedError(err error) bool {
 	if err == nil {
 		return false
@@ -572,9 +609,9 @@ func isSessionClosedError(err error) bool {
 	return strings.Contains(err.Error(), "session closed")
 }
 
-// monitorConnections monitor connection state
+// monitorConnections 监控连接状态
 func (g *GlobalMCPManager) monitorConnections() {
-	pingTicker := time.NewTicker(20 * time.Second) // ping every 20 seconds
+	pingTicker := time.NewTicker(20 * time.Second) // 每60秒ping一次
 	defer pingTicker.Stop()
 
 	for {
@@ -582,7 +619,7 @@ func (g *GlobalMCPManager) monitorConnections() {
 		case <-g.ctx.Done():
 			return
 		case <-pingTicker.C:
-			// execute ping detect
+			// 执行ping检测
 			g.mu.RLock()
 			for name, conn := range g.servers {
 				go func(name string, conn *MCPServerConnection) {
@@ -590,17 +627,17 @@ func (g *GlobalMCPManager) monitorConnections() {
 					defer cancel()
 
 					if err := conn.ping(ctx); err != nil {
-						log.Warnf("MCP server %s ping failed, start reconnect: %v", name, err)
-						// when ping failed, directly mark as disconnected and trigger reconnect
+						log.Warnf("MCP服务器 %s ping失败，开始重连: %v", name, err)
+						// ping失败时直接标记为断开并触发重连
 						conn.mu.Lock()
 						conn.connected = false
 						conn.lastError = err
 						conn.mu.Unlock()
 
-						// directly trigger reconnect
+						// 直接触发重连
 						go g.reconnectServer(name)
 					} else {
-						//log.Debugf("MCP server %s ping successful", name)
+						//log.Debugf("MCP服务器 %s ping成功", name)
 					}
 				}(name, conn)
 			}
@@ -609,7 +646,7 @@ func (g *GlobalMCPManager) monitorConnections() {
 	}
 }
 
-// reconnectServer reconnect server and return new client
+// reconnectServer 重连服务器并返回新的client
 func (g *GlobalMCPManager) reconnectServer(serverName string) (*client.Client, error) {
 	g.mu.RLock()
 	var conn *MCPServerConnection
@@ -622,35 +659,80 @@ func (g *GlobalMCPManager) reconnectServer(serverName string) (*client.Client, e
 	g.mu.RUnlock()
 
 	if conn == nil {
-		return nil, fmt.Errorf("not found server connection: %s", serverName)
+		return nil, fmt.Errorf("未找到服务器连接: %s", serverName)
 	}
 
-	// disconnect connection
+	conn.mu.Lock()
+	if conn.reconnecting {
+		wait := conn.reconnectWait
+		conn.mu.Unlock()
+		if wait != nil {
+			<-wait
+		}
+
+		conn.mu.RLock()
+		mcpClient := conn.client
+		connected := conn.connected
+		lastErr := conn.lastError
+		conn.mu.RUnlock()
+		if mcpClient != nil && connected {
+			return mcpClient, nil
+		}
+		if lastErr != nil {
+			return nil, fmt.Errorf("重连失败: %v", lastErr)
+		}
+		return nil, fmt.Errorf("重连失败: client未就绪")
+	}
+	wait := make(chan struct{})
+	conn.reconnecting = true
+	conn.reconnectWait = wait
+	conn.mu.Unlock()
+
+	defer func() {
+		conn.mu.Lock()
+		conn.reconnecting = false
+		if conn.reconnectWait == wait {
+			close(wait)
+			conn.reconnectWait = nil
+		}
+		conn.mu.Unlock()
+	}()
+
+	// 断开连接
 	if err := conn.disconnect(); err != nil {
-		log.Errorf("disconnect connection failed: %v", err)
+		log.Errorf("断开连接失败: %v", err)
 	}
 
-	// wait a short time to ensure resource release
+	// 等待一小段时间确保资源释放
 	time.Sleep(time.Second)
 
-	// reconnect
+	// 重新连接
 	if err := conn.connect(); err != nil {
-		return nil, fmt.Errorf("reconnect failed: %v", err)
+		conn.mu.Lock()
+		conn.lastError = err
+		conn.mu.Unlock()
+		return nil, fmt.Errorf("重连失败: %v", err)
 	}
 
-	return conn.client, nil
+	conn.mu.RLock()
+	mcpClient := conn.client
+	conn.mu.RUnlock()
+	return mcpClient, nil
 }
 
-// ping send ping request to detect connection state
+// ping 发送ping请求检测连接状态
 func (conn *MCPServerConnection) ping(ctx context.Context) error {
-	if conn.client == nil {
-		return fmt.Errorf("client not initialized")
+	conn.mu.RLock()
+	mcpClient := conn.client
+	conn.mu.RUnlock()
+	if mcpClient == nil {
+		return fmt.Errorf("client未初始化")
 	}
 
-	// use empty Ping request as ping
-	err := conn.client.Ping(ctx)
+	// 使用空的Ping请求作为ping
+	err := mcpClient.Ping(ctx)
 	if err != nil {
-		return fmt.Errorf("ping failed: %v", err)
+		return fmt.Errorf("ping失败: %v", err)
 	}
 
 	conn.mu.Lock()

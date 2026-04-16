@@ -1,8 +1,10 @@
 package chat
 
 import (
+	"context"
 	"testing"
 
+	client "xiaozhi-esp32-server-golang/internal/data/client"
 	"xiaozhi-esp32-server-golang/internal/domain/play_music"
 )
 
@@ -57,11 +59,11 @@ func TestIsRealtimeMcpAudioPlaybackState(t *testing.T) {
 		t.Fatal("expected mcp playing state to be gated")
 	}
 
-	if !isRealtimeMcpAudioPlaybackState(MediaPlayerState{
+	if isRealtimeMcpAudioPlaybackState(MediaPlayerState{
 		Status:            play_music.StatusPaused,
 		CurrentSourceType: MediaSourceTypeInlineAudio,
 	}) {
-		t.Fatal("expected inline paused state to be gated")
+		t.Fatal("expected inline paused state not to gate general ASR")
 	}
 
 	if isRealtimeMcpAudioPlaybackState(MediaPlayerState{
@@ -77,4 +79,68 @@ func TestIsRealtimeMcpAudioPlaybackState(t *testing.T) {
 	}) {
 		t.Fatal("expected non-mcp source not to be gated")
 	}
+}
+
+func TestTryHandleRealtimeMcpAudioASRAllowsNormalChatWhenPlaybackPaused(t *testing.T) {
+	session, runtime := newRealtimeGateTestSession(t)
+	active := newActiveMediaPlayback(context.Background())
+	defer active.cancel()
+	defer active.closeDone()
+	active.setPaused(true)
+
+	source := MediaSourceDescriptor{SourceType: MediaSourceTypeMCPResource}
+	runtime.mu.Lock()
+	runtime.active = active
+	runtime.attachment = &mediaSessionAttachment{}
+	runtime.currentSource = &source
+	runtime.state.Status = play_music.StatusPaused
+	runtime.state.CurrentSourceType = MediaSourceTypeMCPResource
+	runtime.mu.Unlock()
+
+	handled, err := session.tryHandleRealtimeMcpAudioASR(context.Background(), "你在干什么")
+	if err != nil {
+		t.Fatalf("tryHandleRealtimeMcpAudioASR returned error: %v", err)
+	}
+	if handled {
+		t.Fatal("expected paused media context to allow normal chat through")
+	}
+}
+
+func TestTryHandleRealtimeMcpAudioASRSwallowsNormalChatWhenPlaybackActive(t *testing.T) {
+	session, runtime := newRealtimeGateTestSession(t)
+	active := newActiveMediaPlayback(context.Background())
+	defer active.cancel()
+	defer active.closeDone()
+
+	source := MediaSourceDescriptor{SourceType: MediaSourceTypeMCPResource}
+	runtime.mu.Lock()
+	runtime.active = active
+	runtime.attachment = &mediaSessionAttachment{}
+	runtime.currentSource = &source
+	runtime.state.Status = play_music.StatusPlaying
+	runtime.state.CurrentSourceType = MediaSourceTypeMCPResource
+	runtime.mu.Unlock()
+
+	handled, err := session.tryHandleRealtimeMcpAudioASR(context.Background(), "你在干什么")
+	if err != nil {
+		t.Fatalf("tryHandleRealtimeMcpAudioASR returned error: %v", err)
+	}
+	if !handled {
+		t.Fatal("expected active media playback to gate normal ASR text")
+	}
+}
+
+func newRealtimeGateTestSession(t *testing.T) (*ChatSession, *deviceMediaRuntime) {
+	t.Helper()
+
+	clientState := &client.ClientState{
+		Ctx:        context.Background(),
+		DeviceID:   t.Name(),
+		ListenMode: "realtime",
+	}
+	session := &ChatSession{
+		clientState: clientState,
+	}
+	session.mediaPlayer = NewSessionMediaPlayer(session)
+	return session, session.mediaPlayer.runtime
 }

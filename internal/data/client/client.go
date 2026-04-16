@@ -26,9 +26,9 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Dialogue indicates conversation history
+// Dialogue 表示对话历史
 type Dialogue struct {
-	mu       sync.RWMutex // protects Messages with read-write lock
+	mu       sync.RWMutex // 保护 Messages 的读写锁
 	Messages []*schema.Message
 }
 
@@ -73,89 +73,89 @@ func NormalizeSpeakerChatMode(mode string) string {
 
 type SendAudioData func(audioData []byte) error
 
-// ClientState indicates client-side state
+// ClientState 表示客户端状态
 type ClientState struct {
 	IsActivated bool
-	// conversation history
+	// 对话历史
 	Dialogue *Dialogue
-	// interrupt state
+	// 打断状态
 	Abort bool
-	// audio pickup mode
+	// 拾音模式
 	ListenMode string
-	// listen start process state: idle / starting / listening
+	// listen start 流程状态: idle / starting / listening
 	ListenPhase string
-	// device ID
+	// 设备ID
 	DeviceID string
 	AgentID  string
-	// session ID
+	// 会话ID
 	SessionID string
 
-	// device config
+	//设备配置
 	DeviceConfig utypes.UConfig
 
 	Vad
 	Asr
 	Llm
 
-	// TTS provider
-	TTSProvider      tts.TTSProvider        // default TTS provider
-	SpeakerTTSConfig map[string]interface{} // voiceprint recognition TTS config (complete config, priority use)
-	// memory provider
+	// TTS 提供者
+	TTSProvider      tts.TTSProvider        // 默认TTS提供者
+	SpeakerTTSConfig map[string]interface{} // 声纹识别的TTS配置（完整config，优先使用）
+	// memory提供者
 	MemoryProvider memory.MemoryProvider
-	MemoryContext  string // memory context
+	MemoryContext  string //memory context
 
-	// context control
+	// 上下文控制
 	Ctx    context.Context
 	Cancel context.CancelFunc
 
-	SessionCtx         Ctx // conversation context at a time
-	AfterAsrSessionCtx Ctx // context after ASR process
+	SessionCtx         Ctx //一次对话的上下文
+	AfterAsrSessionCtx Ctx //asr后流程的上下文
 
-	// prompt, system hint words
+	//prompt, 系统提示词
 	SystemPrompt string
 
-	InputAudioFormat  AudioFormat // input audio format
-	OutputAudioFormat AudioFormat // output audio format
+	InputAudioFormat  AudioFormat //输入音频格式
+	OutputAudioFormat AudioFormat //输出音频格式
 
-	// opus received audio data buffer
+	// opus接收的音频数据缓冲区
 	OpusAudioBuffer chan []byte
 
-	// pcm received audio data buffer
+	// pcm接收的音频数据缓冲区
 	AsrAudioBuffer *AsrAudioBuffer
 
 	VoiceStatus
 
-	UdpSendAudioData SendAudioData // send audio data
-	Statistic        Statistic     // time consumption count
-	MqttLastActiveTs int64         // last active time
-	VadLastActiveTs  int64         // vad last active time, exceeds 60s && no tts then disconnect
+	UdpSendAudioData SendAudioData //发送音频数据
+	Statistic        Statistic     //耗时统计
+	MqttLastActiveTs int64         //最后活跃时间
+	VadLastActiveTs  int64         //vad最后活跃时间, 超过 60s && 没有在tts则断开连接
 
-	Status string // state: listening, llmStart, ttsStart
+	Status string //状态 listening, llmStart, ttsStart
 
-	IsTtsStart        bool // whether tts started
-	IsWelcomeSpeaking bool // whether already played welcome phrase
-	IsWelcomePlaying  bool // whether playing welcome phrase
+	IsTtsStart        bool //是否tts开始
+	IsWelcomeSpeaking bool //是否已经播放过欢迎语
+	IsWelcomePlaying  bool //是否正在播放欢迎语
 
-	// voiceprint recognition related
-	SpeakerProvider speaker.SpeakerProvider // voiceprint recognition provider (initialized in session)
+	// 声纹识别相关
+	SpeakerProvider speaker.SpeakerProvider // 声纹识别提供者（在 session 中初始化）
 
-	// async get voiceprint result callback function (set in session)
+	// 异步获取声纹结果的回调函数（在 session 中设置）
 	OnVoiceSilenceSpeakerCallback func(ctx context.Context)
 
-	// ASR first time return char callback function (set in session)
+	// ASR首次返回字符的回调函数（在 session 中设置）
 	OnAsrFirstTextCallback func(text string, isFinal bool)
 }
 
-// IsSpeakerEnabled check if voiceprint recognition is enabled (read from global config)
+// IsSpeakerEnabled 检查是否启用声纹识别（从全局配置中读取）
 func (c *ClientState) IsSpeakerEnabled() bool {
-	// get enable field from global config (viper)
+	// 从全局配置（viper）获取 enable 字段
 	enabled := viper.GetBool("voice_identify.enable")
 	return enabled
 }
 
-// HasSpeakerGroups check if device config has voiceprint groups
+// HasSpeakerGroups 检查设备配置中是否有声纹组
 func (c *ClientState) HasSpeakerGroups() bool {
-	// check if device config has voiceprint group config
+	// 检查设备配置中是否有声纹组配置
 	return len(c.DeviceConfig.VoiceIdentify) > 0
 }
 
@@ -190,10 +190,10 @@ func (c *ClientState) GetDeviceIDOrAgentID() string {
 	return c.DeviceID
 }
 
-// history message related methods start
+// 历史消息相关的方法开始
 func (c *ClientState) AddMessage(msg *schema.Message) {
 	if msg == nil {
-		log.Warnf("try to add nil message to conversation history")
+		log.Warnf("尝试添加 nil 消息到对话历史")
 		return
 	}
 	c.Dialogue.mu.Lock()
@@ -205,12 +205,12 @@ func (c *ClientState) GetMessages(count int) []*schema.Message {
 	c.Dialogue.mu.RLock()
 	defer c.Dialogue.mu.RUnlock()
 
-	// add boundary check, prevent array out of bounds
+	// 添加边界检查，防止数组越界
 	if len(c.Dialogue.Messages) == 0 {
 		return []*schema.Message{}
 	}
 
-	// calculate start index, ensure no out of bounds
+	// 计算起始索引，确保不会越界
 	startIndex := len(c.Dialogue.Messages) - count
 	if startIndex < 0 {
 		startIndex = 0
@@ -222,7 +222,7 @@ func (c *ClientState) GetMessages(count int) []*schema.Message {
 /*
 func AlignMessage(messages []*schema.Message) []*schema.Message {
 	findMsgTypeUser := false
-	// ensure message completeness, traverse to find message after User
+	// 为保证消息完整性, 遍历 找到第一个User之后的消息
 	for i := 0; i < len(messages); i++ {
 		msg := messages[i]
 		if msg == nil {
@@ -238,19 +238,19 @@ func AlignMessage(messages []*schema.Message) []*schema.Message {
 	return messages
 }
 */
-// AlignToolMessages ensures role:tool message's tool_call_id matches role:assistant message's tool_calls id
-// if no matching then delete corresponding tool message, also process reverse non-matching scenario
+// AlignToolMessages 保证 role:tool 消息中的 tool_call_id 与 role:assistant 消息中的 tool_calls 的 id 对应
+// 如果不匹配则删除对应的 tool 消息，同时处理反向不匹配的场景
 func AlignToolMessages(messages []*schema.Message) []*schema.Message {
 	if len(messages) == 0 {
 		return messages
 	}
 
-	// collect all assistant message's tool_calls id
+	// 收集所有 assistant 消息中的 tool_calls id
 	validToolCallIDs := make(map[string]bool)
-	// collect all tool message's tool_call_id
+	// 收集所有 tool 消息中的 tool_call_id
 	usedToolCallIDs := make(map[string]bool)
 
-	// first pass: collect assistant message's tool_calls id and tool message's tool_call_id
+	// 第一遍遍历：收集 assistant 消息中的 tool_calls id 和 tool 消息中的 tool_call_id
 	for _, msg := range messages {
 		if msg == nil {
 			continue
@@ -269,20 +269,20 @@ func AlignToolMessages(messages []*schema.Message) []*schema.Message {
 		}
 	}
 
-	// filter message, process dual non-matching situation
+	// 过滤消息，处理双向不匹配的情况
 	var alignedMessages []*schema.Message
 	for _, msg := range messages {
 		if msg == nil {
 			continue
 		}
 
-		// if it's a tool message, check if tool_call_id is valid
+		// 如果是 tool 消息，检查 tool_call_id 是否有效
 		if msg.Role == schema.Tool {
 			if msg.ToolCallID != "" && validToolCallIDs[msg.ToolCallID] {
 				alignedMessages = append(alignedMessages, msg)
 			}
 		} else if msg.Role == schema.Assistant && len(msg.ToolCalls) > 0 {
-			// process assistant message, check if has unused tool_calls
+			// 处理 assistant 消息，检查是否有未使用的 tool_calls
 			for _, toolCall := range msg.ToolCalls {
 				if toolCall.ID != "" {
 					if usedToolCallIDs[toolCall.ID] {
@@ -293,7 +293,7 @@ func AlignToolMessages(messages []*schema.Message) []*schema.Message {
 				}
 			}
 		} else {
-			// other type of message keep directly
+			// 其他类型的消息直接保留
 			alignedMessages = append(alignedMessages, msg)
 		}
 	}
@@ -308,7 +308,7 @@ func (c *ClientState) InitMessages(messages []*schema.Message) error {
 	return nil
 }
 
-// history message related methods end
+//历史消息相关的方法结束
 
 func (c *ClientState) SetTtsStart(isStart bool) {
 	c.IsTtsStart = isStart
@@ -429,7 +429,7 @@ func (s *ClientState) getLLMProvider() (llm.LLMProvider, error) {
 	}
 	llmProvider, err := llm.GetLLMProvider(providerName, llmConfig.Config)
 	if err != nil {
-		return nil, fmt.Errorf("create LLM provider failed: %v", err)
+		return nil, fmt.Errorf("创建 LLM 提供者失败: %v", err)
 	}
 	return llmProvider, nil
 }
@@ -439,7 +439,7 @@ func (s *ClientState) InitLlm() error {
 
 	llmProvider, err := s.getLLMProvider()
 	if err != nil {
-		log.Errorf("create LLM provider failed: %v", err)
+		log.Errorf("创建 LLM 提供者失败: %v", err)
 		return err
 	}
 
@@ -454,9 +454,9 @@ func (s *ClientState) InitLlm() error {
 func (s *ClientState) InitAsr() error {
 	asrConfig := s.DeviceConfig.Asr
 
-	log.Infof("initialize asr, asrConfig: %+v", asrConfig)
+	log.Infof("初始化asr, asrConfig: %+v", asrConfig)
 
-	// initialize asr (no longer directly create AsrProvider, changed to use resource pool)
+	//初始化asr（不再直接创建 AsrProvider，改为使用资源池）
 	ctx, cancel := context.WithCancel(s.Ctx)
 	s.Asr = Asr{
 		Ctx:             ctx,
@@ -465,10 +465,10 @@ func (s *ClientState) InitAsr() error {
 		AsrEnd:          make(chan bool, 1),
 		AsrResult:       bytes.Buffer{},
 		AsrType:         asrConfig.Provider,
-		ClientState:     s, // set ClientState reference
+		ClientState:     s, // 设置 ClientState 引用
 	}
 
-	// set ASR mode
+	// 设置 ASR 模式
 	if mode, ok := asrConfig.Config["mode"].(string); ok {
 		s.Asr.Mode = mode
 	}
@@ -485,10 +485,10 @@ func (c *ClientState) Destroy() {
 	c.Asr.StopWithReason("ClientState.Destroy")
 	c.Vad.Reset()
 
-	// return ASR resource (if exists)
-	// note: this needs to import pool package, but to avoid circular dependency, process at caller
-	// or use type assert here, but need to import pool package
-	// temporarily process resource return at caller (ChatSession.Close)
+	// 归还ASR资源（如果存在）
+	// 注意：这里需要导入 pool 包，但为了避免循环依赖，在调用处处理
+	// 或者在这里使用类型断言，但需要导入 pool 包
+	// 暂时在调用处（ChatSession.Close）处理资源归还
 
 	c.VoiceStatus.Reset()
 	c.AsrAudioBuffer.ClearAsrAudioData()
@@ -510,16 +510,16 @@ func (state *ClientState) OnManualStop() {
 func (state *ClientState) OnVoiceSilence() {
 	log.Debugf("OnVoiceSilence, voiceDuration: %d, voiceDurationInSession: %d", state.Vad.GetVoiceDuration(), state.Vad.GetVoiceDurationInSession())
 	state.Asr.ResetReceivedText()
-	state.SetClientVoiceStop(true) // set stop speak flag, this time received audio data will not enter vad
-	// client-side stop speaking
-	state.Asr.StopWithReason("ClientState.OnVoiceSilence") // stop asr and get result, perform llm
-	// release vad
-	state.Vad.Reset() // release vad instance
+	state.SetClientVoiceStop(true) //设置停止说话标志位, 此时收到的音频数据不会进vad
+	//客户端停止说话
+	state.Asr.StopWithReason("ClientState.OnVoiceSilence") //停止asr并获取结果，进行llm
+	//释放vad
+	state.Vad.Reset() //释放vad实例
 
 	state.SetStatus(ClientStatusListenStop)
 	state.SetListenPhase(ListenPhaseIdle)
 
-	// if set async get voiceprint result callback, then call
+	// 如果设置了异步获取声纹结果的回调，则调用
 	if state.OnVoiceSilenceSpeakerCallback != nil {
 		state.OnVoiceSilenceSpeakerCallback(state.Ctx)
 	}
@@ -530,25 +530,31 @@ func (state *ClientState) OnVoiceSilence() {
 type Llm struct {
 	Ctx    context.Context
 	Cancel context.CancelFunc
-	// LLM provider
+	// LLM 提供者
 	LLMProvider llm.LLMProvider
-	// asr to text received channel
+	//asr to text接收的通道
 	LLmRecvChannel chan llm_common.LLMResponseStruct
 }
 
-// ClientMessage indicates client-side message
+type SpeakReadyUDPConfig struct {
+	Ready         bool `json:"ready"`
+	ReuseExisting bool `json:"reuse_existing,omitempty"`
+}
+
+// ClientMessage 表示客户端消息
 type ClientMessage struct {
-	Type        string          `json:"type"`
-	DeviceID    string          `json:"device_id,omitempty"`
-	SessionID   string          `json:"session_id,omitempty"`
-	Text        string          `json:"text,omitempty"`
-	Mode        string          `json:"mode,omitempty"`
-	State       string          `json:"state,omitempty"`
-	Token       string          `json:"token,omitempty"`
-	DeviceMac   string          `json:"device_mac,omitempty"`
-	Version     int             `json:"version,omitempty"`
-	Transport   string          `json:"transport,omitempty"`
-	Features    map[string]bool `json:"features,omitempty"`
-	AudioParams *AudioFormat    `json:"audio_params,omitempty"`
-	PayLoad     json.RawMessage `json:"payload,omitempty"`
+	Type           string               `json:"type"`
+	DeviceID       string               `json:"device_id,omitempty"`
+	SessionID      string               `json:"session_id,omitempty"`
+	Text           string               `json:"text,omitempty"`
+	Mode           string               `json:"mode,omitempty"`
+	State          string               `json:"state,omitempty"`
+	Token          string               `json:"token,omitempty"`
+	DeviceMac      string               `json:"device_mac,omitempty"`
+	Version        int                  `json:"version,omitempty"`
+	Transport      string               `json:"transport,omitempty"`
+	Features       map[string]bool      `json:"features,omitempty"`
+	AudioParams    *AudioFormat         `json:"audio_params,omitempty"`
+	SpeakUDPConfig *SpeakReadyUDPConfig `json:"udp_config,omitempty"`
+	PayLoad        json.RawMessage      `json:"payload,omitempty"`
 }

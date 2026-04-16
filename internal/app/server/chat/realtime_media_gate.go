@@ -19,75 +19,75 @@ var realtimeMcpAudioControlRules = []realtimeMusicControlRule{
 	{
 		action: "play_playlist",
 		keywords: []string{
-			"play playlist",
-			"play playlist songs",
-			"play playlist",
-			"playlist",
+			"播放歌单",
+			"播放歌单里的歌曲",
+			"播放播放列表",
+			"播放列表",
 		},
 	},
 	{
 		action: "enqueue_current",
 		keywords: []string{
-			"add to playlist",
-			"add to playlist",
-			"add to playlist",
-			"add to playlist",
+			"加入歌单",
+			"加入播放列表",
+			"添加到歌单",
+			"添加到播放列表",
 		},
 	},
 	{
 		action: "resume",
 		keywords: []string{
-			"continue play",
-			"resume play",
-			"continue listen",
-			"continue play",
-			"continue playing",
+			"继续播放",
+			"恢复播放",
+			"继续听",
+			"接着放",
+			"接着播",
 		},
 	},
 	{
 		action: "pause",
 		keywords: []string{
-			"pause",
-			"first pause",
-			"first stop",
+			"暂停",
+			"先暂停",
+			"先停一下",
 		},
 	},
 	{
 		action: "stop",
 		keywords: []string{
-			"stop play",
-			"stop",
-			"stop playing",
-			"don't play",
+			"停止播放",
+			"停止",
+			"停播",
+			"别播了",
 		},
 	},
 	{
 		action: "next",
 		keywords: []string{
-			"next one",
-			"next song",
-			"switch to next",
-			"next song",
+			"下一首",
+			"下首",
+			"切到下一首",
+			"切歌",
 		},
 	},
 	{
 		action: "prev",
 		keywords: []string{
-			"previous one",
-			"previous song",
-			"switch to previous",
+			"上一首",
+			"上首",
+			"切到上一首",
 		},
 	},
 }
 
 var realtimeMcpAudioExitKeywords = []string{
-	"goodbye",
-	"bye bye",
-	"bye",
-	"see you",
-	"exit",
-	"exit conversation",
-	"quit",
+	"再见",
+	"拜拜",
+	"拜了",
+	"回见",
+	"退出",
+	"退出对话",
+	"退下吧",
 }
 
 func normalizeRealtimeMcpAudioText(text string) string {
@@ -134,12 +134,24 @@ func isRealtimeMcpAudioExitCommand(text string) bool {
 	return false
 }
 
+func isRealtimeMcpAudioSourceType(sourceType MediaSourceType) bool {
+	return sourceType == MediaSourceTypeMCPResource || sourceType == MediaSourceTypeInlineAudio
+}
+
 func isRealtimeMcpAudioPlaybackState(state MediaPlayerState) bool {
-	if state.CurrentSourceType != MediaSourceTypeMCPResource && state.CurrentSourceType != MediaSourceTypeInlineAudio {
+	if !isRealtimeMcpAudioSourceType(state.CurrentSourceType) {
 		return false
 	}
 
-	return state.Status == play_music.StatusPlaying || state.Status == play_music.StatusPaused
+	return state.Status == play_music.StatusPlaying
+}
+
+func (s *ChatSession) hasRealtimeMcpAudioControlContext() bool {
+	if s == nil || s.clientState == nil || !s.clientState.IsRealTime() || s.mediaPlayer == nil {
+		return false
+	}
+
+	return s.mediaPlayer.HasRealtimeMcpAudioControlContext()
 }
 
 func (s *ChatSession) isRealtimeMcpAudioGateActive() bool {
@@ -147,24 +159,23 @@ func (s *ChatSession) isRealtimeMcpAudioGateActive() bool {
 		return false
 	}
 
-	state := s.mediaPlayer.GetState()
-	return isRealtimeMcpAudioPlaybackState(state)
+	return s.mediaPlayer.ShouldGateRealtimeMcpAudioASR()
 }
 
 func (s *ChatSession) tryHandleRealtimeMcpAudioASR(ctx context.Context, text string) (bool, error) {
-	if !s.isRealtimeMcpAudioGateActive() {
+	if !s.hasRealtimeMcpAudioControlContext() {
 		return false, nil
 	}
 
 	if isRealtimeMcpAudioExitCommand(text) {
 		eventbus.Get().Publish(eventbus.TopicExitChat, &eventbus.ExitChatEvent{
 			ClientState: s.clientState,
-			Reason:      "realtime media play user exit",
+			Reason:      "realtime媒体播放中用户退出",
 			TriggerType: "realtime_media_exit_words",
 			UserText:    text,
 			Timestamp:   time.Now(),
 		})
-		log.Infof("device %s realtime media play gate exit command: %s", s.clientState.DeviceID, text)
+		log.Infof("设备 %s realtime媒体播放门控命中退出指令: %s", s.clientState.DeviceID, text)
 		return true, nil
 	}
 
@@ -172,13 +183,17 @@ func (s *ChatSession) tryHandleRealtimeMcpAudioASR(ctx context.Context, text str
 	if action != "" {
 		_, err := controlMusicPlayback(ctx, s, &MusicPlaybackControlParams{Action: action})
 		if err != nil {
-			log.Warnf("device %s realtime media play gate execute control action failed: action=%s, text=%s, err=%v", s.clientState.DeviceID, action, text, err)
+			log.Warnf("设备 %s realtime媒体播放门控执行控制动作失败: action=%s, text=%s, err=%v", s.clientState.DeviceID, action, text, err)
 			return true, nil
 		}
-		log.Infof("device %s realtime media play gate execute control action: action=%s, text=%s", s.clientState.DeviceID, action, text)
+		log.Infof("设备 %s realtime媒体播放门控执行控制动作: action=%s, text=%s", s.clientState.DeviceID, action, text)
 		return true, nil
 	}
 
-	log.Debugf("device %s realtime media play gate ignore ASR text: %s", s.clientState.DeviceID, text)
+	if !s.isRealtimeMcpAudioGateActive() {
+		return false, nil
+	}
+
+	log.Debugf("设备 %s realtime媒体播放门控忽略ASR文本: %s", s.clientState.DeviceID, text)
 	return true, nil
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sync"
 	"time"
+	"xiaozhi-esp32-server-golang/internal/app/server/mqtt_udp"
 	types_conn "xiaozhi-esp32-server-golang/internal/app/server/types"
 	types_audio "xiaozhi-esp32-server-golang/internal/data/audio"
 	. "xiaozhi-esp32-server-golang/internal/data/client"
@@ -21,6 +22,10 @@ type ServerTransport struct {
 	McpRecvMsgChan chan []byte
 	closed         bool
 	mu             sync.Mutex
+}
+
+type udpSessionProvider interface {
+	GetUdpSession() *mqtt_udp.UdpSession
 }
 
 func NewServerTransport(transport types_conn.IConn, clientState *ClientState) *ServerTransport {
@@ -66,7 +71,22 @@ func (s *ServerTransport) SendTtsStop() error {
 	s.clientState.IsWelcomePlaying = false
 	// after a round of conversation broadcast end, return to can trigger next round of conversation state.
 	s.clientState.SetStatus(ClientStatusListenStop)
+	s.clientState.SetTtsStart(false)
 	return nil
+}
+
+func (s *ServerTransport) SendSpeakRequest(text string, autoListen bool) error {
+	msg := ServerMessage{
+		Type:       ServerMessageTypeSpeakRequest,
+		Text:       text,
+		SessionID:  s.clientState.SessionID,
+		AutoListen: &autoListen,
+	}
+	bytes, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	return s.transport.SendCmd(bytes)
 }
 
 func (s *ServerTransport) SendMqttGoodbye() error {
@@ -195,6 +215,30 @@ func (s *ServerTransport) GetData(key string) (interface{}, error) {
 	return s.transport.GetData(key)
 }
 
+func (s *ServerTransport) HasActiveUDPBinding() bool {
+	provider, ok := s.transport.(udpSessionProvider)
+	if !ok {
+		return false
+	}
+	session := provider.GetUdpSession()
+	if session == nil {
+		return false
+	}
+	return session.GetRemoteAddr() != nil
+}
+
+func (s *ServerTransport) GetUDPLastActiveTs() int64 {
+	provider, ok := s.transport.(udpSessionProvider)
+	if !ok {
+		return 0
+	}
+	session := provider.GetUdpSession()
+	if session == nil || session.GetRemoteAddr() == nil {
+		return 0
+	}
+	return session.LastActive.UnixMilli()
+}
+
 func (s *ServerTransport) SendMcpMsg(payload []byte) error {
 	response := ServerMessage{
 		Type:      MessageTypeMcp,
@@ -245,6 +289,14 @@ func (s *ServerTransport) IsClosed() bool {
 }
 
 func (s *ServerTransport) Close() error {
+	return s.close(true)
+}
+
+func (s *ServerTransport) CloseWithoutTransport() error {
+	return s.close(false)
+}
+
+func (s *ServerTransport) close(closeUnderlyingTransport bool) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -254,12 +306,17 @@ func (s *ServerTransport) Close() error {
 
 	s.closed = true
 
-	if s.transport.GetTransportType() == types_conn.TransportTypeMqttUdp {
-		s.SendMqttGoodbye()
+	if closeUnderlyingTransport && s.transport.GetTransportType() == types_conn.TransportTypeMqttUdp {
+		if err := s.SendMqttGoodbye(); err != nil {
+			log.Warnf("发送 mqtt goodbye 失败: %v", err)
+		}
 	}
 
 	close(s.McpRecvMsgChan)
-	return s.transport.Close()
+	if closeUnderlyingTransport {
+		return s.transport.Close()
+	}
+	return nil
 }
 
 func (s *ServerTransport) RecvAudio(ctx context.Context, timeOut int) ([]byte, error) {

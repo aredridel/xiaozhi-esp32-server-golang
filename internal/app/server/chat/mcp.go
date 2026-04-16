@@ -18,7 +18,7 @@ type McpTransport struct {
 }
 
 func (c *McpTransport) SendMcpMsg(payload []byte) error {
-	// if is initialize request, then inject vision
+	//如果是initialize请求，则注入vision
 	var request transport.JSONRPCRequest
 	err := json.Unmarshal(payload, &request)
 	if err == nil {
@@ -51,23 +51,24 @@ func (c *McpTransport) RecvMcpMsg(ctx context.Context, timeOut int) ([]byte, err
 	return c.ServerTransport.RecvMcpMsg(ctx, timeOut)
 }
 
-func initMcp(clientState *ClientState, serverTransport *ServerTransport) {
-	mcpClientSession := mcp.GetDeviceMcpClient(clientState.DeviceID)
-	if mcpClientSession == nil {
-		mcpClientSession = mcp.NewDeviceMCPSession(clientState.DeviceID)
-		mcp.AddDeviceMcpClient(clientState.DeviceID, mcpClientSession)
+func (c *McpTransport) HandleMcpMessage(payload []byte) error {
+	if c == nil || c.ServerTransport == nil {
+		return nil
 	}
+	return c.ServerTransport.HandleMcpMessage(payload)
+}
 
-	// create IotOverMcp client-side
-	mcpTransport := &McpTransport{
-		Client:          clientState,
-		ServerTransport: serverTransport,
+func (c *McpTransport) GetMcpTransportType() string {
+	if c == nil || c.ServerTransport == nil {
+		return ""
 	}
-	iotOverMcpClient := mcp.NewIotOverMcpClient(clientState.DeviceID, mcpTransport)
-	if iotOverMcpClient == nil {
-		log.Errorf("create IotOverMcp client-side failed")
-		serverTransport.transport.Close()
-		return
+	return c.ServerTransport.GetTransportType()
+}
+
+func initMcp(deviceID string, mcpTransport *McpTransport) error {
+	if err := mcp.EnsureDeviceIotOverMcp(deviceID, mcpTransport); err != nil {
+		log.Errorf("确保IotOverMcp客户端失败: %v", err)
+		return err
 	}
-	mcpClientSession.SetIotOverMcp(iotOverMcpClient)
+	return nil
 }

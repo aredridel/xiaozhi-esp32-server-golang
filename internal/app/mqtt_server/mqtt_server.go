@@ -2,6 +2,7 @@ package mqtt_server
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -10,6 +11,7 @@ import (
 	"github.com/mochi-mqtt/server/v2/listeners"
 	"github.com/spf13/viper"
 
+	msg "xiaozhi-esp32-server-golang/internal/data/msg"
 	log "xiaozhi-esp32-server-golang/logger"
 )
 
@@ -33,7 +35,16 @@ func StartMqttServer() error {
 		log.Errorf("Failed to add AuthHook: %v", err)
 		return err
 	}
-	deviceHook := &DeviceHook{server: srv}
+	deviceHook := &DeviceHook{
+		server: srv,
+		publishLifecycle: func(event msg.MqttLifecycleEvent) error {
+			payload, err := json.Marshal(event)
+			if err != nil {
+				return err
+			}
+			return srv.Publish(msg.MDeviceLifecycleTopic, payload, false, 0)
+		},
+	}
 	if err := srv.AddHook(deviceHook, nil); err != nil {
 		log.Errorf("Failed to add DeviceHook: %v", err)
 		return err
