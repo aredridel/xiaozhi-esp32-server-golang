@@ -137,7 +137,7 @@ func (p *McpClientPool) checkOffline() {
 
 func (p *McpClientPool) sweepOfflineClients() {
 	for _, client := range p.device2McpClient.Items() {
-		// 检查WebSocket端点MCP连接
+		// check WebSocket endpoint MCP connections
 		hasActiveWsConnections := false
 		staleWsConnections := make([]*McpClientInstance, 0)
 		client.wsEndPointMcp.Range(func(_, value interface{}) bool {
@@ -154,7 +154,7 @@ func (p *McpClientPool) sweepOfflineClients() {
 			wsInstance.cancel()
 		}
 
-		// 检查IoT over MCP连接（按 transportType）
+		// check IoT over MCP connections (by transportType)
 		hasActiveIotConnection := false
 		staleIotConnections := make([]*McpClientInstance, 0)
 		client.iotMux.Lock()
@@ -172,7 +172,7 @@ func (p *McpClientPool) sweepOfflineClients() {
 			iotClient.cancel()
 		}
 
-		// 如果没有任何活跃连接，移除客户端
+		// if no active connections, remove client
 		if !hasActiveWsConnections && !hasActiveIotConnection {
 			p.RemoveMcpClient(client.deviceID)
 		}

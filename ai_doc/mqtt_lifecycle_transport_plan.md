@@ -1,30 +1,30 @@
-# MQTT 生命周期驱动的 Transport 预创建方案
+# MQTT Lifecycle-Driven Transport Pre-Creation Plan
 
-## 目标
+## Goal
 
-在设备连接 / 断开 `mqtt_server` 时，由 `mqtt_server` 通过回调向主程序已监听的 MQTT topic 发布生命周期消息。主程序收到后：
+When devices connect to / disconnect from `mqtt_server`, the `mqtt_server` publishes lifecycle messages to an MQTT topic that the main program is already listening on via callbacks. After the main program receives them:
 
-1. 设备上线时提前创建 `mqtt udp transport`
-2. 设备上线时最佳努力预热 MCP
-3. 设备下线时立即映射设备离线状态
-4. 设备下线后保留一段时间 transport，避免短时重连频繁创建 / 销毁
-5. 不改变现有 `hello` / `listen` / `abort` / `goodbye` 的信令语义
+1. Pre-create `mqtt udp transport` when device comes online
+2. Best-effort warm up MCP when device comes online
+3. Immediately map device offline status when device goes offline
+4. Retain transport for a period after device goes offline, avoiding frequent creation/destruction from short reconnections
+5. Do not change existing `hello` / `listen` / `abort` / `goodbye` signaling semantics
 
-## Topic 设计
+## Topic Design
 
-不新增新的根前缀，复用现有 `"/p2p/device_public/"` 前缀。
+No new root prefix is added; reuse the existing `"/p2p/device_public/"` prefix.
 
-新增生命周期 topic：
+New lifecycle topic:
 
 `/p2p/device_public/_server/lifecycle`
 
-对应代码常量建议：
+Suggested code constant:
 
 - `MDeviceLifecycleTopic = MDevicePubTopicPrefix + "_server/lifecycle"`
 
-## 生命周期消息格式
+## Lifecycle Message Format
 
-消息体使用 JSON：
+Message body uses JSON:
 
 ```json
 {
@@ -36,127 +36,127 @@
 }
 ```
 
-字段说明：
+Field descriptions:
 
-- `type`: 固定为 `mqtt_lifecycle`
-- `device_id`: 归一化后的设备 ID，统一用冒号格式
+- `type`: Fixed as `mqtt_lifecycle`
+- `device_id`: Normalized device ID, using colon format consistently
 - `state`: `online` / `offline`
-- `client_id`: 原始 MQTT client id，便于排障
-- `ts`: 事件时间戳，毫秒
+- `client_id`: Original MQTT client ID, for troubleshooting
+- `ts`: Event timestamp in milliseconds
 
-## 端到端流程
+## End-to-End Flow
 
-### 1. mqtt_server 发布生命周期消息
+### 1. mqtt_server Publishes Lifecycle Message
 
-在 `DeviceHook` 的：
+In `DeviceHook`:
 
 - `OnSessionEstablished`
 - `OnDisconnect`
 
-里，通过回调把生命周期事件发布到 `/p2p/device_public/_server/lifecycle`。
+Publish the lifecycle event to `/p2p/device_public/_server/lifecycle` via callback.
 
-实现上仍然由 `mqtt_server` 负责发布，只是发布动作收敛为 hook 内调用的 callback，避免把 topic 拼接逻辑散在多个位置。
+The `mqtt_server` is still responsible for publishing, but the publish action is consolidated into a callback invoked within the hook, avoiding scattering topic concatenation logic across multiple locations.
 
-### 2. 主程序复用现有订阅
+### 2. Main Program Reuses Existing Subscription
 
-`MqttUdpAdapter` 继续只订阅现有的：
+`MqttUdpAdapter` continues to subscribe only to the existing:
 
 `/p2p/device_public/#`
 
-收到消息后先判断 topic：
+After receiving a message, first check the topic:
 
-- 如果是 `/p2p/device_public/_server/lifecycle`，走生命周期处理分支
-- 否则继续走现有设备业务消息分支
+- If it is `/p2p/device_public/_server/lifecycle`, route to the lifecycle handling branch
+- Otherwise, continue to the existing device business message branch
 
-这样不会影响后续 `hello` / `listen` 等正常信令解析。
+This does not affect subsequent normal signal parsing such as `hello` / `listen`.
 
-### 3. 设备上线时预创建 transport
+### 3. Pre-create Transport on Device Online
 
-收到 `online` 生命周期消息后：
+After receiving an `online` lifecycle message:
 
-1. 先做生命周期防抖
-2. 若 transport 不存在，则立即创建 `MqttUdpConn + UdpSession`
-3. 触发 `onNewConnection`，让主程序创建 `ChatManager`
-4. 标记 broker online
-5. 触发一次最佳努力的 MCP 预热
-6. 映射设备在线状态
+1. First perform lifecycle debouncing
+2. If transport does not exist, immediately create `MqttUdpConn + UdpSession`
+3. Trigger `onNewConnection`, letting the main program create `ChatManager`
+4. Mark broker online
+5. Trigger a best-effort MCP warm-up
+6. Map device online status
 
-注意：
+Note:
 
-- 这里创建的是 `transport` 和 `ChatManager`
-- `ChatSession` 仍然保持为 `hello` 后懒创建
+- This creates `transport` and `ChatManager`
+- `ChatSession` is still lazily created after `hello`
 
-### 4. 设备下线时延迟回收 transport
+### 4. Delayed Transport Reclamation on Device Offline
 
-收到 `offline` 生命周期消息后：
+After receiving an `offline` lifecycle message:
 
-1. 先标记 broker offline
-2. 立即映射设备离线状态
-3. 启动延迟清理 timer
-4. 在 grace period 内保留 `transport + udp session`
-5. grace period 内如果再次收到 `online`，取消 cleanup timer 并复用原 transport
+1. First mark broker offline
+2. Immediately map device offline status
+3. Start delayed cleanup timer
+4. Retain `transport + udp session` during grace period
+5. If `online` is received again within the grace period, cancel the cleanup timer and reuse the original transport
 
-默认保留时间建议为 `2m`，后续可配置化。
+The default retention period is recommended as `2m`, and can be made configurable later.
 
-## 在线状态语义
+## Online Status Semantics
 
-MQTT-UDP 设备在线状态改为由 MQTT 生命周期驱动，而不是由 `ChatManager` 创建 / 销毁驱动。
+MQTT-UDP device online status is now driven by MQTT lifecycle events, rather than by `ChatManager` creation/destruction.
 
-也就是：
+That is:
 
-- MQTT `online` -> 设备在线
-- MQTT `offline` -> 设备离线
+- MQTT `online` -> Device online
+- MQTT `offline` -> Device offline
 
-为了避免重复通知：
+To avoid duplicate notifications:
 
-- `App.OnNewConnection()` 对 `websocket` 维持原逻辑
-- `mqtt udp` 的 `DeviceOnline / DeviceOffline` 改为由 `MqttUdpAdapter` 生命周期回调触发
+- `App.OnNewConnection()` maintains original logic for `websocket`
+- `mqtt udp` `DeviceOnline / DeviceOffline` is now triggered by `MqttUdpAdapter` lifecycle callbacks
 
-## 与 hello / listen 的关系
+## Relationship with hello / listen
 
-现有聊天信令逻辑不改：
+Existing chat signaling logic remains unchanged:
 
-- transport 可以在 MQTT 连接建立后提前存在
-- `ChatManager` 可以提前存在
-- `ChatSession` 仍然在 `hello` 成功后创建
-- `listen` 仍然要求 `hello` 已完成
+- Transport can pre-exist after MQTT connection is established
+- `ChatManager` can pre-exist
+- `ChatSession` is still created after successful `hello`
+- `listen` still requires `hello` to be completed
 
-这样可以做到“transport 预创建”而不改变会话层语义。
+This achieves "transport pre-creation" without changing session-layer semantics.
 
-## MCP 预热策略
+## MCP Warm-Up Strategy
 
-生命周期 `online` 到来后触发一次最佳努力 MCP 预热。
+A best-effort MCP warm-up is triggered when the lifecycle `online` event arrives.
 
-同时保留 `hello` 中现有的 MCP 初始化兜底逻辑。
+At the same time, the existing MCP initialization fallback logic in `hello` is retained.
 
-两条链路并存时，依赖当前分支已有的 MCP 幂等与状态机能力避免重复初始化：
+When both paths coexist, they rely on the MCP idempotency and state machine capabilities already present in the current branch to avoid duplicate initialization:
 
-- 上线时优先预热，提升控制台工具可见性
-- `hello` 时继续兜底，避免预热缺失影响业务
+- Prioritize warm-up on online, improving console tool visibility
+- `hello` continues as a fallback, preventing missing warm-up from affecting business
 
-## 高并发与防抖
+## High Concurrency and Debouncing
 
-按设备维度维护生命周期状态：
+Maintain lifecycle state per device dimension:
 
 - `brokerOnline`
 - `lastEventTs`
 - `cleanupTimer`
 - `cleanupVersion`
 
-防抖规则：
+Debouncing rules:
 
-- 旧时间戳事件直接忽略
-- 重复 `online` 不重复通知上线
-- 重复 `offline` 只刷新 cleanup timer，不重复通知离线
-- timer 回调执行时校验 `cleanupVersion`，避免旧 timer 误删新连接
+- Old timestamp events are ignored directly
+- Duplicate `online` does not trigger duplicate online notification
+- Duplicate `offline` only refreshes the cleanup timer, does not trigger duplicate offline notification
+- Timer callback verifies `cleanupVersion` when executing, preventing old timers from mistakenly deleting new connections
 
-## 需要一起修正的点
+## Points That Need to Be Fixed Together
 
-由于离线后 transport 会短暂保留，因此“当前在线 transport”解析不能只看 `ChatManager` 是否存在。
+Since transport is briefly retained after going offline, "current online transport" resolution cannot solely rely on whether `ChatManager` exists.
 
-需要让 `MqttUdpConn` 暴露 broker online 状态，并让 `ChatManager.GetTransportType()` 在 MQTT transport 已离线时返回空字符串。这样设备维度的 MCP 查询 / 调用仍然严格依赖“当前在线 transport”。
+`MqttUdpConn` needs to expose broker online status, and `ChatManager.GetTransportType()` should return an empty string when MQTT transport is offline. This way, device-dimension MCP queries/calls still strictly depend on the "current online transport".
 
-## 涉及文件
+## Affected Files
 
 - `internal/data/msg/message_types.go`
 - `internal/app/mqtt_server/device_hook.go`

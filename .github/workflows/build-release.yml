@@ -1,4 +1,4 @@
-﻿name: Build Go binaries
+name: Build Go binaries
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -28,7 +28,7 @@ jobs:
       - name: Verify asr_server submodule
         run: |
           if [ ! -f asr_server/server/setup.go ]; then
-            echo "::error::asr_server 子模块未拉取，binary 构建需要 voice_server" 
+            echo "::error::asr_server submodule not fetched, voice_server is required for binary build" 
             ls -la asr_server 2>/dev/null || true
             exit 1
           fi
@@ -63,7 +63,7 @@ jobs:
       - name: Verify asr_server submodule
         run: |
           if [ ! -f asr_server/server/setup.go ]; then
-            echo "::error::asr_server 子模块未拉取，binary 构建需要 voice_server" 
+            echo "::error::asr_server submodule not fetched, voice_server is required for binary build" 
             ls -la asr_server 2>/dev/null || true
             exit 1
           fi
@@ -106,7 +106,7 @@ jobs:
       - name: Verify asr_server submodule
         run: |
           if [ ! -f asr_server/server/setup.go ]; then
-            echo "::error::asr_server 子模块未拉取，binary 构建需要 voice_server"
+            echo "::error::asr_server submodule not fetched, voice_server is required for binary build"
             ls -la asr_server 2>/dev/null || true
             exit 1
           fi

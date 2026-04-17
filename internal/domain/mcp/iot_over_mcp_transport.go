@@ -45,7 +45,7 @@ type IotOverMcpTransport struct {
 	conn ConnInterface
 
 	notifyHandler func(notification mcp.JSONRPCNotification)
-	// 添加关闭回调
+	// close callback
 	onCloseHandler func(reason string)
 
 	respChans    map[string]*pendingResponse
@@ -80,9 +80,9 @@ func NewIotOverMcpTransport(conn ConnInterface) (*IotOverMcpTransport, error) {
 	return transportInstance, nil
 }
 
-// 实现 Interface 接口
+// implements Interface
 func (t *IotOverMcpTransport) Start(ctx context.Context) error {
-	// TODO: 启动连接/监听消息等
+	// TODO: start connection / listen for messages
 
 	return nil
 }
@@ -255,7 +255,7 @@ func (t *IotOverMcpTransport) SetNotificationHandler(handler func(notification m
 	t.notifyHandler = handler
 }
 
-// SetOnCloseHandler 设置连接关闭回调
+// SetOnCloseHandler sets connection close callback
 func (t *IotOverMcpTransport) SetOnCloseHandler(handler func(reason string)) {
 	t.onCloseHandler = handler
 }
@@ -266,7 +266,7 @@ func (t *IotOverMcpTransport) Close() error {
 	t.closedMux.Unlock()
 	t.failAllPending(fmt.Errorf("connection is closed"))
 
-	// 通知client层连接即将关闭
+	// notify client layer that connection is about to close
 	if t.onCloseHandler != nil {
 		t.onCloseHandler("manual_close")
 	}

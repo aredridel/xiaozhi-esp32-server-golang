@@ -95,7 +95,7 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context, onClose func()) {
 			vadWrapper = nil
 			vadProvider = nil
 			vadLastUseAt = time.Time{}
-			log.Debugf("释放VAD资源: device=%s, reason=%s", state.DeviceID, reason)
+			log.Debugf("release VAD resource: device=%s, reason=%s", state.DeviceID, reason)
 		}
 		defer releaseVad("process_exit")
 		ensureVad := func() bool {
@@ -108,9 +108,9 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context, onClose func()) {
 
 			// 检查 provider 是否为空，如果为空则记录警告
 			if vadProviderName == "" {
-				log.Warnf("VAD provider 为空，尝试从 config 中获取")
+				log.Warnf("VAD provider is empty, trying to get from config")
 			} else {
-				log.Debugf("获取VAD资源: provider=%s", vadProviderName)
+				log.Debugf("acquiring VAD resource: provider=%s", vadProviderName)
 			}
 
 			wrapper, err := pool.Acquire[inter.VAD](
@@ -119,7 +119,7 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context, onClose func()) {
 				vadProviderConfig,
 			)
 			if err != nil {
-				log.Errorf("获取VAD资源失败: provider=%s, config=%+v, error=%v", vadProviderName, vadProviderConfig, err)
+				log.Errorf("acquire VAD resource failed: provider=%s, config=%+v, error=%v", vadProviderName, vadProviderConfig, err)
 				return false
 			}
 			vadWrapper = wrapper
@@ -141,7 +141,7 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context, onClose func()) {
 			case opusFrame, ok := <-state.OpusAudioBuffer:
 				//log.Debugf("processAsrAudio 收到音频数据, len: %d", len(opusFrame))
 				if !ok {
-					log.Debugf("processAsrAudio 音频通道已关闭")
+					log.Debugf("processAsrAudio audio channel closed")
 					return
 				}
 
@@ -163,7 +163,7 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context, onClose func()) {
 
 				n, err := audioProcesser.DecoderFloat32(opusFrame, pcmFrame)
 				if err != nil {
-					log.Errorf("解码失败: %v", err)
+					log.Errorf("decode failed: %v", err)
 					continue
 				}
 
@@ -184,17 +184,15 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context, onClose func()) {
 							vadNeedGetCount = 1
 						}
 					}
-					log.Debugf("从实际音频数据计算帧信息: frameSize=%d, frameDurationMs=%d, vadNeedGetCount=%d", frameSize, frameDurationMs, vadNeedGetCount)
+					log.Debugf("calculated frame info from actual audio data: frameSize=%d, frameDurationMs=%d, vadNeedGetCount=%d", frameSize, frameDurationMs, vadNeedGetCount)
 				}
 
 				var vadPcmData []float32
 				pcmData := pcmFrame[:n]
 				speakerPcmData := pcmFrame[:n]
 
-				// 检查帧大小是否一致（正常情况下应该一致，但不一致时使用实际值）
 				if n != frameSize {
-					log.Debugf("帧大小不一致: 期望=%d, 实际=%d，使用实际值", frameSize, n)
-					// 重新计算这一帧的时长
+					log.Debugf("frame size mismatch: expected=%d, actual=%d, using actual value", frameSize, n)
 					samplesPerChannel := n / audioFormat.Channels
 					currentFrameDurationMs := samplesPerChannel * 1000 / audioFormat.SampleRate
 					frameSize = n
@@ -224,7 +222,7 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context, onClose func()) {
 						// 重置VAD状态
 						vadLastUseAt = time.Now()
 						if err := vadProvider.Reset(); err != nil {
-							log.Errorf("重置vad失败: %v", err)
+							log.Errorf("reset VAD failed: %v", err)
 							continue
 						}
 
@@ -232,7 +230,7 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context, onClose func()) {
 						vadLastUseAt = time.Now()
 						haveVoice, err = vadProvider.IsVADExt(vadPcmData, audioFormat.SampleRate, frameSize)
 						if err != nil {
-							log.Errorf("processAsrAudio VAD检测失败: %v", err)
+							log.Errorf("processAsrAudio VAD detection failed: %v", err)
 							continue
 						}
 
@@ -249,9 +247,9 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context, onClose func()) {
 				if !haveVoice || state.Asr.AutoEnd {
 					state.Vad.AddIdleDuration(int64(frameDurationMs))
 					idleDuration := state.Vad.GetIdleDuration()
-					log.Infof("空闲时间: %dms", idleDuration)
+					log.Infof("idle time: %dms", idleDuration)
 					if idleDuration > state.GetMaxIdleDuration() {
-						log.Infof("超出空闲时长: %dms, 断开连接", idleDuration)
+						log.Infof("exceeded idle duration: %dms, disconnecting", idleDuration)
 						//断开连接
 						onClose()
 						return
@@ -274,7 +272,7 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context, onClose func()) {
 						// 只有在未触发过的情况下才执行，确保只执行一次
 						if !hasTriggeredCancel {
 							//realtime模式下, 如果此时有正在进行的llm和tts则取消掉
-							log.Debugf("realtime模式vad打断下 && 语音时长超过%d ms 如果此时有正在进行的llm和tts则取消掉", continuousVoiceDuration)
+							log.Debugf("realtime mode VAD interrupt && voice duration exceeds %d ms, canceling ongoing LLM and TTS", continuousVoiceDuration)
 							state.AfterAsrSessionCtx.CancelWithReason("ASRManager.ProcessVadAudio: realtime_mode=1 VAD interrupt")
 							if a.session != nil {
 								a.session.InterruptAndClearTTSQueue()
@@ -316,7 +314,7 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context, onClose func()) {
 							sampleRate := audioFormat.SampleRate
 							agentId := a.session.clientState.AgentID
 							if err := a.session.speakerManager.StartStreaming(ctx, sampleRate, agentId); err != nil {
-								log.Warnf("启动声纹识别流失败: %v", err)
+								log.Warnf("start streaming speaker recognition failed: %v", err)
 							} else {
 								speakerInterruptTriggered.Store(false)
 								lastSpeakerPeekDoneAt.Store(0)
@@ -326,7 +324,7 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context, onClose func()) {
 
 						// 发送音频块
 						if err := a.session.speakerManager.SendAudioChunk(ctx, speakerPcmData); err != nil {
-							log.Warnf("发送音频块到声纹识别服务失败: %v", err)
+							log.Warnf("send audio chunk to speaker recognition service failed: %v", err)
 						} else if a.session.speakerManager.IsActive() {
 							if audioFormat.Channels > 0 && audioFormat.SampleRate > 0 {
 								speakerPeekAudioMs += int64(len(speakerPcmData)/audioFormat.Channels) * 1000 / int64(audioFormat.SampleRate)
@@ -359,7 +357,7 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context, onClose func()) {
 										peekResult, throttled, err := a.session.speakerManager.PeekAndIdentify(peekCtx, reqID)
 										if err != nil {
 											if ctx.Err() == nil {
-												log.Debugf("声纹peek失败: device=%s, request_id=%s, err=%v", state.DeviceID, reqID, err)
+												log.Debugf("speaker peek failed: device=%s, request_id=%s, err=%v", state.DeviceID, reqID, err)
 											}
 											return
 										}
@@ -374,7 +372,7 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context, onClose func()) {
 										}
 
 										log.Infof(
-											"realtime模式声纹peek命中，立即打断: device=%s, speaker=%s, confidence=%.4f, threshold=%.4f",
+											"realtime mode speaker peek hit, immediate interrupt: device=%s, speaker=%s, confidence=%.4f, threshold=%.4f",
 											state.DeviceID,
 											peekResult.SpeakerName,
 											peekResult.Confidence,
@@ -397,7 +395,7 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context, onClose func()) {
 					// 判断有音频的语音时长，如果小于300ms则重置clientHaveVoice，避免短时间语音造成的误判
 					voiceDurationInSession := state.Vad.GetVoiceDurationInSession()
 					if voiceDurationInSession < 100 {
-						log.Debugf("语音时长过短 (%dms < 300ms)，重置clientHaveVoice", voiceDurationInSession)
+						log.Debugf("voice duration too short (%dms < 300ms), resetting clientHaveVoice", voiceDurationInSession)
 						state.SetClientHaveVoice(false)
 						state.Vad.ResetVoiceDuration()
 						speakerInterruptTriggered.Store(false)
@@ -411,7 +409,7 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context, onClose func()) {
 						preTextSilenceDuration := state.GetPreAsrTextSilenceDuration()
 						if idleDuration <= preTextSilenceDuration {
 							log.Debugf(
-								"realtime模式尚未收到ASR首文本，延迟按静音阈值收口: status=%s, idle=%dms, pre_text_timeout=%dms, voice_duration=%dms, voice_duration_in_session=%dms, history_audio_samples=%d",
+								"realtime mode pre-ASR-text silence timeout, delaying close: status=%s, idle=%dms, pre_text_timeout=%dms, voice_duration=%dms, voice_duration_in_session=%dms, history_audio_samples=%d",
 								state.Status,
 								idleDuration,
 								preTextSilenceDuration,
@@ -424,7 +422,7 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context, onClose func()) {
 
 						if !hasLoggedFirstTextExtendedWait {
 							log.Debugf(
-								"realtime模式静音超时且仍未收到ASR文本，继续保持当前ASR流并转发音频: status=%s, idle=%dms, pre_text_timeout=%dms, voice_duration=%dms, voice_duration_in_session=%dms, history_audio_samples=%d",
+								"realtime mode silence timeout without ASR text, keeping current ASR stream and forwarding audio: status=%s, idle=%dms, pre_text_timeout=%dms, voice_duration=%dms, voice_duration_in_session=%dms, history_audio_samples=%d",
 								state.Status,
 								idleDuration,
 								preTextSilenceDuration,
@@ -439,7 +437,7 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context, onClose func()) {
 
 					if state.IsSilence(idleDuration) { //从有声音到 静默的判断
 						log.Debugf(
-							"判定语音结束，准备停止ASR: status=%s, idle=%dms, voice_duration=%dms, voice_duration_in_session=%dms, history_audio_samples=%d, pending_restart=%v",
+							"voice end detected, preparing to stop ASR: status=%s, idle=%dms, voice_duration=%dms, voice_duration_in_session=%dms, history_audio_samples=%d, pending_restart=%v",
 							state.Status,
 							idleDuration,
 							state.Vad.GetVoiceDuration(),
@@ -471,7 +469,7 @@ func (a *ASRManager) releaseResource() {
 	if a.asrResource != nil {
 		pool.Release(a.asrResource)
 		a.asrResource = nil
-		log.Debugf("ASR资源已归还")
+		log.Debugf("ASR resource returned")
 	}
 }
 
@@ -483,7 +481,7 @@ func (a *ASRManager) Cleanup() {
 // restartAsrRecognition 重启ASR识别
 func (a *ASRManager) RestartAsrRecognition(ctx context.Context) error {
 	state := a.clientState
-	log.Debugf("重启ASR识别开始")
+	log.Debugf("restarting ASR recognition")
 	if a.session != nil {
 		a.session.ResetTurnSpeakerInterrupted()
 	}
@@ -509,8 +507,8 @@ func (a *ASRManager) RestartAsrRecognition(ctx context.Context) error {
 			state.DeviceConfig.Asr.Config,
 		)
 		if err != nil {
-			log.Errorf("获取ASR资源失败: %v", err)
-			return fmt.Errorf("获取ASR资源失败: %v", err)
+			log.Errorf("acquire ASR resource failed: %v", err)
+			return fmt.Errorf("acquire ASR resource failed: %v", err)
 		}
 
 		// 保存资源引用到私有字段
@@ -518,12 +516,12 @@ func (a *ASRManager) RestartAsrRecognition(ctx context.Context) error {
 		a.asrResource = asrWrapper
 		asrProvider = asrWrapper.GetProvider()
 		a.resourceMu.Unlock()
-		log.Debugf("获取新的ASR资源")
+		log.Debugf("acquired new ASR resource")
 	} else {
 		// 复用现有资源
 		asrProvider = a.asrResource.GetProvider()
 		a.resourceMu.Unlock()
-		log.Debugf("复用现有ASR资源")
+		log.Debugf("reusing existing ASR resource")
 	}
 
 	// 重新创建ASR上下文和通道
@@ -535,8 +533,8 @@ func (a *ASRManager) RestartAsrRecognition(ctx context.Context) error {
 	if err != nil {
 		// 识别失败，归还资源（因为资源可能已损坏）
 		a.releaseResource()
-		log.Errorf("重启ASR流式识别失败: %v", err)
-		return fmt.Errorf("重启ASR流式识别失败: %v", err)
+		log.Errorf("restart ASR streaming recognition failed: %v", err)
+		return fmt.Errorf("restart ASR streaming recognition failed: %v", err)
 	}
 
 	state.AsrResultChannel = asrResultChannel
@@ -545,7 +543,7 @@ func (a *ASRManager) RestartAsrRecognition(ctx context.Context) error {
 	if a.session != nil {
 		a.session.TraceTurnStart(state.Asr.Ctx, state.Statistic.TurnStartTs)
 	}
-	log.Debugf("重启ASR识别成功")
+	log.Debugf("ASR recognition restarted successfully")
 	return nil
 }
 
@@ -564,7 +562,7 @@ func (a *ASRManager) StartAsrRecognitionLoop(
 		// 使用 defer 确保 goroutine 退出时释放 ASR 资源
 		defer func() {
 			if r := recover(); r != nil {
-				log.Errorf("asr结果处理goroutine panic: %v, stack: %s", r, string(debug.Stack()))
+				log.Errorf("asr result processing goroutine panic: %v, stack: %s", r, string(debug.Stack()))
 			}
 			// 无论正常退出还是 panic，都释放资源
 			a.releaseResource()
@@ -609,7 +607,7 @@ func (a *ASRManager) StartAsrRecognitionLoop(
 
 			result, isRetry, err := state.RetireAsrResult(ctx)
 			if err != nil {
-				log.Errorf("处理asr结果失败: %v", err)
+				log.Errorf("process asr result failed: %v", err)
 				if onError != nil {
 					onError(err)
 				}

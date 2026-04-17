@@ -1,8 +1,8 @@
 name: Build and Push Docker Image
 on:
   push:
-    tags: ["v*"]  # 当推送形如 v1.0.0 的标签时触发
-  workflow_dispatch:  # 允许手动触发
+    tags: ["v*"]  # Triggered when pushing tags like v1.0.0
+  workflow_dispatch:  # Allow manual trigger
 jobs:
   build-main:
     runs-on: ubuntu-latest
@@ -19,11 +19,11 @@ jobs:
       - name: Verify asr_server submodule
         run: |
           if [ ! -f asr_server/server/setup.go ]; then
-            echo "::error::asr_server 子模块未拉取，请确认 checkout 已使用 submodules: recursive"
+            echo "::error::asr_server submodule not fetched, please confirm checkout uses submodules: recursive"
             ls -la asr_server 2>/dev/null || true
             exit 1
           fi
-          echo "asr_server 子模块已就绪"
+          echo "asr_server submodule is ready"
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx

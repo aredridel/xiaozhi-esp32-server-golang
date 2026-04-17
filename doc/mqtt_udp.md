@@ -1,46 +1,46 @@
-# mqtt udp服务器配置流程
+# MQTT UDP Server Configuration Guide
 
-本项目实现了**自有的 MQTT+UDP 服务端**，用于高效处理设备与服务器之间的音频等数据传输。架构灵活，支持多种部署和替换方式，适应不同业务场景。
+This project implements a **custom MQTT+UDP server** for efficiently handling data transmission such as audio between devices and the server. The architecture is flexible, supporting multiple deployment and replacement methods to accommodate different business scenarios.
 
-## 1. 架构特点与灵活性
+## 1. Architecture Features and Flexibility
 
-- **自研 MQTT+UDP 服务端**：项目内置了完整的 MQTT 协议服务端和 UDP 音频通道，支持设备通过 MQTT 建立会话，后续数据走 UDP，兼顾可靠性与实时性。
-- **MQTT 服务端可选部署方式**：
-  - 可作为主程序（server）的一部分随主进程启动，适合一体化部署。
-  - 也可单独部署为独立进程，便于横向扩展和资源隔离。
-- **支持第三方 MQTT 服务端**：
-  - 项目架构支持将内置 MQTT 服务端替换为如 EMQX、或自研MQTT Server等第三方 MQTT Broker。
-  - 只需在配置文件中调整 `mqtt` 相关参数，主程序即可作为纯客户端对接外部 Broker，适合大规模集群和高可用场景。
-- **支持 虾哥官方 xiaozhi-mqtt-gateway 项目接入**
-  - 适配了虾哥 xiaozhi-mqtt-gateway 开源项目，可以接入使用
-  - [详见 mqtt_bridge.md](./mqtt_bridge.md)
+- **Custom MQTT+UDP Server**: The project includes a built-in complete MQTT protocol server and UDP audio channel. Devices establish sessions via MQTT, with subsequent data transmitted over UDP, balancing reliability and real-time performance.
+- **MQTT Server Deployment Options**:
+  - Can be started as part of the main program (server), suitable for all-in-one deployment.
+  - Can also be deployed as a standalone process for horizontal scaling and resource isolation.
+- **Third-Party MQTT Server Support**:
+  - The project architecture supports replacing the built-in MQTT server with third-party MQTT brokers such as EMQX or custom MQTT servers.
+  - Simply adjust the `mqtt` related parameters in the configuration file, and the main program acts as a pure client connecting to an external broker, suitable for large-scale clusters and high availability scenarios.
+- **Support for the official xiaoge xiaozhi-mqtt-gateway project**
+  - Adapted to the xiaoge xiaozhi-mqtt-gateway open-source project for integration
+  - [See mqtt_bridge.md for details](./mqtt_bridge.md)
 
-### 部署架构图
+### Deployment Architecture Diagram
 
-下图展示了两种典型部署方式，帮助理解项目的灵活架构：
+The diagram below shows two typical deployment methods to help understand the project's flexible architecture:
 
 ```mermaid
 flowchart TD
-    subgraph A[内置MQTT服务端模式]
+    subgraph A[Built-in MQTT Server Mode]
         direction LR
-        D1["<b>设备/客户端</b>"]
-        D2["<b>设备/客户端</b>"]
-        MQTTUDPServer["<b>主程序</b><br/>MQTT+UDP服务端<br/>- MQTT服务端（可选）<br/>- MQTT客户端<br/>- UDP服务端"]
-        D1 -- "MQTT/UDP通信" --> MQTTUDPServer
-        D2 -- "MQTT/UDP通信" --> MQTTUDPServer
+        D1["<b>Device/Client</b>"]
+        D2["<b>Device/Client</b>"]
+        MQTTUDPServer["<b>Main Program</b><br/>MQTT+UDP Server<br/>- MQTT Server (optional)<br/>- MQTT Client<br/>- UDP Server"]
+        D1 -- "MQTT/UDP Communication" --> MQTTUDPServer
+        D2 -- "MQTT/UDP Communication" --> MQTTUDPServer
     end
     
-    subgraph B[外部Broker模式]
+    subgraph B[External Broker Mode]
         direction LR
-        D3["<b>设备/客户端</b>"]
-        D4["<b>设备/客户端</b>"]
-        Broker["<b>EMQX/自研MQTT Server<br/>等第三方MQTT Broker</b>"]
-        MainServer["<b>主程序</b><br/>MQTT客户端+UDP服务端"]
-        D3 -- "MQTT通信" --> Broker
-        D4 -- "MQTT通信" --> Broker
-        Broker -- "MQTT通信" --> MainServer
-        D3 -- "UDP通信" --> MainServer
-        D4 -- "UDP通信" --> MainServer
+        D3["<b>Device/Client</b>"]
+        D4["<b>Device/Client</b>"]
+        Broker["<b>EMQX/Custom MQTT Server<br/>or other third-party MQTT Broker</b>"]
+        MainServer["<b>Main Program</b><br/>MQTT Client + UDP Server"]
+        D3 -- "MQTT Communication" --> Broker
+        D4 -- "MQTT Communication" --> Broker
+        Broker -- "MQTT Communication" --> MainServer
+        D3 -- "UDP Communication" --> MainServer
+        D4 -- "UDP Communication" --> MainServer
     end
     
     style A fill:#e0f7fa,stroke:#26c6da,stroke-width:2px
@@ -49,25 +49,25 @@ flowchart TD
     class D1,D2,D3,D4 device;
 ```
 
-**说明：**
-- <b>内置MQTT服务端模式</b>：主程序集成MQTT服务端和UDP服务端，设备直接与主程序通信。
-- <b>外部Broker模式</b>：主程序仅作为MQTT客户端连接EMQX、或自研MQTT Server等外部Broker，设备通过Broker转发MQTT消息，UDP数据仍直连主程序。
+**Notes:**
+- <b>Built-in MQTT Server Mode</b>: The main program integrates both the MQTT server and UDP server. Devices communicate directly with the main program.
+- <b>External Broker Mode</b>: The main program acts only as an MQTT client connecting to an external broker such as EMQX or a custom MQTT server. Devices forward MQTT messages through the broker, while UDP data still connects directly to the main program.
 
-## 2. 配置文件设置
-在 `config/config.yaml` 中，需关注以下参数：
-- `mqtt`：**客户端角色**，用于配置本服务作为 MQTT 客户端连接到 Broker（无论是内置还是外部 Broker）。
-  - `broker`、`type`、`port`、`client_id`、`username`、`password`
-- `mqtt_server`：内置 MQTT 服务端参数（仅主程序内置时需启用）
-  - `enable`、`listen_host`、`listen_port`、`tls` 等
-- `udp`：UDP 通道参数
-  - `external_host`、`external_port`、`listen_host`、`listen_port`
+## 2. Configuration File Settings
+In `config/config.yaml`, pay attention to the following parameters:
+- `mqtt`: **Client role**, used to configure this service as an MQTT client connecting to a broker (whether built-in or external).
+  - `broker`, `type`, `port`, `client_id`, `username`, `password`
+- `mqtt_server`: Built-in MQTT server parameters (only needs to be enabled when the main program runs the built-in server)
+  - `enable`, `listen_host`, `listen_port`, `tls`, etc.
+- `udp`: UDP channel parameters
+  - `external_host`, `external_port`, `listen_host`, `listen_port`
 
-## 3. OTA相关配置
+## 3. OTA Configuration
 
-OTA（Over-the-Air）配置用于设备远程获取服务器、MQTT、WebSocket等连接信息，以及固件升级、激活等参数。根据设备网络环境（如内网/公网），可自动返回不同的OTA配置信息。
+OTA (Over-the-Air) configuration is used for devices to remotely obtain server, MQTT, WebSocket, and other connection information, as well as firmware upgrade and activation parameters. Depending on the device's network environment (e.g., intranet/public network), different OTA configuration information can be returned automatically.
 
-- 配置位置：`config/config.yaml` 的 `ota` 字段。
-- 典型结构：
+- Configuration location: `config/config.yaml` in the `ota` field.
+- Typical structure:
   ```yaml
   ota:
     test:
@@ -83,36 +83,36 @@ OTA（Over-the-Air）配置用于设备远程获取服务器、MQTT、WebSocket�
         enable: false
         endpoint: "www.youdomain.cn"
   ```
-- 主要参数说明：
-  - `test`：内网/测试环境下的OTA返回信息。
-  - `external`：公网/生产环境下的OTA返回信息。
-  - `websocket.url`：设备通过OTA获取的WebSocket服务地址。
-  - `mqtt.endpoint`：设备通过OTA获取的MQTT服务器地址。
-  - `mqtt.enable`：是否启用MQTT（如需动态切换可用）。
-- 典型用途：
-  - 设备首次启动或升级时，通过OTA接口获取最新的服务器连接信息和固件信息。
-  - 支持根据设备IP自动区分内外网，返回不同的连接参数，便于测试和生产环境隔离。
+- Main parameter descriptions:
+  - `test`: OTA return information for intranet/test environments.
+  - `external`: OTA return information for public network/production environments.
+  - `websocket.url`: WebSocket service address obtained by the device via OTA.
+  - `mqtt.endpoint`: MQTT server address obtained by the device via OTA.
+  - `mqtt.enable`: Whether to enable MQTT (can be used for dynamic switching).
+- Typical use cases:
+  - When a device starts up for the first time or upgrades, it obtains the latest server connection information and firmware information through the OTA interface.
+  - Supports automatically distinguishing between intranet and public network based on device IP, returning different connection parameters to facilitate test and production environment isolation.
 
-**注意事项：**
-- OTA接口通常为 `/xiaozhi/ota/`，需在WebSocket服务端开放对应路由。
-- 设备需在请求头中带上 `Device-Id` 和 `Client-Id`。
-- 可结合激活机制，返回激活码、挑战码等信息，提升设备安全性。
+**Notes:**
+- The OTA interface is typically at `/xiaozhi/ota/` and requires the corresponding route to be opened on the WebSocket server.
+- Devices need to include `Device-Id` and `Client-Id` in the request headers.
+- Can be combined with an activation mechanism to return activation codes, challenge codes, and other information to enhance device security.
 
-## 4. 启动与运行流程
+## 4. Startup and Running Process
 
-1. **服务初始化**  
-   启动主程序时，自动按配置初始化 WebSocket、MQTT Server（可选）、以及 mqtt udp 服务。
-2. **MQTT+UDP 服务启动流程**  
-   - 读取配置文件中的 mqtt、udp 参数。
-   - 若 `mqtt_server.enable=true`，则启动内置 MQTT 服务端，否则仅作为客户端连接外部 Broker。
-   - 启动 UDP 服务器，监听 `udp.listen_port`，对外暴露 `udp.external_host:external_port`。
-   - 创建 MQTT 客户端（**客户端角色**），连接到配置的 Broker。
-   - 当设备连上内置 `mqtt_server` 后，服务端会通过生命周期消息提前创建或复用 MQTT transport，并最佳努力预热设备侧 MCP。
-   - 客户端通过 MQTT 发送 `hello` 消息后，服务器返回 `audio_params`、UDP 信息等聊天级参数，并建立 UDP 会话，后续音频等数据通过 UDP 通道传输。
+1. **Service Initialization**
+   When starting the main program, it automatically initializes WebSocket, MQTT Server (optional), and the MQTT UDP service according to the configuration.
+2. **MQTT+UDP Service Startup Process**
+   - Read the mqtt and udp parameters from the configuration file.
+   - If `mqtt_server.enable=true`, start the built-in MQTT server; otherwise, connect only as a client to an external broker.
+   - Start the UDP server, listening on `udp.listen_port`, exposing `udp.external_host:external_port` externally.
+   - Create an MQTT client (**client role**), connecting to the configured broker.
+   - When a device connects to the built-in `mqtt_server`, the server will pre-create or reuse MQTT transport via lifecycle messages, and best-effort warm up device-side MCP.
+   - After the client sends a `hello` message via MQTT, the server returns chat-level parameters such as `audio_params` and UDP info, establishes a UDP session, and subsequent data such as audio is transmitted through the UDP channel.
 
-## 5. 配置示例
+## 5. Configuration Examples
 
-**内置 MQTT 服务端模式**（一体化部署）
+**Built-in MQTT Server Mode** (all-in-one deployment)
 ```yaml
 mqtt:
   broker: "127.0.0.1"
@@ -145,7 +145,7 @@ ota:
       endpoint: "www.youdomain.cn"
 ```
 
-**对接外部 MQTT Broker（如 EMQX/自研MQTT Server）**
+**Connecting to an External MQTT Broker (e.g., EMQX/Custom MQTT Server)**
 ```yaml
 mqtt:
   broker: "emqx.example.com"
@@ -157,7 +157,7 @@ mqtt:
 mqtt_server:
   enable: false
 udp:
-  external_host: "公网IP"
+  external_host: "Public IP"
   external_port: 8990
   listen_host: "0.0.0.0"
   listen_port: 8990
@@ -176,46 +176,46 @@ ota:
       endpoint: "emqx.example.com"
 ```
 
-## 6. 推荐场景
-- **一体化部署**：适合中小规模、单机或容器化场景，配置简单，维护方便。
-- **分布式/集群部署**：推荐关闭内置 MQTT 服务端，采用 EMQX 等高可用 Broker，主程序仅作为客户端对接，便于弹性扩展和负载均衡。
+## 6. Recommended Scenarios
+- **All-in-one deployment**: Suitable for small to medium scale, single machine, or containerized scenarios. Simple configuration and easy maintenance.
+- **Distributed/cluster deployment**: Recommend disabling the built-in MQTT server and using a high-availability broker such as EMQX. The main program acts only as a client for elastic scaling and load balancing.
 
 ---
 
-**简要流程**：配置文件设置 → 服务启动自动加载配置 → 启动UDP监听和MQTT连接 → 设备 MQTT 上线时创建或复用 transport 并预热 MCP → 客户端通过 MQTT `hello` 建立聊天级 UDP 会话。
+**Brief Process**: Configuration file settings → Service startup automatically loads configuration → Start UDP listener and MQTT connection → Create or reuse transport and warm up MCP on device MQTT online → Client establishes chat-level UDP session via MQTT `hello`.
 
-## 7. 对接EMQX等第三方MQTT服务器的Topic定义与映射
+## 7. Topic Definition and Mapping for Connecting to Third-Party MQTT Servers like EMQX
 
-在对接EMQX等第三方MQTT Broker时，需遵循如下Topic定义和映射规则，以确保设备与服务端的数据通信顺畅：
+When connecting to third-party MQTT brokers such as EMQX, follow the topic definition and mapping rules below to ensure smooth data communication between devices and the server:
 
-### 设备端Topic定义
-- **public**: `device-server`  
-  > 设备端发布消息时，实际服务端会自动将其映射为 `/p2p/device_public/{mac_addr}`，其中 `{mac_addr}` 为设备的MAC地址。
-- **sub**: `null`  
-  > 设备端无需主动订阅，服务端会自动为其订阅 `/p2p/device_sub/{mac_addr}`。
+### Device-Side Topic Definition
+- **public**: `device-server`
+  > When the device publishes a message, the server automatically maps it to `/p2p/device_public/{mac_addr}`, where `{mac_addr}` is the device's MAC address.
+- **sub**: `null`
+  > Devices do not need to subscribe proactively; the server automatically subscribes to `/p2p/device_sub/{mac_addr}` on their behalf.
 
-### 服务端Topic定义
-- **public**: `/p2p/device_sub/{mac_addr}`  
-  > 服务端向指定设备下发消息时，需发布到该Topic。
-- **sub**: `/p2p/device_public/#`  
-  > 服务端需订阅该通配符Topic，以接收所有设备上报的消息。
+### Server-Side Topic Definition
+- **public**: `/p2p/device_sub/{mac_addr}`
+  > When the server sends a message to a specific device, it publishes to this topic.
+- **sub**: `/p2p/device_public/#`
+  > The server needs to subscribe to this wildcard topic to receive messages from all devices.
 - **lifecycle**: `/p2p/device_public/_server/lifecycle`
-  > 内置 `mqtt_server` 在设备连上或断开时，会通过该保留 Topic 发布生命周期事件，供主程序维护 transport、在线状态和 MCP 预热。
+  > The built-in `mqtt_server` publishes lifecycle events via this retained topic when devices connect or disconnect, allowing the main program to maintain transport, online status, and MCP warm-up.
 
-#### Topic映射说明
-- 设备端与服务端的Topic采用自动映射机制，设备只需关注`device-server`，无需关心实际的P2P路径，服务端会根据设备MAC地址自动完成Topic转换。
-- 该机制便于大规模设备管理和消息隔离，提升系统安全性和可维护性。
+#### Topic Mapping Notes
+- Device-side and server-side topics use an automatic mapping mechanism. Devices only need to use `device-server` without worrying about the actual P2P path. The server automatically converts topics based on the device MAC address.
+- This mechanism facilitates large-scale device management and message isolation, improving system security and maintainability.
 
-#### 示例
-- 设备A（MAC: 11:22:33:44:55:66）
-  - 设备端发布：`device-server` → 实际服务端收到：`/p2p/device_public/11:22:33:44:55:66`
-  - 服务端下发：`/p2p/device_sub/11:22:33:44:55:66`
+#### Example
+- Device A (MAC: 11:22:33:44:55:66)
+  - Device publishes: `device-server` → Server receives: `/p2p/device_public/11:22:33:44:55:66`
+  - Server sends: `/p2p/device_sub/11:22:33:44:55:66`
 
-- 服务端订阅：`/p2p/device_public/#`，可接收所有设备的上报消息。
+- Server subscribes: `/p2p/device_public/#`, can receive upload messages from all devices.
 
-- 生命周期消息示例：
-  - Topic：`/p2p/device_public/_server/lifecycle`
-  - Payload：
+- Lifecycle message example:
+  - Topic: `/p2p/device_public/_server/lifecycle`
+  - Payload:
     ```json
     {
       "type": "mqtt_lifecycle",
@@ -226,48 +226,48 @@ ota:
     }
     ```
 
-> **注意：**
-> - 以上Topic映射规则仅在对接EMQX等第三方MQTT Broker时生效。
-> - 若使用内置 MQTT 服务端，主程序仍监听 `/p2p/device_public/#`，其中 `/p2p/device_public/_server/lifecycle` 为服务端保留 Topic，请勿给设备业务消息复用。
+> **Note:**
+> - The above topic mapping rules only apply when connecting to third-party MQTT brokers such as EMQX.
+> - When using the built-in MQTT server, the main program still listens on `/p2p/device_public/#`, where `/p2p/device_public/_server/lifecycle` is a server-reserved topic. Do not reuse it for device business messages.
 
-### EMQX消息重定向配置
+### EMQX Message Redirection Configuration
 
-为了实现设备消息的自动路由和转发，需要在EMQX中配置以下规则：
+To implement automatic routing and forwarding of device messages, configure the following rules in EMQX:
 
-#### 1. 自动订阅新增配置
+#### 1. Auto-Subscription Configuration
 - **topic**: `/p2p/device_sub/${clientid}`
 
-#### 2. 消息重转发
-在规则中新增一项，配置如下：
+#### 2. Message Re-publish
+Add a new rule with the following configuration:
 
-**SQL规则**：
+**SQL Rule**:
 ```sql
 SELECT clientid, payload FROM "device-server"
 ```
 
-**配置参数**：
-- **数据输入**: `"device-server"`
-- **动作输出类型**: `"消息重发布"`
+**Configuration Parameters**:
+- **Data Input**: `"device-server"`
+- **Action Output Type**: `"Message Re-publish"`
 - **topic**: `/p2p/device_public/${clientid}`
 - **payload**: `${payload}`
 
-## 8. MQTT UDP 数据流程
+## 8. MQTT UDP Data Flow
 
-本节简要介绍设备与服务器之间通过 MQTT+UDP 进行数据交互的整体流程，包括会话建立、数据上报与下发等关键步骤。
+This section briefly introduces the overall data interaction flow between devices and the server via MQTT+UDP, including key steps such as session establishment, data upload, and delivery.
 
-详细协议与数据包格式请参考：[MQTT UDP 协议与数据流程文档](./mqtt_udp_protocol.md)
+For detailed protocol and packet format, please refer to: [MQTT UDP Protocol and Data Flow Documentation](./mqtt_udp_protocol.md)
 
-### 流程概述
-1. **设备启动**，通过 MQTT 连接服务器。
-2. **生命周期预热**：内置 `mqtt_server` 在设备上线时发布 `/p2p/device_public/_server/lifecycle`，主程序据此创建或复用 transport、映射设备在线状态，并最佳努力预热设备侧 MCP。
-3. **设备发送 `hello`**：服务器响应并下发 `audio_params`、UDP 地址、密钥和 nonce 等聊天级参数。
-4. **音频/数据上报**：设备通过 UDP 通道高效上传音频等数据。
-5. **服务器下发指令**：如需下发控制指令，可通过 MQTT 或 UDP 通道完成。
-6. **断线与保留**：设备下线时会发布生命周期离线事件，主程序会立即映射离线状态，但会在一段保留时间内复用已有 transport，避免短时重连造成频繁创建和销毁。
+### Flow Overview
+1. **Device starts up** and connects to the server via MQTT.
+2. **Lifecycle warm-up**: The built-in `mqtt_server` publishes `/p2p/device_public/_server/lifecycle` when the device comes online. The main program creates or reuses transport, maps device online status, and best-effort warms up device-side MCP.
+3. **Device sends `hello`**: The server responds and delivers chat-level parameters such as `audio_params`, UDP address, key, and nonce.
+4. **Audio/data upload**: The device efficiently uploads data such as audio through the UDP channel.
+5. **Server delivers commands**: If control commands need to be sent, they can be delivered via MQTT or UDP channel.
+6. **Disconnect and retention**: When the device goes offline, a lifecycle offline event is published. The main program immediately maps the offline status but retains the existing transport for a retention period to avoid frequent creation and destruction from short reconnections.
 
-### 生命周期事件与 `hello` 的边界
-- MQTT 生命周期事件负责连接级资源维护，包括 transport 预创建、在线状态映射、MCP 预热和离线延迟回收。
-- `hello` 仍然只负责聊天级初始化，包括 `audio_params`、UDP 协商、采样参数和会话级状态准备。
-- `listen`、`abort`、`goodbye` 等现有信令语义不变，仍然以 `hello` 完成为前提。
+### Lifecycle Events and `hello` Boundary
+- MQTT lifecycle events handle connection-level resource maintenance, including transport pre-creation, online status mapping, MCP warm-up, and offline delayed reclamation.
+- `hello` still handles only chat-level initialization, including `audio_params`, UDP negotiation, sampling parameters, and session-level state preparation.
+- Existing signaling semantics such as `listen`, `abort`, and `goodbye` remain unchanged and still depend on `hello` completion.
 
-> 详细的 Topic 设计、数据包结构、状态流转等请查阅 [mqtt_udp_protocol.md](./mqtt_udp_protocol.md)。
+> For detailed topic design, packet structure, state transitions, etc., please refer to [mqtt_udp_protocol.md](./mqtt_udp_protocol.md).
