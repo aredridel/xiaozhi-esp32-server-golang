@@ -147,8 +147,8 @@ func (s *WebSocketServer) handleMqttUdpChat(w http.ResponseWriter, r *http.Reque
 func (s *WebSocketServer) internalHandleChat(w http.ResponseWriter, r *http.Request, isMqttUdp bool) {
 	deviceID, clientID := extractDeviceAndClientID(r)
 	if deviceID == "" {
-		log.Warn("缺少 device-id，请从 Header 或 URL 参数传入")
-		http.Error(w, "缺少 device-id（支持 Header 或 URL 参数）", http.StatusBadRequest)
+		log.Warn("Missing device-id, please pass it via Header or URL parameter")
+		http.Error(w, "Missing device-id (supports Header or URL parameter)", http.StatusBadRequest)
 		return
 	}
 	if clientID == "" {
@@ -200,14 +200,14 @@ func extractDeviceAndClientID(r *http.Request) (string, string) {
 	if deviceID == "" {
 		deviceID = queryDeviceID
 	} else if queryDeviceID != "" && queryDeviceID != headerDeviceID {
-		log.Warnf("device-id 在 Header(%s) 与 URL 参数(%s) 不一致，优先使用 Header 值", headerDeviceKey, queryDeviceKey)
+		log.Warnf("device-id mismatch between Header(%s) and URL parameter(%s), using Header value", headerDeviceKey, queryDeviceKey)
 	}
 
 	clientID := headerClientID
 	if clientID == "" {
 		clientID = queryClientID
 	} else if queryClientID != "" && queryClientID != headerClientID {
-		log.Warnf("client-id 在 Header(%s) 与 URL 参数(%s) 不一致，优先使用 Header 值", headerClientKey, queryClientKey)
+		log.Warnf("client-id mismatch between Header(%s) and URL parameter(%s), using Header value", headerClientKey, queryClientKey)
 	}
 
 	return deviceID, clientID
