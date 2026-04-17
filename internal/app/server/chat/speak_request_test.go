@@ -75,14 +75,14 @@ func TestPrepareSpeakPathForInjectedSpeechSendsSpeakRequestAndWaitsForReady(t *t
 
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- manager.prepareSpeakPathForInjectedSpeech("主动播报内容")
+		errCh <- manager.prepareSpeakPathForInjectedSpeech("proactive broadcast content")
 	}()
 
 	serverMsg := waitForServerMessage(t, conn, 0)
 	if serverMsg.Type != msgdata.ServerMessageTypeSpeakRequest {
 		t.Fatalf("expected speak_request, got %s", serverMsg.Type)
 	}
-	if serverMsg.Text != "主动播报内容" {
+	if serverMsg.Text != "proactive broadcast content" {
 		t.Fatalf("expected speak_request text to be forwarded, got %q", serverMsg.Text)
 	}
 	if serverMsg.AutoListen == nil || *serverMsg.AutoListen {
@@ -123,13 +123,13 @@ func TestPrepareSpeakPathForInjectedSpeechReusesPendingSpeakRequest(t *testing.T
 	errCh1 := make(chan error, 1)
 	errCh2 := make(chan error, 1)
 	go func() {
-		errCh1 <- manager.prepareSpeakPathForInjectedSpeech("第一次播报")
+		errCh1 <- manager.prepareSpeakPathForInjectedSpeech("first broadcast")
 	}()
 
 	_ = waitForServerMessage(t, conn, 0)
 
 	go func() {
-		errCh2 <- manager.prepareSpeakPathForInjectedSpeech("第二次播报")
+		errCh2 <- manager.prepareSpeakPathForInjectedSpeech("second broadcast")
 	}()
 
 	time.Sleep(30 * time.Millisecond)
@@ -164,11 +164,11 @@ func TestPrepareSpeakPathForInjectedSpeechTimesOut(t *testing.T) {
 	manager, conn := newSpeakRequestTestManager(types_conn.TransportTypeMqttUdp)
 	manager.speakReadyTimeout = 30 * time.Millisecond
 
-	err := manager.prepareSpeakPathForInjectedSpeech("超时播报")
+	err := manager.prepareSpeakPathForInjectedSpeech("timeout broadcast")
 	if err == nil {
 		t.Fatal("expected prepareSpeakPathForInjectedSpeech to time out")
 	}
-	if !errors.Is(err, context.DeadlineExceeded) && err.Error() != "等待 speak_ready 超时" {
+	if !errors.Is(err, context.DeadlineExceeded) && err.Error() != "wait speak_ready timeout" {
 		t.Fatalf("expected speak_ready timeout error, got %v", err)
 	}
 	if conn.sentCmdCount() != 1 {
@@ -188,7 +188,7 @@ func TestInjectMessageWithSkipLlmFalseStillSendsSpeakRequest(t *testing.T) {
 
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- manager.InjectMessage("需要先过LLM", false)
+		errCh <- manager.InjectMessage("need to go through LLM first", false)
 	}()
 
 	serverMsg := waitForServerMessage(t, conn, 0)
@@ -220,7 +220,7 @@ func TestInjectMessageWithSkipLlmFalseStillSendsSpeakRequest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected injected message to enter chat queue, got %v", err)
 	}
-	if item.text != "需要先过LLM" {
+	if item.text != "need to go through LLM first" {
 		t.Fatalf("expected injected text to be queued, got %q", item.text)
 	}
 }
@@ -233,7 +233,7 @@ func TestAddAsrResultToQueueWithOptionsCarriesPlaybackStartHook(t *testing.T) {
 	}
 
 	startedCount := 0
-	if err := session.AddAsrResultToQueueWithOptions("需要走LLM", nil, llmResponseChannelOptions{
+	if err := session.AddAsrResultToQueueWithOptions("need to go through LLM", nil, llmResponseChannelOptions{
 		onTTSPlaybackStart: func() {
 			startedCount++
 		},
@@ -267,7 +267,7 @@ func TestAddTextToTTSQueueWithOptionsKeepsPlaybackHookOutOfQueueStart(t *testing
 	llmManager := NewLLMManager(manager.clientState, NewServerTransport(conn, manager.clientState), ttsManager, nil, nil)
 
 	startedCount := 0
-	if err := llmManager.AddTextToTTSQueueWithOptions("直接播报", llmResponseChannelOptions{
+	if err := llmManager.AddTextToTTSQueueWithOptions("direct broadcast", llmResponseChannelOptions{
 		onTTSPlaybackStart: func() {
 			startedCount++
 		},

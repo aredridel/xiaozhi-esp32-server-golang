@@ -97,7 +97,7 @@ func TestTryHandleRealtimeMcpAudioASRAllowsNormalChatWhenPlaybackPaused(t *testi
 	runtime.state.CurrentSourceType = MediaSourceTypeMCPResource
 	runtime.mu.Unlock()
 
-	handled, err := session.tryHandleRealtimeMcpAudioASR(context.Background(), "你在干什么")
+	handled, err := session.tryHandleRealtimeMcpAudioASR(context.Background(), "what are you doing")
 	if err != nil {
 		t.Fatalf("tryHandleRealtimeMcpAudioASR returned error: %v", err)
 	}
@@ -121,7 +121,7 @@ func TestTryHandleRealtimeMcpAudioASRSwallowsNormalChatWhenPlaybackActive(t *tes
 	runtime.state.CurrentSourceType = MediaSourceTypeMCPResource
 	runtime.mu.Unlock()
 
-	handled, err := session.tryHandleRealtimeMcpAudioASR(context.Background(), "你在干什么")
+	handled, err := session.tryHandleRealtimeMcpAudioASR(context.Background(), "what are you doing")
 	if err != nil {
 		t.Fatalf("tryHandleRealtimeMcpAudioASR returned error: %v", err)
 	}

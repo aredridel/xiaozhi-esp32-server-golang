@@ -308,7 +308,7 @@ func (s *ServerTransport) close(closeUnderlyingTransport bool) error {
 
 	if closeUnderlyingTransport && s.transport.GetTransportType() == types_conn.TransportTypeMqttUdp {
 		if err := s.SendMqttGoodbye(); err != nil {
-			log.Warnf("发送 mqtt goodbye 失败: %v", err)
+			log.Warnf("send mqtt goodbye failed: %v", err)
 		}
 	}
 
